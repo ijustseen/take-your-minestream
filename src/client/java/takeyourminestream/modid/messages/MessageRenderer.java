@@ -1,6 +1,6 @@
 package takeyourminestream.modid.messages;
 
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -51,7 +51,7 @@ public class MessageRenderer {
                 return;
             }
 
-            MatrixStack matrices = context.matrixStack();
+            MatrixStack matrices = context.matrices();
             TextRenderer textRenderer = client.textRenderer;
             VertexConsumerProvider consumers = context.consumers();
 

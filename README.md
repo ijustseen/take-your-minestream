@@ -50,6 +50,16 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 ./gradlew build
 ```
 
+## Development
+
+For developers working on this mod:
+
+- **[MINECRAFT_1.21.10_GUIDE.md](MINECRAFT_1.21.10_GUIDE.md)** - Complete guide for Minecraft 1.21.10 update
+  - API changes and fixes
+  - Custom rendering system
+  - Usage examples
+  - Troubleshooting
+
 ## License
 
 MIT License. See `LICENSE` for details.

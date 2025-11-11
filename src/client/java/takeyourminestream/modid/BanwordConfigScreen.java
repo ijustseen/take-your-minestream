@@ -138,7 +138,11 @@ public class BanwordConfigScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean rightClick) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+        
         if (button == 0) {
             int top = 40;
             int bottom = this.height - 60;
@@ -175,7 +179,7 @@ public class BanwordConfigScreen extends Screen {
                 y += LINE_HEIGHT;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(click, rightClick);
     }
 
     @Override

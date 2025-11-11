@@ -38,22 +38,19 @@ public class MessageScaleSliderWidget extends SliderWidget {
     }
     
     @Override
-    public void onClick(double mouseX, double mouseY) {
+    public void onClick(net.minecraft.client.gui.Click click, boolean rightClick) {
         // Переопределяем клик для фиксированных позиций
-        super.onClick(mouseX, mouseY);
+        super.onClick(click, rightClick);
         // После клика принудительно устанавливаем в ближайшую фиксированную позицию
         applyValue();
     }
     
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+    protected void onDrag(net.minecraft.client.gui.Click click, double deltaX, double deltaY) {
         // Переопределяем перетаскивание для фиксированных позиций
-        boolean result = super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
-        if (result) {
-            // После перетаскивания принудительно устанавливаем в ближайшую фиксированную позицию
-            applyValue();
-        }
-        return result;
+        super.onDrag(click, deltaX, deltaY);
+        // После перетаскивания принудительно устанавливаем в ближайшую фиксированную позицию
+        applyValue();
     }
     
     /**

@@ -29,7 +29,7 @@ public class KeyBindingManager {
             "key.takeyourminestream.openconfig",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_RIGHT_BRACKET, // Клавиша ']'
-            "category.takeyourminestream.general"
+            KeyBinding.Category.MISC
         ));
 
         // Обработка нажатия клавиш

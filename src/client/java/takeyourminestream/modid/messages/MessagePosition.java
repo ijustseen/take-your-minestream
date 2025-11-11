@@ -20,7 +20,7 @@ public class MessagePosition {
         }
         
         Random random = client.world.random;
-        Vec3d playerPos = client.player.getPos();
+        Vec3d playerPos = client.player.getEyePos();
 
         // Генерируем случайный угол и радиус
         double angle = random.nextDouble() * 2 * Math.PI;
