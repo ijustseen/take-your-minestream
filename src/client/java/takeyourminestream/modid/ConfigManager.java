@@ -116,6 +116,9 @@ public class ConfigManager implements IConfigManager {
             case "followPlayer":
                 configData.setFollowPlayer((Boolean) value);
                 break;
+            case "enableClickToRemove":
+                configData.setEnableClickToRemove((Boolean) value);
+                break;
             default:
                 LOGGER.warning("Неизвестный ключ конфигурации: " + key);
                 return;
@@ -143,6 +146,7 @@ public class ConfigManager implements IConfigManager {
         configCache.put("messageScale", configData.getMessageScale());
         configCache.put("showMessageBackground", configData.isShowMessageBackground());
         configCache.put("followPlayer", configData.isFollowPlayer());
+        configCache.put("enableClickToRemove", configData.isEnableClickToRemove());
     }
 
     public ModConfigData getConfigData() {

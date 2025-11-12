@@ -197,6 +197,24 @@ public class MessageLifecycleManager {
     public void clearMessageHistory() {
         messageHistory.clear();
     }
+    
+    /**
+     * Удаляет сообщение с немедленным спавном партиклов
+     * @param message Сообщение для удаления
+     * @param client Minecraft клиент
+     */
+    public void removeMessageWithParticles(Message message, MinecraftClient client) {
+        if (activeMessages.contains(message)) {
+            // Спавним партиклы на текущей позиции
+            if (particleManager != null) {
+                MessageParticleSpawner.spawnParticlesForMessage(message, particleManager, client, message.getPosition());
+            }
+            
+            // Удаляем сообщение
+            activeMessages.remove(message);
+            spawnedParticlesForMessages.remove(message);
+        }
+    }
 
     private static float lerpAngleDegrees(float a, float b, float t) {
         float delta = MathHelper.wrapDegrees(b - a);
