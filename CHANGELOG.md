@@ -12,10 +12,6 @@
 
 ### Changed
 
-- Updated Minecraft version from 1.21.7 to 1.21.10
-- Updated Fabric API to 0.129.0+1.21.7
-- Fixed WorldRenderEvents imports (moved to v1.world package)
-- Updated rendering API calls (matrixStack() → matrices())
 - Fixed MinecraftClient.disconnect() mixin signature for new boolean parameter
 
 ### Technical
@@ -25,17 +21,3 @@
 - WorldEventHandler for managing message parsing state
 - ClientPlayNetworkHandlerMixin for world join detection
 - MinecraftClientMixin for world leave detection
-
-## [1.1.0] - 2024-11-11
-
-### Added
-
-- Custom render pipeline system (CustomRenderPipeline.java, WaypointRenderer.java)
-- GPU resource cleanup (GameRendererMixin.java)
-- Rendering guide (RENDERING_GUIDE.md)
-
-### Technical
-
-- Support for extraction/drawing phase rendering
-- Example waypoint renderer with through-wall rendering
-- Proper GPU memory management
