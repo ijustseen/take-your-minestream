@@ -48,6 +48,8 @@
   "takeyourminestream.config.show_message_bg.desc": "Показывать полупрозрачный фон под текстом сообщения",
   "takeyourminestream.config.follow_player": "Следовать за игроком:",
   "takeyourminestream.config.follow_player.desc": "3D сообщения будут мягко следовать за игроком, удерживая исходное относительное смещение",
+  "takeyourminestream.config.click_to_remove": "Удаление кликом:",
+  "takeyourminestream.config.click_to_remove.desc": "Кликните ЛКМ по сообщению, чтобы мгновенно удалить его с партиклами",
   "takeyourminestream.history.title": "История сообщений",
   "takeyourminestream.history.close": "Закрыть",
   "takeyourminestream.history.clear": "Очистить историю",

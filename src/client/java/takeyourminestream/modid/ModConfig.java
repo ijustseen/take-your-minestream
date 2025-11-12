@@ -113,4 +113,13 @@ public class ModConfig {
     public static void setFOLLOW_PLAYER(boolean value) {
         ConfigManager.getInstance().setConfigValue("followPlayer", value);
     }
+
+    public static boolean isENABLE_CLICK_TO_REMOVE() {
+        Object value = ConfigManager.getInstance().getConfigValue("enableClickToRemove");
+        return value != null ? (Boolean) value : true; // По умолчанию true
+    }
+
+    public static void setENABLE_CLICK_TO_REMOVE(boolean value) {
+        ConfigManager.getInstance().setConfigValue("enableClickToRemove", value);
+    }
 } 

@@ -10,6 +10,7 @@ import net.minecraft.util.math.MathHelper;
 public class MessageSpawner {
     private final MessageQueue messageQueue;
     private final MessageLifecycleManager lifecycleManager;
+    private volatile boolean paused = false;
     
     public MessageSpawner(MessageQueue messageQueue, MessageLifecycleManager lifecycleManager) {
         this.messageQueue = messageQueue;
@@ -78,7 +79,10 @@ public class MessageSpawner {
             messageQueue.clear();
             lifecycleManager.clearAllMessages();
         } else {
-            messageQueue.enqueueMessage(message, authorColorRgb);
+            // Не добавляем сообщения, если система на паузе
+            if (!paused) {
+                messageQueue.enqueueMessage(message, authorColorRgb);
+            }
         }
     }
     
@@ -88,5 +92,29 @@ public class MessageSpawner {
      */
     public MessageLifecycleManager getLifecycleManager() {
         return lifecycleManager;
+    }
+    
+    /**
+     * Ставит систему сообщений на паузу
+     * Новые сообщения не будут добавляться в очередь
+     */
+    public void pause() {
+        paused = true;
+    }
+    
+    /**
+     * Снимает систему сообщений с паузы
+     * Новые сообщения снова будут добавляться в очередь
+     */
+    public void resume() {
+        paused = false;
+    }
+    
+    /**
+     * Проверяет, находится ли система на паузе
+     * @return true если на паузе
+     */
+    public boolean isPaused() {
+        return paused;
     }
 } 

@@ -4,7 +4,7 @@ package takeyourminestream.modid.config;
  * Модель данных конфигурации мода
  */
 public class ModConfigData {
-    private String twitchChannelName = "ijustseen_you";
+    private String twitchChannelName = "ijustseen";
     // Старые поля для обратной совместимости (тики)
     private int messageLifetimeTicks = 80;
     private int messageFallTicks = 20;
@@ -22,6 +22,7 @@ public class ModConfigData {
     private MessageScale messageScale = MessageScale.NORMAL;
     private boolean showMessageBackground = true;
     private boolean followPlayer = false;
+    private boolean enableClickToRemove = true;
 
     // Геттеры
     public String getTwitchChannelName() { return twitchChannelName; }
@@ -40,6 +41,7 @@ public class ModConfigData {
     public MessageScale getMessageScale() { return messageScale; }
     public boolean isShowMessageBackground() { return showMessageBackground; }
     public boolean isFollowPlayer() { return followPlayer; }
+    public boolean isEnableClickToRemove() { return enableClickToRemove; }
 
     // Сеттеры
     public void setTwitchChannelName(String twitchChannelName) { this.twitchChannelName = twitchChannelName; }
@@ -58,6 +60,7 @@ public class ModConfigData {
     public void setMessageScale(MessageScale messageScale) { this.messageScale = messageScale; }
     public void setShowMessageBackground(boolean showMessageBackground) { this.showMessageBackground = showMessageBackground; }
     public void setFollowPlayer(boolean followPlayer) { this.followPlayer = followPlayer; }
+    public void setEnableClickToRemove(boolean enableClickToRemove) { this.enableClickToRemove = enableClickToRemove; }
     
     // Методы для обратной совместимости
     public boolean isMessagesInFrontOfPlayerOnly() { 
