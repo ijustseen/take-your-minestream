@@ -33,7 +33,7 @@ import net.minecraft.util.math.Vec3d;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 
 /**
- * Пример рендерера waypoint'ов с кастомным пайплайном для Minecraft 1.21.1+
+ * Пример рендерера waypoint'ов с кастомным пайплайном для Minecraft 1.21.10
  * 
  * Этот класс демонстрирует:
  * - Создание кастомного рендер-пайплайна

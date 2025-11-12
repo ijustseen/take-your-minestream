@@ -50,6 +50,9 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         commandManager.registerCommands();
         keyBindingManager.registerKeyBindings();
         
+        // Регистрация обработчиков событий мира
+        WorldEventHandler.register(messageSpawner);
+        
         Logger.info("Все компоненты мода инициализированы");
     }
 

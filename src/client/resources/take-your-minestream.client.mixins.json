@@ -2,7 +2,13 @@
   "required": true,
   "package": "takeyourminestream.modid.mixin.client",
   "compatibilityLevel": "JAVA_21",
-  "client": ["ExampleClientMixin", "GameRendererMixin"],
+  "client": [
+    "ExampleClientMixin",
+    "GameRendererMixin",
+    "MouseHandlerMixin",
+    "ClientPlayNetworkHandlerMixin",
+    "MinecraftClientMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

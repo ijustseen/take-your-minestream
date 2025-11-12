@@ -48,6 +48,8 @@
   "takeyourminestream.config.show_message_bg.desc": "Show semi-transparent background behind message text",
   "takeyourminestream.config.follow_player": "Follow Player:",
   "takeyourminestream.config.follow_player.desc": "3D messages smoothly follow the player, keeping their original relative offset",
+  "takeyourminestream.config.click_to_remove": "Click to Remove:",
+  "takeyourminestream.config.click_to_remove.desc": "Left-click on messages to remove them instantly with particles",
   "takeyourminestream.history.title": "Message History",
   "takeyourminestream.history.close": "Close",
   "takeyourminestream.history.clear": "Clear History",

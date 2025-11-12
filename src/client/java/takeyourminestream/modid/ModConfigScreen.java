@@ -232,6 +232,16 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(followPlayerButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.follow_player", "takeyourminestream.config.follow_player.desc", ConfigEntryType.TOGGLE, followPlayerButton, ConfigCategory.BEHAVIOR));
 
+        ButtonWidget clickToRemoveButton = ButtonWidget.builder(
+            Text.translatable(ModConfig.isENABLE_CLICK_TO_REMOVE() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
+            btn -> {
+                ModConfig.setENABLE_CLICK_TO_REMOVE(!ModConfig.isENABLE_CLICK_TO_REMOVE());
+                btn.setMessage(Text.translatable(ModConfig.isENABLE_CLICK_TO_REMOVE() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(clickToRemoveButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.click_to_remove", "takeyourminestream.config.click_to_remove.desc", ConfigEntryType.TOGGLE, clickToRemoveButton, ConfigCategory.BEHAVIOR));
+
         TextFieldWidget maxFreezeDistanceField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.max_freeze_distance"));
         maxFreezeDistanceField.setText(String.valueOf(ModConfig.getMAX_FREEZE_DISTANCE()));
         maxFreezeDistanceField.setChangedListener(s -> {

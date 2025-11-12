@@ -33,7 +33,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 
 /**
- * Пример кастомного рендер-пайплайна для Minecraft 1.21.1+
+ * Пример кастомного рендер-пайплайна для Minecraft 1.21.10
  * Рендерит waypoint через стены
  */
 public class CustomRenderPipeline implements ClientModInitializer {
