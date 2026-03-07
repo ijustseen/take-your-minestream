@@ -51,6 +51,9 @@ public class MessageLifecycleManager {
             float pitchLerp = clamp01(1.0f - (float)Math.exp(-1.0f / pitchSmoothTime));
 
             for (Message message : activeMessages) {
+                if (message.isPinned()) {
+                    continue;
+                }
                 Vec3d local = message.getTargetOffsetFromEye();
                 if (local == null) continue; // для HUD или старых сообщений
 
@@ -78,6 +81,9 @@ public class MessageLifecycleManager {
         // Обновляем замороженное время для всех сообщений
         if (ModConfig.isENABLE_FREEZING_ON_VIEW()) {
             for (Message message : activeMessages) {
+                if (message.isPinned()) {
+                    continue;
+                }
                 if (MessageViewDetector.isPlayerLookingAtMessage(client, message.getPosition(), message.getYaw(), message.getPitch(), message.getText(), 
                                                                tickCounter, message.getSpawnTick(), message.getFrozenTicks())) {
                     message.incrementFrozenTicks();
@@ -90,6 +96,9 @@ public class MessageLifecycleManager {
         int removeAfter = ModConfig.getMESSAGE_LIFETIME_TICKS() + fallTicks;
         if (ModConfig.isENABLE_FREEZING_ON_VIEW()) {
             activeMessages.removeIf(message -> {
+                if (message.isPinned()) {
+                    return false;
+                }
                 int effectiveAge = message.getEffectiveAge(tickCounter);
                 // Спавним партиклы за тик до удаления
                 if (effectiveAge == removeAfter - 1 && !spawnedParticlesForMessages.contains(message)) {
@@ -112,6 +121,9 @@ public class MessageLifecycleManager {
             });
         } else {
             activeMessages.removeIf(message -> {
+                if (message.isPinned()) {
+                    return false;
+                }
                 int effectiveAge = tickCounter - (int)message.getSpawnTick();
                 // Спавним партиклы за тик до удаления
                 if (effectiveAge == removeAfter - 1 && !spawnedParticlesForMessages.contains(message)) {
@@ -157,6 +169,11 @@ public class MessageLifecycleManager {
     public void clearAllMessages() {
         activeMessages.clear();
         tickCounter = 0;
+    }
+
+    public void clearTransientMessages() {
+        activeMessages.removeIf(message -> !message.isPinned());
+        spawnedParticlesForMessages.removeIf(message -> !message.isPinned());
     }
     
     /**
@@ -214,6 +231,43 @@ public class MessageLifecycleManager {
             activeMessages.remove(message);
             spawnedParticlesForMessages.remove(message);
         }
+    }
+
+    public void removeMessageWithoutParticles(Message message) {
+        activeMessages.remove(message);
+        spawnedParticlesForMessages.remove(message);
+    }
+
+    public void addPinnedMessage(Message message) {
+        message.setPinned(true);
+        activeMessages.add(message);
+    }
+
+    public Message unpinMessage(Message message, MinecraftClient client) {
+        if (message == null || !activeMessages.contains(message)) {
+            return null;
+        }
+
+        Vec3d targetOffset = Vec3d.ZERO;
+        if (client != null && client.player != null) {
+            targetOffset = message.getPosition().subtract(client.player.getEyePos());
+        }
+
+        Message replacement = new Message(
+            message.getText(),
+            message.getPosition(),
+            tickCounter,
+            message.getYaw(),
+            message.getPitch(),
+            message.getAuthorColorRgb(),
+            targetOffset
+        );
+        replacement.setPinned(false);
+
+        int idx = activeMessages.indexOf(message);
+        activeMessages.set(idx, replacement);
+        spawnedParticlesForMessages.remove(message);
+        return replacement;
     }
 
     private static float lerpAngleDegrees(float a, float b, float t) {

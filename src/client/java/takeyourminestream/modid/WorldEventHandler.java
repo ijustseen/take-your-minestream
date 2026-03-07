@@ -2,6 +2,7 @@ package takeyourminestream.modid;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import takeyourminestream.modid.messages.MessageSpawner;
+import takeyourminestream.modid.messages.PinnedMessageStore;
 import takeyourminestream.modid.utils.Logger;
 
 /**
@@ -17,6 +18,11 @@ public class WorldEventHandler {
         // При выходе из мира - ставим на паузу
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             if (messageSpawner != null) {
+                var app = TakeYourMineStreamClient.getInstance();
+                if (app != null && app.getTwitchManager() != null && app.getTwitchManager().isConnected()) {
+                    app.getTwitchManager().disconnect();
+                }
+                PinnedMessageStore.saveForCurrentWorld(messageSpawner.getLifecycleManager());
                 messageSpawner.pause();
                 Logger.info("Система сообщений поставлена на паузу (выход из игры)");
             }
@@ -29,9 +35,12 @@ public class WorldEventHandler {
      * @param messageSpawner система спавна сообщений
      */
     public static void onWorldJoin(MessageSpawner messageSpawner) {
-        if (messageSpawner != null && messageSpawner.isPaused()) {
-            messageSpawner.resume();
-            Logger.info("Система сообщений снята с паузы (вход в мир)");
+        if (messageSpawner != null) {
+            if (messageSpawner.isPaused()) {
+                messageSpawner.resume();
+                Logger.info("Система сообщений снята с паузы (вход в мир)");
+            }
+            PinnedMessageStore.loadForCurrentWorld(messageSpawner.getLifecycleManager());
         }
     }
     
@@ -42,6 +51,11 @@ public class WorldEventHandler {
      */
     public static void onWorldLeave(MessageSpawner messageSpawner) {
         if (messageSpawner != null && !messageSpawner.isPaused()) {
+            var app = TakeYourMineStreamClient.getInstance();
+            if (app != null && app.getTwitchManager() != null && app.getTwitchManager().isConnected()) {
+                app.getTwitchManager().disconnect();
+            }
+            PinnedMessageStore.saveForCurrentWorld(messageSpawner.getLifecycleManager());
             messageSpawner.pause();
             Logger.info("Система сообщений поставлена на паузу (выход из мира)");
         }

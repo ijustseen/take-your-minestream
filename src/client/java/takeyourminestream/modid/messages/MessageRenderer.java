@@ -31,11 +31,15 @@ public class MessageRenderer {
     private final java.util.WeakHashMap<Message, SmoothingState> smoothing = new java.util.WeakHashMap<>();
     
     private static final Identifier PANEL_TEXTURE = Identifier.of("take-your-minestream", "textures/gui/message_panel.png");
+    private static final Identifier PIN_TEXTURE = Identifier.of("take-your-minestream", "textures/gui/pin.png");
     private static final int PANEL_TEX_SIZE = 32;
     private static final int PANEL_CORNER = 8;
     private static final int PANEL_MIN = 2 * PANEL_CORNER;
     private static final int PANEL_PADDING_X = 6;
     private static final int PANEL_PADDING_Y = 4;
+    private static final int PIN_ICON_SIZE = 8;
+    private static final int PIN_ICON_MARGIN = 1;
+    private static final float PIN_ICON_Z_OFFSET = -0.02f;
 
     public MessageRenderer(MessageLifecycleManager lifecycleManager, MessageParticleManager particleManager) {
         this.lifecycleManager = lifecycleManager;
@@ -75,7 +79,7 @@ public class MessageRenderer {
         matrices.push();
 
         int tickCounter = lifecycleManager.getTickCounter();
-        int age = message.getEffectiveAge(tickCounter);
+        int age = message.isPinned() ? 0 : message.getEffectiveAge(tickCounter);
         int fallTicks = ModConfig.getMESSAGE_FALL_TICKS();
         int fallStart = ModConfig.getMESSAGE_LIFETIME_TICKS();
         int fallAge = age - fallStart;
@@ -126,7 +130,7 @@ public class MessageRenderer {
         matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0);
         // Рендерим панель (по флагу)
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
-            renderPanel9Slice(matrices, -PANEL_PADDING_X, -PANEL_PADDING_Y, panelWidth, panelHeight, 1.0f, consumers);
+            renderPanel9Slice(matrices, -PANEL_PADDING_X, -PANEL_PADDING_Y, panelWidth, panelHeight, 1.0f, consumers, 1.0f, 1.0f, 1.0f);
         }
         // Рендерим текст
         for (int i = 0; i < wrappedText.size(); i++) {
@@ -143,6 +147,9 @@ public class MessageRenderer {
                               0,
                               0xF000F0
                               );
+        }
+        if (message.isPinned()) {
+            renderPinIcon(matrices, panelWidth, consumers);
         }
         matrices.pop();
     }
@@ -197,7 +204,7 @@ public class MessageRenderer {
     /**
      * Рендерит 9-slice панель
      */
-    private void renderPanel9Slice(MatrixStack matrices, int x, int y, int width, int height, float alpha, VertexConsumerProvider consumers) {
+    private void renderPanel9Slice(MatrixStack matrices, int x, int y, int width, int height, float alpha, VertexConsumerProvider consumers, float red, float green, float blue) {
         if (width < PANEL_MIN) width = PANEL_MIN;
         if (height < PANEL_MIN) height = PANEL_MIN;
         VertexConsumer consumer = consumers.getBuffer(net.minecraft.client.render.RenderLayer.getEntityTranslucent(PANEL_TEXTURE));
@@ -219,51 +226,73 @@ public class MessageRenderer {
         float v2 = 24f / (float)PANEL_TEX_SIZE;
         float v3 = 1f;
         // 1. Углы
-        drawQuadGL(consumer, mat, x0, y0, x1, y1, u0, v0, u1, v1, alpha); // левый верх
-        drawQuadGL(consumer, mat, x2, y0, x3, y1, u2, v0, u3, v1, alpha); // правый верх
-        drawQuadGL(consumer, mat, x0, y2, x1, y3, u0, v2, u1, v3, alpha); // левый низ
-        drawQuadGL(consumer, mat, x2, y2, x3, y3, u2, v2, u3, v3, alpha); // правый низ
+        drawQuadGL(consumer, mat, x0, y0, x1, y1, u0, v0, u1, v1, alpha, red, green, blue); // левый верх
+        drawQuadGL(consumer, mat, x2, y0, x3, y1, u2, v0, u3, v1, alpha, red, green, blue); // правый верх
+        drawQuadGL(consumer, mat, x0, y2, x1, y3, u0, v2, u1, v3, alpha, red, green, blue); // левый низ
+        drawQuadGL(consumer, mat, x2, y2, x3, y3, u2, v2, u3, v3, alpha, red, green, blue); // правый низ
         // 2. Края
-        drawQuadGL(consumer, mat, x1, y0, x2, y1, u1, v0, u2, v1, alpha); // верх
-        drawQuadGL(consumer, mat, x1, y2, x2, y3, u1, v2, u2, v3, alpha); // низ
-        drawQuadGL(consumer, mat, x0, y1, x1, y2, u0, v1, u1, v2, alpha); // левый
-        drawQuadGL(consumer, mat, x2, y1, x3, y2, u2, v1, u3, v2, alpha); // правый
+        drawQuadGL(consumer, mat, x1, y0, x2, y1, u1, v0, u2, v1, alpha, red, green, blue); // верх
+        drawQuadGL(consumer, mat, x1, y2, x2, y3, u1, v2, u2, v3, alpha, red, green, blue); // низ
+        drawQuadGL(consumer, mat, x0, y1, x1, y2, u0, v1, u1, v2, alpha, red, green, blue); // левый
+        drawQuadGL(consumer, mat, x2, y1, x3, y2, u2, v1, u3, v2, alpha, red, green, blue); // правый
         // 3. Центр
-        drawQuadGL(consumer, mat, x1, y1, x2, y2, u1, v1, u2, v2, alpha); // центр
+        drawQuadGL(consumer, mat, x1, y1, x2, y2, u1, v1, u2, v2, alpha, red, green, blue); // центр
     }
     /**
      * Рисует один quad
      */
-    private void drawQuadGL(VertexConsumer consumer, Matrix4f mat, int x0, int y0, int x1, int y1, float u0, float v0, float u1, float v1, float alpha) {
+    private void drawQuadGL(VertexConsumer consumer, Matrix4f mat, int x0, int y0, int x1, int y1, float u0, float v0, float u1, float v1, float alpha, float red, float green, float blue) {
         int light = 0xF000F0;
         int overlay = net.minecraft.client.render.OverlayTexture.DEFAULT_UV;
         // Левый верх
         consumer.vertex(mat, x0, y0, 0)
-                .color(1f, 1f, 1f, alpha)
+            .color(red, green, blue, alpha)
                 .texture(u0, v0)
                 .overlay(overlay)
                 .light(light)
                 .normal(0, 0, -1);
         // Левый низ
         consumer.vertex(mat, x0, y1, 0)
-                .color(1f, 1f, 1f, alpha)
+            .color(red, green, blue, alpha)
                 .texture(u0, v1)
                 .overlay(overlay)
                 .light(light)
                 .normal(0, 0, -1);
         // Правый низ
         consumer.vertex(mat, x1, y1, 0)
-                .color(1f, 1f, 1f, alpha)
+            .color(red, green, blue, alpha)
                 .texture(u1, v1)
                 .overlay(overlay)
                 .light(light)
                 .normal(0, 0, -1);
         // Правый верх
         consumer.vertex(mat, x1, y0, 0)
-                .color(1f, 1f, 1f, alpha)
+                .color(red, green, blue, alpha)
                 .texture(u1, v0)
                 .overlay(overlay)
                 .light(light)
                 .normal(0, 0, -1);
+    }
+
+    private void renderPinIcon(MatrixStack matrices, int panelWidth, VertexConsumerProvider consumers) {
+        VertexConsumer consumer = consumers.getBuffer(net.minecraft.client.render.RenderLayer.getEntityTranslucent(PIN_TEXTURE));
+        Matrix4f mat = matrices.peek().getPositionMatrix();
+
+        int markerX = panelWidth - PANEL_PADDING_X - (PIN_ICON_SIZE / 2) + PIN_ICON_MARGIN;
+        int markerY = -PANEL_PADDING_Y - (PIN_ICON_SIZE / 2) - PIN_ICON_MARGIN;
+        float u0 = 0f;
+        float v0 = 0f;
+        float u1 = 1f;
+        float v1 = 1f;
+        drawQuadIcon(consumer, mat, markerX, markerY, markerX + PIN_ICON_SIZE, markerY + PIN_ICON_SIZE, PIN_ICON_Z_OFFSET, u0, v0, u1, v1);
+    }
+
+    private void drawQuadIcon(VertexConsumer consumer, Matrix4f mat, int x0, int y0, int x1, int y1, float z, float u0, float v0, float u1, float v1) {
+        int light = 0xF000F0;
+        int overlay = net.minecraft.client.render.OverlayTexture.DEFAULT_UV;
+        consumer.vertex(mat, x0, y0, z).color(1f, 1f, 1f, 1.0f).texture(u0, v0).overlay(overlay).light(light).normal(0, 0, -1);
+        consumer.vertex(mat, x0, y1, z).color(1f, 1f, 1f, 1.0f).texture(u0, v1).overlay(overlay).light(light).normal(0, 0, -1);
+        consumer.vertex(mat, x1, y1, z).color(1f, 1f, 1f, 1.0f).texture(u1, v1).overlay(overlay).light(light).normal(0, 0, -1);
+        consumer.vertex(mat, x1, y0, z).color(1f, 1f, 1f, 1.0f).texture(u1, v0).overlay(overlay).light(light).normal(0, 0, -1);
     }
 } 

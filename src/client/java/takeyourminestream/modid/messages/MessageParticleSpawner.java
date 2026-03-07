@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Random;
 
 public class MessageParticleSpawner {
+    private static final int PANEL_PADDING_X = 6;
+    private static final int PANEL_PADDING_Y = 4;
+
     public static void spawnParticlesForMessage(Message message, MessageParticleManager manager, MinecraftClient client, Vec3d spawnPos) {
         if (client == null || client.textRenderer == null) return;
         Random random = new Random();
@@ -25,36 +28,48 @@ public class MessageParticleSpawner {
         // Получаем размеры панели сообщения
         TextRenderer textRenderer = client.textRenderer;
         List<OrderedText> wrappedText = textRenderer.wrapLines(Text.of(message.getText()), 120);
+        if (wrappedText.isEmpty()) {
+            return;
+        }
         float totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
-        int textWidth = textRenderer.getWidth(wrappedText.get(0));
-        int panelWidth = textWidth + 6 * 2; // PANEL_PADDING_X
-        int panelHeight = (int)totalTextHeight + 4 * 2; // PANEL_PADDING_Y
+        int textWidth = 0;
+        for (OrderedText line : wrappedText) {
+            textWidth = Math.max(textWidth, textRenderer.getWidth(line));
+        }
+        int panelWidth = textWidth + PANEL_PADDING_X * 2;
+        int panelHeight = (int)totalTextHeight + PANEL_PADDING_Y * 2;
 
         // Центр панели в мировых координатах
         float yaw = message.getYaw();
         float pitch = message.getPitch();
-        double scale = 0.025;
+        double scale = 0.025 * ModConfig.getMESSAGE_SCALE().getScale();
+        int gridX = (int) Math.ceil(Math.sqrt(count));
+        int gridY = (int) Math.ceil((double) count / (double) gridX);
 
         List<MessageParticle> particles = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            // Случайная точка внутри панели (в пикселях)
-            float px = random.nextFloat() * panelWidth - panelWidth / 2f;
-            float py = random.nextFloat() * panelHeight - panelHeight / 2f;
+            int cellX = i % gridX;
+            int cellY = i / gridX;
+            float cellW = (float) panelWidth / (float) gridX;
+            float cellH = (float) panelHeight / (float) gridY;
+            float px = -panelWidth / 2f + (cellX + random.nextFloat()) * cellW;
+            float py = -panelHeight / 2f + (cellY + random.nextFloat()) * cellH;
             // Переводим в мировые координаты (с учётом yaw/pitch)
             Vec3d local = new Vec3d(px * scale, py * scale, 0);
             Vec3d world = rotateVec(local, yaw, pitch).add(spawnPos);
 
-            // Случайная скорость: вниз + заметно в стороны
-            double vx = (random.nextDouble() - 0.5) * 0.08;
-            double vy = -0.07 - random.nextDouble() * 0.06;
-            double vz = (random.nextDouble() - 0.5) * 0.08;
-            Vec3d velocity = new Vec3d(vx, vy, vz);
+            // Скорость в локальных координатах панели (сообщение "рассыпается" в своей плоскости)
+            // x/y — разброс по плоскости, z — небольшой вылет перпендикулярно панели
+            double localVx = (random.nextDouble() - 0.5) * 0.06;
+            double localVy = (random.nextDouble() - 0.5) * 0.06;
+            double localVz = (random.nextDouble() - 0.5) * 0.04;
+            Vec3d velocity = rotateVec(new Vec3d(localVx, localVy, localVz), yaw, pitch);
 
             // Размер: от 2.0 до 5.0
             float particleSize = 2.0f + random.nextFloat() * 3.0f;
             // Вращение: случайный стартовый угол и скорость
             float rotation = random.nextFloat() * 360f;
-            float rotationSpeed = (random.nextFloat() - 0.5f) * 8f; // -4..+4 градусов за тик
+            float rotationSpeed = (random.nextFloat() - 0.5f) * 6f;
 
             // Цвет: половина партиклов — цвет текста (цвет автора, если известен), половина — цвет фона
             MessageParticle.ParticleType type = (i % 2 == 0) ? MessageParticle.ParticleType.TEXT_COLOR : MessageParticle.ParticleType.BACKGROUND_COLOR;
