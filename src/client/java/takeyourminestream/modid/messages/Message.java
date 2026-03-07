@@ -22,6 +22,7 @@ public class Message {
     private Vec3d velocity = Vec3d.ZERO;
     // Отстающая базовая ориентация (yaw), вокруг которой вращается локальное смещение
     private float followBasisYaw;
+    private boolean pinned;
     
     public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch) {
         this(text, position, spawnTick, yaw, pitch, null, Vec3d.ZERO);
@@ -44,6 +45,7 @@ public class Message {
         this.targetOffsetFromEye = targetOffsetFromEye;
         this.followBasisYaw = 0.0f;
         this.previousPosition = position;
+        this.pinned = false;
     }
     
     public String getText() { 
@@ -83,6 +85,8 @@ public class Message {
     public Vec3d getPreviousPosition() { return previousPosition; }
     public float getPreviousYaw() { return previousYaw; }
     public float getPreviousPitch() { return previousPitch; }
+    public boolean isPinned() { return pinned; }
+    public void setPinned(boolean pinned) { this.pinned = pinned; }
     
     /**
      * Вычисляет эффективный возраст сообщения с учетом замороженного времени

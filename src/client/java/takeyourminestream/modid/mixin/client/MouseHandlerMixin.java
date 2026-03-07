@@ -13,6 +13,8 @@ import takeyourminestream.modid.messages.Message;
 import takeyourminestream.modid.messages.MessageClickHandler;
 import takeyourminestream.modid.TakeYourMineStreamClient;
 
+import java.util.ArrayList;
+
 /**
  * Mixin для обработки кликов по сообщениям
  */
@@ -21,20 +23,8 @@ public class MouseHandlerMixin {
     @Shadow @Final private MinecraftClient client;
     
     @Inject(method = "onMouseButton", at = @At("HEAD"), cancellable = true)
-    private void onMouseButton(long window, MouseInput mouseInput, int mods, CallbackInfo ci) {
+    private void onMouseButton(long window, MouseInput mouseInput, int action, CallbackInfo ci) {
         int button = ((MouseInputAccessor) (Object) mouseInput).getButton();
-        // В 1.21.10 action больше не передается, проверяем только button
-        int action = 1; // Предполагаем, что это нажатие
-        // Проверяем, включена ли функция удаления кликом
-        if (!takeyourminestream.modid.ModConfig.isENABLE_CLICK_TO_REMOVE()) {
-            return;
-        }
-        
-        // Проверяем только левую кнопку мыши (button == 0) и нажатие (action == 1)
-        if (button != 0 || action != 1) {
-            return;
-        }
-        
         // Проверяем, что игрок в игре
         if (client.player == null || client.world == null) {
             return;
@@ -55,9 +45,41 @@ public class MouseHandlerMixin {
         if (lifecycleManager == null) {
             return;
         }
+
+        if (button == 1) {
+            var interactionManager = messageSpawner.getPinnedInteractionManager();
+            if (interactionManager == null) {
+                return;
+            }
+
+            if (action == 1) {
+                if (interactionManager.onRightMousePressed(client)) {
+                    ci.cancel();
+                }
+                return;
+            }
+
+            if (action == 0) {
+                interactionManager.onRightMouseReleased();
+            }
+            return;
+        }
+
+        // Проверяем, включена ли функция удаления кликом
+        if (!takeyourminestream.modid.ModConfig.isENABLE_CLICK_TO_REMOVE()) {
+            return;
+        }
+
+        // Проверяем только левую кнопку мыши (button == 0) и нажатие (action == 1)
+        if (button != 0 || action != 1) {
+            return;
+        }
         
         // Проверяем каждое активное сообщение
-        for (Message message : lifecycleManager.getActiveMessages()) {
+        for (Message message : new ArrayList<>(lifecycleManager.getActiveMessages())) {
+            if (message.isPinned()) {
+                continue;
+            }
             if (MessageClickHandler.isClickOnMessage(client, message, lifecycleManager.getTickCounter())) {
                 // Удаляем сообщение с партиклами
                 lifecycleManager.removeMessageWithParticles(message, client);

@@ -10,14 +10,17 @@ import net.minecraft.util.math.MathHelper;
 public class MessageSpawner {
     private final MessageQueue messageQueue;
     private final MessageLifecycleManager lifecycleManager;
+    private final PinnedMessageInteractionManager pinnedInteractionManager;
     private volatile boolean paused = false;
     
     public MessageSpawner(MessageQueue messageQueue, MessageLifecycleManager lifecycleManager) {
         this.messageQueue = messageQueue;
         this.lifecycleManager = lifecycleManager;
+        this.pinnedInteractionManager = new PinnedMessageInteractionManager(lifecycleManager);
         
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player != null && client.world != null) {
+                pinnedInteractionManager.tick(client);
                 // Обновляем жизненный цикл существующих сообщений
                 lifecycleManager.updateMessages(client);
                 
@@ -92,6 +95,10 @@ public class MessageSpawner {
      */
     public MessageLifecycleManager getLifecycleManager() {
         return lifecycleManager;
+    }
+
+    public PinnedMessageInteractionManager getPinnedInteractionManager() {
+        return pinnedInteractionManager;
     }
     
     /**

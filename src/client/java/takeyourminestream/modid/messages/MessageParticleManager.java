@@ -40,11 +40,12 @@ public class MessageParticleManager {
         if (particles.isEmpty()) return;
         matrices.push();
         for (MessageParticle p : particles) {
-            float alpha = 1.0f;
-            // Без тонировки: рендерим текстуру как есть
-            float fr = 1.0f;
-            float fg = 1.0f;
-            float fb = 1.0f;
+            float lifeProgress = p.lifetimeTicks <= 0 ? 1.0f : (float)p.ageTicks / (float)p.lifetimeTicks;
+            lifeProgress = Math.max(0.0f, Math.min(1.0f, lifeProgress));
+            float alpha = 1.0f - (lifeProgress * lifeProgress);
+            float fr = p.color.getRed() / 255.0f;
+            float fg = p.color.getGreen() / 255.0f;
+            float fb = p.color.getBlue() / 255.0f;
             // Переводим мировые координаты в локальные относительно камеры
             double camX = client.gameRenderer.getCamera().getPos().getX();
             double camY = client.gameRenderer.getCamera().getPos().getY();
@@ -62,7 +63,6 @@ public class MessageParticleManager {
             float sz = p.size * 0.025f;
             // Получаем матрицу
             Matrix4f mat = matrices.peek().getPositionMatrix();
-            // Используем оригинальную текстуру партикла без сдвига цветов
             VertexConsumer consumer = consumers.getBuffer(RenderLayer.getEntityTranslucent(PARTICLE_TEXTURE));
             int light = 0xF000F0;
             int overlay = 0;
