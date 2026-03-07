@@ -3,6 +3,7 @@ package takeyourminestream.modid.messages;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import takeyourminestream.modid.utils.CameraPositionCompat;
 
 import java.util.ArrayList;
 
@@ -72,7 +73,7 @@ public class PinnedMessageInteractionManager {
             return;
         }
 
-        Vec3d cameraPos = client.gameRenderer.getCamera().getPos();
+        Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
         Vec3d lookVec = client.player.getRotationVec(1.0f).normalize();
         Vec3d newPos = cameraPos.add(lookVec.multiply(dragDistance));
         draggedMessage.setPosition(newPos);

@@ -27,6 +27,7 @@ import net.minecraft.client.util.BufferAllocator;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
+import takeyourminestream.modid.utils.CameraPositionCompat;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
@@ -77,7 +78,7 @@ public class CustomRenderPipeline implements ClientModInitializer {
     private void renderWaypoint(WorldRenderContext context) {
         MatrixStack matrices = context.matrices();
         MinecraftClient client = MinecraftClient.getInstance();
-        Vec3d camera = client.gameRenderer.getCamera().getPos();
+        Vec3d camera = CameraPositionCompat.getCameraPos(client);
 
         assert matrices != null;
         matrices.push();

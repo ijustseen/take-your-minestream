@@ -21,6 +21,8 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.util.math.Vec3d;
+import takeyourminestream.modid.utils.CameraPositionCompat;
+import takeyourminestream.modid.utils.RenderLayerCompat;
 
 /**
  * Отвечает за рендеринг сообщений в мире
@@ -102,10 +104,12 @@ public class MessageRenderer {
         SmoothingState state = smoothing.computeIfAbsent(message, m -> SmoothingState.fromMessage(m));
         state.updateTowards(message);
 
+        Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
+
         matrices.translate(
-            state.pos.x - client.gameRenderer.getCamera().getPos().getX(),
-            state.pos.y - client.gameRenderer.getCamera().getPos().getY(),
-            state.pos.z - client.gameRenderer.getCamera().getPos().getZ()
+            state.pos.x - cameraPos.getX(),
+            state.pos.y - cameraPos.getY(),
+            state.pos.z - cameraPos.getZ()
         );
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-state.yaw));
         matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(state.pitch));
@@ -207,7 +211,7 @@ public class MessageRenderer {
     private void renderPanel9Slice(MatrixStack matrices, int x, int y, int width, int height, float alpha, VertexConsumerProvider consumers, float red, float green, float blue) {
         if (width < PANEL_MIN) width = PANEL_MIN;
         if (height < PANEL_MIN) height = PANEL_MIN;
-        VertexConsumer consumer = consumers.getBuffer(net.minecraft.client.render.RenderLayer.getEntityTranslucent(PANEL_TEXTURE));
+        VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(PANEL_TEXTURE));
         Matrix4f mat = matrices.peek().getPositionMatrix();
         int x0 = x;
         int x1 = x + PANEL_CORNER;
@@ -275,7 +279,7 @@ public class MessageRenderer {
     }
 
     private void renderPinIcon(MatrixStack matrices, int panelWidth, VertexConsumerProvider consumers) {
-        VertexConsumer consumer = consumers.getBuffer(net.minecraft.client.render.RenderLayer.getEntityTranslucent(PIN_TEXTURE));
+        VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(PIN_TEXTURE));
         Matrix4f mat = matrices.peek().getPositionMatrix();
 
         int markerX = panelWidth - PANEL_PADDING_X - (PIN_ICON_SIZE / 2) + PIN_ICON_MARGIN;

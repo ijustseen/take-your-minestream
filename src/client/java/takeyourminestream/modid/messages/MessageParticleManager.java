@@ -11,6 +11,9 @@ import java.util.Iterator;
 import java.util.List;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
+import takeyourminestream.modid.utils.CameraPositionCompat;
+import takeyourminestream.modid.utils.RenderLayerCompat;
 
 public class MessageParticleManager {
     private final List<MessageParticle> particles = new ArrayList<>();
@@ -39,6 +42,7 @@ public class MessageParticleManager {
     public void render(MinecraftClient client, MatrixStack matrices, VertexConsumerProvider consumers) {
         if (particles.isEmpty()) return;
         matrices.push();
+        Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
         for (MessageParticle p : particles) {
             float lifeProgress = p.lifetimeTicks <= 0 ? 1.0f : (float)p.ageTicks / (float)p.lifetimeTicks;
             lifeProgress = Math.max(0.0f, Math.min(1.0f, lifeProgress));
@@ -47,12 +51,9 @@ public class MessageParticleManager {
             float fg = p.color.getGreen() / 255.0f;
             float fb = p.color.getBlue() / 255.0f;
             // Переводим мировые координаты в локальные относительно камеры
-            double camX = client.gameRenderer.getCamera().getPos().getX();
-            double camY = client.gameRenderer.getCamera().getPos().getY();
-            double camZ = client.gameRenderer.getCamera().getPos().getZ();
-            double x = p.position.x - camX;
-            double y = p.position.y - camY;
-            double z = p.position.z - camZ;
+            double x = p.position.x - cameraPos.getX();
+            double y = p.position.y - cameraPos.getY();
+            double z = p.position.z - cameraPos.getZ();
             matrices.push();
             matrices.translate(x, y, z);
             matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-p.yaw));
@@ -63,7 +64,7 @@ public class MessageParticleManager {
             float sz = p.size * 0.025f;
             // Получаем матрицу
             Matrix4f mat = matrices.peek().getPositionMatrix();
-            VertexConsumer consumer = consumers.getBuffer(RenderLayer.getEntityTranslucent(PARTICLE_TEXTURE));
+            VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(PARTICLE_TEXTURE));
             int light = 0xF000F0;
             int overlay = 0;
             consumer.vertex(mat, -sz/2, -sz/2, 0).color(fr, fg, fb, alpha).texture(0, 0).overlay(overlay).light(light).normal(0, 0, -1);

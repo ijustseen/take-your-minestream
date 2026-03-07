@@ -6,9 +6,7 @@
     "ExampleClientMixin",
     "GameRendererMixin",
     "MouseHandlerMixin",
-    "MouseInputAccessor",
-    "ClientPlayNetworkHandlerMixin",
-    "MinecraftClientMixin"
+    "MouseInputAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

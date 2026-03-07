@@ -5,6 +5,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
+import takeyourminestream.modid.utils.CameraPositionCompat;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -82,7 +83,7 @@ public class MessageClickHandler {
             return false;
         }
         
-        Vec3d cameraPos = client.gameRenderer.getCamera().getPos();
+        Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
         Vec3d messagePos = message.getPosition();
         double distance = cameraPos.distanceTo(messagePos);
         
@@ -106,7 +107,7 @@ public class MessageClickHandler {
             return null;
         }
 
-        Vec3d rayOrigin = client.gameRenderer.getCamera().getPos();
+        Vec3d rayOrigin = CameraPositionCompat.getCameraPos(client);
         Vec3d rayDir = client.player.getRotationVec(1.0f).normalize();
 
         Vec3d panelCenter = message.getPosition();

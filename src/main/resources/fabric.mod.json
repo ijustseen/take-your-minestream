@@ -14,10 +14,7 @@
   "environment": "*",
   "entrypoints": {
     "main": ["takeyourminestream.modid.TakeYourMineStream"],
-    "client": [
-      "takeyourminestream.modid.TakeYourMineStreamClient",
-      "takeyourminestream.modid.rendering.CustomRenderPipeline"
-    ]
+    "client": ["takeyourminestream.modid.TakeYourMineStreamClient"]
   },
   "mixins": [
     "take-your-minestream.mixins.json",

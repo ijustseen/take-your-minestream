@@ -1,6 +1,7 @@
 package takeyourminestream.modid;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import takeyourminestream.modid.messages.MessageSpawner;
 import takeyourminestream.modid.messages.PinnedMessageStore;
 import takeyourminestream.modid.utils.Logger;
@@ -15,6 +16,14 @@ public class WorldEventHandler {
      * @param messageSpawner система спавна сообщений
      */
     public static void register(MessageSpawner messageSpawner) {
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            onWorldJoin(messageSpawner);
+        });
+
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            onWorldLeave(messageSpawner);
+        });
+
         // При выходе из мира - ставим на паузу
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             if (messageSpawner != null) {
