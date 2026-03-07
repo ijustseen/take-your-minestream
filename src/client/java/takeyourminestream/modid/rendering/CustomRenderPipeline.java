@@ -63,7 +63,6 @@ public class CustomRenderPipeline implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         instance = this;
-        WorldRenderEvents.AFTER_ENTITIES.register(this::extractAndDrawWaypoint);
     }
 
     private void extractAndDrawWaypoint(WorldRenderContext context) {
