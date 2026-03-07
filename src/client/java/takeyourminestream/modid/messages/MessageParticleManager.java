@@ -4,7 +4,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.RenderLayer;
 import org.joml.Matrix4f;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -43,6 +42,11 @@ public class MessageParticleManager {
         if (particles.isEmpty()) return;
         matrices.push();
         Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
+        net.minecraft.client.render.RenderLayer particleLayer = RenderLayerCompat.tryGetEntityTextureLayer(PARTICLE_TEXTURE);
+        if (particleLayer == null) {
+            matrices.pop();
+            return;
+        }
         for (MessageParticle p : particles) {
             float lifeProgress = p.lifetimeTicks <= 0 ? 1.0f : (float)p.ageTicks / (float)p.lifetimeTicks;
             lifeProgress = Math.max(0.0f, Math.min(1.0f, lifeProgress));
@@ -64,7 +68,7 @@ public class MessageParticleManager {
             float sz = p.size * 0.025f;
             // Получаем матрицу
             Matrix4f mat = matrices.peek().getPositionMatrix();
-            VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(PARTICLE_TEXTURE));
+            VertexConsumer consumer = consumers.getBuffer(particleLayer);
             int light = 0xF000F0;
             int overlay = 0;
             consumer.vertex(mat, -sz/2, -sz/2, 0).color(fr, fg, fb, alpha).texture(0, 0).overlay(overlay).light(light).normal(0, 0, -1);

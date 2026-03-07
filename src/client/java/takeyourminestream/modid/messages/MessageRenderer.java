@@ -211,7 +211,11 @@ public class MessageRenderer {
     private void renderPanel9Slice(MatrixStack matrices, int x, int y, int width, int height, float alpha, VertexConsumerProvider consumers, float red, float green, float blue) {
         if (width < PANEL_MIN) width = PANEL_MIN;
         if (height < PANEL_MIN) height = PANEL_MIN;
-        VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(PANEL_TEXTURE));
+        RenderLayer panelLayer = RenderLayerCompat.tryGetEntityTextureLayer(PANEL_TEXTURE);
+        if (panelLayer == null) {
+            return;
+        }
+        VertexConsumer consumer = consumers.getBuffer(panelLayer);
         Matrix4f mat = matrices.peek().getPositionMatrix();
         int x0 = x;
         int x1 = x + PANEL_CORNER;
@@ -279,7 +283,11 @@ public class MessageRenderer {
     }
 
     private void renderPinIcon(MatrixStack matrices, int panelWidth, VertexConsumerProvider consumers) {
-        VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(PIN_TEXTURE));
+        RenderLayer pinLayer = RenderLayerCompat.tryGetEntityTextureLayer(PIN_TEXTURE);
+        if (pinLayer == null) {
+            return;
+        }
+        VertexConsumer consumer = consumers.getBuffer(pinLayer);
         Matrix4f mat = matrices.peek().getPositionMatrix();
 
         int markerX = panelWidth - PANEL_PADDING_X - (PIN_ICON_SIZE / 2) + PIN_ICON_MARGIN;
