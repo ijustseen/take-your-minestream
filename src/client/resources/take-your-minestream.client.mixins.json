@@ -1,10 +1,8 @@
 {
   "required": true,
-  "package": "takeyourminestream.modid.mixin.client",
+  "package": "takeyourminestream.ijustseen.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "ExampleClientMixin",
-    "GameRendererMixin",
     "MouseHandlerMixin",
     "MouseInputAccessor"
   ],

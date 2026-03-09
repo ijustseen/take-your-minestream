@@ -11,13 +11,11 @@
   },
   "license": "MIT",
   "icon": "assets/take-your-minestream/icon.png",
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
-    "main": ["takeyourminestream.modid.TakeYourMineStream"],
-    "client": ["takeyourminestream.modid.TakeYourMineStreamClient"]
+    "client": ["takeyourminestream.ijustseen.TakeYourMineStreamClient"]
   },
   "mixins": [
-    "take-your-minestream.mixins.json",
     {
       "config": "take-your-minestream.client.mixins.json",
       "environment": "client"

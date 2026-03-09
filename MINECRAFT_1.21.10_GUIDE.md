@@ -278,8 +278,8 @@ public class GameRendererMixin {
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.util.math.Vec3d;
-import takeyourminestream.modid.rendering.WaypointRenderer;
-import takeyourminestream.modid.rendering.WaypointRenderer.Waypoint;
+import takeyourminestream.ijustseen.rendering.WaypointRenderer;
+import takeyourminestream.ijustseen.rendering.WaypointRenderer.Waypoint;
 
 public class MyModClient implements ClientModInitializer {
     private WaypointRenderer waypointRenderer;
@@ -290,7 +290,7 @@ public class MyModClient implements ClientModInitializer {
 
         // Добавляем зеленый waypoint
         waypointRenderer.addWaypoint(
-            Waypoint.green(new Vec3d(0, 100, 0))
+                Waypoint.green(new Vec3d(0, 100, 0))
         );
 
         // Регистрируем рендеринг
@@ -387,8 +387,8 @@ public class MessageRenderer {
 
 ```json
 "client": [
-  "takeyourminestream.modid.TakeYourMineStreamClient"
-  // "takeyourminestream.modid.rendering.CustomRenderPipeline"
+  "takeyourminestream.ijustseen.TakeYourMineStreamClient"
+  // "takeyourminestream.ijustseen.rendering.CustomRenderPipeline"
 ]
 ```
 

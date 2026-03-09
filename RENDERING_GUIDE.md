@@ -37,17 +37,23 @@ You should see a green cube that renders through walls.
 
 ```java
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import takeyourminestream.modid.rendering.WaypointRenderer;
-import takeyourminestream.modid.rendering.WaypointRenderer.Waypoint;
+import takeyourminestream.ijustseen.rendering.WaypointRenderer;
+import takeyourminestream.ijustseen.rendering.WaypointRenderer.Waypoint;
 
 WaypointRenderer renderer = new WaypointRenderer();
 
 // Add a green waypoint
-renderer.addWaypoint(Waypoint.green(new Vec3d(0, 100, 0)));
+renderer.
+
+addWaypoint(Waypoint.green(new Vec3d(0, 100,0)));
 
 // Register rendering
-WorldRenderEvents.AFTER_ENTITIES.register(context -> {
-    renderer.render(context);
+        WorldRenderEvents.AFTER_ENTITIES.
+
+register(context ->{
+        renderer.
+
+render(context);
 });
 ```
 
@@ -88,8 +94,8 @@ If you don't want the test waypoint, edit `fabric.mod.json`:
 
 ```json
 "client": [
-  "takeyourminestream.modid.TakeYourMineStreamClient"
-  // "takeyourminestream.modid.rendering.CustomRenderPipeline"
+  "takeyourminestream.ijustseen.TakeYourMineStreamClient"
+  // "takeyourminestream.ijustseen.rendering.CustomRenderPipeline"
 ]
 ```
 
