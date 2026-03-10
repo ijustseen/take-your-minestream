@@ -184,7 +184,7 @@ public class MessageClickHandler {
             return null;
         }
 
-        return new MessageHit(message, t, insidePinIcon);
+        return new MessageHit(message, t, true);
     }
 
     private static Vec3d rotateY(Vec3d v, double angleRad) {
