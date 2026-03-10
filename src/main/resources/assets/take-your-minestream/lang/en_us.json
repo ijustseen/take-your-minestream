@@ -69,5 +69,6 @@
   "takeyourminestream.twitch.error.disconnect": "Error disconnecting from Twitch: %s",
   "takeyourminestream.twitch.error.reconnect": "Error reconnecting to Twitch: %s",
   "key.takeyourminestream.openconfig": "Open MineStream Settings",
+  "key.takeyourminestream.openconfig": "Start And Stop Messages",
   "category.takeyourminestream.general": "Take Your MineStream"
 }
