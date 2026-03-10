@@ -77,6 +77,9 @@ public class ConfigManager implements IConfigManager {
     @Override
     public void setConfigValue(String key, Object value) {
         switch (key) {
+            case "chanceForSpawn":
+                configData.setChanceForSpawn((Integer) value);
+                break;
             case "twitchChannelName":
                 configData.setTwitchChannelName((String) value);
                 break;
@@ -129,6 +132,7 @@ public class ConfigManager implements IConfigManager {
 
     private void updateConfigCache() {
         configCache.clear();
+        configCache.put("chanceForSpawn", configData.getChanceForSpawn());
         configCache.put("twitchChannelName", configData.getTwitchChannelName());
         configCache.put("messageLifetimeTicks", configData.getMessageLifetimeTicks());
         configCache.put("messageFallTicks", configData.getMessageFallTicks());

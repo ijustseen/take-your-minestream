@@ -1,5 +1,7 @@
 {
   "takeyourminestream.config.title": "MineStream Settings",
+  "takeyourminestream.config.chance_for_spawn": "Spawn Chance",
+  "takeyourminestream.config.chance_for_spawn.desc": "Chance to a message to spawn",
   "takeyourminestream.config.channel_name": "Twitch Channel Name:",
   "takeyourminestream.config.message_lifetime_seconds": "Message Lifetime (sec):",
   "takeyourminestream.config.message_lifetime_seconds.desc": "How long messages stay visible (in seconds)",

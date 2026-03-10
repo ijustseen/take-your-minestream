@@ -165,6 +165,21 @@ public class ModConfigScreen extends Screen {
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(regexpButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.regexps", "takeyourminestream.config.regexps.desc", ConfigEntryType.BUTTON, regexpButton, ConfigCategory.GENERAL));
+
+        TextFieldWidget chanceForSpawnField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.chance_for_spawn"));
+        chanceForSpawnField.setText(ConfigManager.getInstance().getConfigValue("chanceForSpawn").toString());
+        chanceForSpawnField.setChangedListener(s -> {
+            if (s.matches("\\d+")) {
+                try {
+                    int value = Integer.parseInt(s);
+                    if (0 <= value && value <= 100) {
+                        ConfigManager.getInstance().setConfigValue("chanceForSpawn", value);
+                    }
+                } catch (Exception ignored) {}
+            }
+        });
+        this.addDrawableChild(chanceForSpawnField);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.chance_for_spawn", "takeyourminestream.config.chance_for_spawn.desc", ConfigEntryType.TEXT_FIELD, chanceForSpawnField, ConfigCategory.GENERAL));
         
         // Настройки сообщений
         TextFieldWidget messageLifetimeField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.message_lifetime_seconds"));

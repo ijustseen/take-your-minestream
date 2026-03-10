@@ -24,11 +24,9 @@ public class ModConfigData {
     private boolean followPlayer = false;
     private boolean enableClickToRemove = true;
     private int chanceForSpawn = 100;
-    private String[] regexps = {};
 
     // Геттеры
     public int getChanceForSpawn() { return chanceForSpawn; }
-    public String[] getRegexps() { return regexps; }
     public String getTwitchChannelName() { return twitchChannelName; }
     public int getMessageLifetimeTicks() { return messageLifetimeTicks; }
     public int getMessageFallTicks() { return messageFallTicks; }
@@ -48,6 +46,7 @@ public class ModConfigData {
     public boolean isEnableClickToRemove() { return enableClickToRemove; }
 
     // Сеттеры
+    public void setChanceForSpawn(int chanceForSpawn) { this.chanceForSpawn = chanceForSpawn; }
     public void setTwitchChannelName(String twitchChannelName) { this.twitchChannelName = twitchChannelName; }
     public void setMessageLifetimeTicks(int messageLifetimeTicks) { this.messageLifetimeTicks = messageLifetimeTicks; }
     public void setMessageFallTicks(int messageFallTicks) { this.messageFallTicks = messageFallTicks; }
