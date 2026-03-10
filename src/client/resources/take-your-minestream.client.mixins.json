@@ -4,7 +4,10 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "MouseHandlerMixin",
-    "MouseInputAccessor"
+    "MouseInputAccessor",
+    "emoticon.EmoticonGlyphAccessor",
+    "emoticon.EmoticonGlyphMixin",
+    "emoticon.StreamotesMSGMixin"
   ],
   "injectors": {
     "defaultRequire": 1

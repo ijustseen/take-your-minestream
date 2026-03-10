@@ -1,10 +1,13 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 import net.minecraft.text.OrderedText;
 import takeyourminestream.ijustseen.ModConfig;
@@ -16,6 +19,7 @@ import net.minecraft.util.Identifier;
 import org.joml.Matrix4f;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.util.math.Vec3d;
+import takeyourminestream.ijustseen.filtering.StreamoteRenderer;
 import takeyourminestream.ijustseen.utils.CameraPositionCompat;
 import takeyourminestream.ijustseen.utils.RenderLayerCompat;
 
@@ -115,7 +119,11 @@ public class MessageRenderer {
         float finalScale = baseScale * configScale;
         matrices.scale(finalScale, -finalScale, finalScale);
 
-        List<OrderedText> wrappedText = textRenderer.wrapLines(Text.of(message.getText()), 120);
+        StringVisitable mutableText = Text.literal(message.getText());
+        if (FabricLoader.getInstance().isModLoaded("streamotes")) {
+            mutableText = StreamoteRenderer.emotifyIfPossible(mutableText);
+        }
+        List<OrderedText> wrappedText = textRenderer.wrapLines(mutableText, 120);
         float totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
         // Найти максимальную ширину среди всех строк
         int maxTextWidth = 0;
@@ -126,26 +134,26 @@ public class MessageRenderer {
         int panelWidth = maxTextWidth + PANEL_PADDING_X * 2;
         int panelHeight = (int)totalTextHeight + PANEL_PADDING_Y * 2;
         // Центрируем текст и панель + применяем падение
-        matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0);
+        matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
         // Рендерим панель (по флагу)
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
             renderPanel9Slice(matrices, -PANEL_PADDING_X, -PANEL_PADDING_Y, panelWidth, panelHeight, 1.0f, consumers, 1.0f, 1.0f, 1.0f);
         }
+        matrices.translate(0f, 0f, 0.1f);
         // Рендерим текст
         for (int i = 0; i < wrappedText.size(); i++) {
-            int alphaInt = 0xFF << 24;
-            int color = (0xFFFFFF) | alphaInt;
-            textRenderer.draw(wrappedText.get(i),
-                              0.0F,
-                              (float)i * textRenderer.fontHeight,
-                             color,
-                              true,
-                              matrices.peek().getPositionMatrix(),
-                              consumers,
-                              TextRenderer.TextLayerType.POLYGON_OFFSET,
-                              0,
-                              0xF000F0
-                              );
+            textRenderer.draw(
+                    wrappedText.get(i),
+                    0.0F,
+                    (float)i * textRenderer.fontHeight,
+                    0xFFFFFFFF,
+                    true,
+                    matrices.peek().getPositionMatrix(),
+                    consumers,
+                    TextRenderer.TextLayerType.NORMAL,
+                    0,
+                    0xFFFFFF
+            );
         }
         if (message.isPinned()) {
             renderPinIcon(matrices, panelWidth, consumers);
