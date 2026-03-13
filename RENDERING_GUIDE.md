@@ -1,155 +1,54 @@
-# Custom Rendering Guide for Minecraft 1.21.7
+# Rendering Guide (current branch: 1.21.7 / 1.21.8)
 
-## Quick Start
+This document describes the rendering flow that is actually used in the current codebase.
 
-### Test the example waypoint
+## Scope
 
-```bash
-./gradlew runClient
-# In game: /tp 0 100 0
-```
+- 3D world rendering for chat messages
+- HUD rendering path
+- Emote rendering (Twitch + 7TV via internal cache/providers)
+- Click hit detection for message interaction
 
-You should see a green cube that renders through walls.
+## Main entry points
 
-## What was added
+- `MessageRenderer` renders world messages and panel/background visuals.
+- `MessageHudRenderer` renders HUD mode.
+- `MessageClickHandler` resolves hit detection for clicks and pin interactions.
+- `TwitchEmoteTextureCache` handles emote texture loading/caching.
+- `SevenTVEmoteProvider` resolves 7TV emotes by code.
 
-### New files
+## Render flow
 
-1. **CustomRenderPipeline.java** - Basic example from Fabric docs
+1. New messages are queued by `MessageQueue`.
+2. `MessageSpawner` creates `Message` entities with position, orientation, and optional emote metadata.
+3. `MessageLifecycleManager` updates age, freeze logic, and cleanup.
+4. `MessageRenderer` draws world-space text panels and emotes each frame.
+5. Optional pin/click logic is applied through `MessageClickHandler` and `PinnedMessageInteractionManager`.
 
-   - Renders a green cube at (0, 100, 0)
-   - Renders through walls (NO_DEPTH_TEST)
-   - Demonstrates extraction/drawing phases
+## Emote rendering flow
 
-2. **WaypointRenderer.java** - Full-featured renderer
+1. Twitch IRC tags are parsed in `TwitchChatClient`.
+2. Twitch emotes are converted into `MessageEmote` ranges.
+3. 7TV scan augments the same line with extra emote ranges.
+4. Texture preloading is triggered via `TwitchEmoteTextureCache.preload(...)`.
+5. `MessageRenderer` draws either glyph text segments or textured emote quads.
 
-   - Support for multiple waypoints
-   - Different colors and sizes
-   - Ready to use in your project
+## Important implementation notes
 
-3. **GameRendererMixin.java** - Resource cleanup
-   - Prevents GPU memory leaks
-   - Called when GameRenderer closes
-
-## Usage Examples
-
-### Basic - Single waypoint
-
-```java
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import takeyourminestream.modid.rendering.WaypointRenderer;
-import takeyourminestream.modid.rendering.WaypointRenderer.Waypoint;
-
-WaypointRenderer renderer = new WaypointRenderer();
-
-// Add a green waypoint
-renderer.addWaypoint(Waypoint.green(new Vec3d(0, 100, 0)));
-
-// Register rendering
-WorldRenderEvents.AFTER_ENTITIES.register(context -> {
-    renderer.render(context);
-});
-```
-
-### Multiple waypoints
-
-```java
-renderer.addWaypoint(Waypoint.green(new Vec3d(0, 100, 0)));
-renderer.addWaypoint(Waypoint.red(new Vec3d(10, 100, 10)));
-renderer.addWaypoint(Waypoint.blue(new Vec3d(-10, 100, -10)));
-
-// Custom waypoint
-renderer.addWaypoint(new Waypoint(
-    new Vec3d(20, 100, 20),  // position
-    1f, 1f, 0f,              // yellow (RGB)
-    0.7f,                    // alpha
-    2f                       // size in blocks
-));
-```
-
-### Dynamic waypoints
-
-```java
-WorldRenderEvents.AFTER_ENTITIES.register(context -> {
-    renderer.clearWaypoints();
-
-    // Add waypoints for active messages
-    for (Message msg : activeMessages) {
-        renderer.addWaypoint(Waypoint.green(msg.getPosition()));
-    }
-
-    renderer.render(context);
-});
-```
-
-## Disable test waypoint
-
-If you don't want the test waypoint, edit `fabric.mod.json`:
-
-```json
-"client": [
-  "takeyourminestream.modid.TakeYourMineStreamClient"
-  // "takeyourminestream.modid.rendering.CustomRenderPipeline"
-]
-```
-
-## How it works
-
-### Two-phase rendering
-
-1. **Extraction** - Collect data for rendering
-   - Call `VertexRendering.drawFilledBox()`
-   - Write vertices to BufferBuilder
-2. **Drawing** - Render to screen
-   - Build the buffer
-   - Upload to GPU
-   - Execute draw call
-
-This allows rendering the previous frame in parallel with extracting the next frame.
-
-### Custom pipeline
-
-```java
-private static final RenderPipeline MY_PIPELINE = RenderPipelines.register(
-    RenderPipeline.builder(RenderPipelines.POSITION_COLOR_SNIPPET)
-        .withLocation(Identifier.of("mod-id", "pipeline/my_pipeline"))
-        .withVertexFormat(VertexFormats.POSITION_COLOR, DrawMode.TRIANGLE_STRIP)
-        .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-        .build()
-);
-```
-
-### Resource cleanup
-
-**IMPORTANT:** Always clean up resources!
-
-```java
-public void close() {
-    allocator.close();
-    if (vertexBuffer != null) {
-        vertexBuffer.close();
-        vertexBuffer = null;
-    }
-}
-```
-
-The GameRendererMixin calls this automatically.
-
-## Performance tips
-
-1. Reuse BufferBuilder (don't create new each frame)
-2. Use MappableRingBuffer for automatic buffer management
-3. Group objects by pipeline
-4. Clear unused waypoints
+- No external Streamotes dependency is required in this branch.
+- The old experimental waypoint/custom pipeline files are not part of the active render path.
+- Message panel/background uses the internal texture-based panel rendering.
+- View-freeze and click hitboxes are computed against actual message plane/size.
 
 ## Compatibility
 
-- ✅ Minecraft 1.21.7
-- ✅ Fabric Loader 0.16.14+
-- ✅ Fabric API 0.129.0+
-- ✅ Java 21
+- Minecraft: 1.21.7 / 1.21.8
+- Fabric Loader: 0.16.14+
+- Fabric API: 0.129.0+
+- Java: 21
 
-## Links
+## Debug checklist
 
-- [Fabric Rendering Documentation](https://docs.fabricmc.net/develop/rendering/world)
-- [Rendering Concepts](https://docs.fabricmc.net/develop/rendering/basic-concepts)
+- Emotes missing: verify provider parsing and texture preload path.
+- Click misses: verify message orientation and hitbox math in `MessageClickHandler`.
+- Disappearing messages: verify lifetime/freeze settings in `ModConfig`.

@@ -1,5 +1,7 @@
 {
   "takeyourminestream.config.title": "MineStream Settings",
+  "takeyourminestream.config.chance_for_spawn": "Spawn Chance",
+  "takeyourminestream.config.chance_for_spawn.desc": "Chance to a message to spawn",
   "takeyourminestream.config.channel_name": "Twitch Channel Name:",
   "takeyourminestream.config.message_lifetime_seconds": "Message Lifetime (sec):",
   "takeyourminestream.config.message_lifetime_seconds.desc": "How long messages stay visible (in seconds)",
@@ -23,10 +25,14 @@
   "takeyourminestream.config.scale_large": "Large",
   "takeyourminestream.config.scale_huge": "Huge",
   "takeyourminestream.config.message_history": "Message History",
+  "takeyourminestream.config.regexps": "Regexps",
+  "takeyourminestream.config.regexps.desc": "Open regexps management screen",
   "takeyourminestream.config.banwords": "Banwords",
   "takeyourminestream.config.banwords.desc": "Open banwords management screen",
   "takeyourminestream.config.banwords_config": "Config",
+  "takeyourminestream.config.regexps_config": "Config",
   "takeyourminestream.banwords.title": "Manage Banwords",
+  "takeyourminestream.regexps.title": "Manage Banwords",
   "takeyourminestream.banwords.input": "Enter word",
   "takeyourminestream.banwords.add": "Add",
   "takeyourminestream.banwords.show": "Show",
@@ -69,5 +75,6 @@
   "takeyourminestream.twitch.error.disconnect": "Error disconnecting from Twitch: %s",
   "takeyourminestream.twitch.error.reconnect": "Error reconnecting to Twitch: %s",
   "key.takeyourminestream.openconfig": "Open MineStream Settings",
+  "key.takeyourminestream.openconfig": "Start And Stop Messages",
   "category.takeyourminestream.general": "Take Your MineStream"
 }
