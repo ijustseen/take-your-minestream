@@ -10,9 +10,11 @@ public class MessageQueue {
     public static class QueuedMessage {
         public final String text;
         public final Integer authorColorRgb; // может быть null
-        public QueuedMessage(String text, Integer authorColorRgb) {
+        public final java.util.List<MessageEmote> emotes;
+        public QueuedMessage(String text, Integer authorColorRgb, java.util.List<MessageEmote> emotes) {
             this.text = text;
             this.authorColorRgb = authorColorRgb;
+            this.emotes = emotes == null ? java.util.Collections.emptyList() : java.util.List.copyOf(emotes);
         }
     }
 
@@ -25,11 +27,15 @@ public class MessageQueue {
      * @param message текст сообщения
      */
     public void enqueueMessage(String message) {
-        messageQueue.offer(new QueuedMessage(message, null));
+        messageQueue.offer(new QueuedMessage(message, null, java.util.Collections.emptyList()));
     }
 
     public void enqueueMessage(String message, Integer authorColorRgb) {
-        messageQueue.offer(new QueuedMessage(message, authorColorRgb));
+        messageQueue.offer(new QueuedMessage(message, authorColorRgb, java.util.Collections.emptyList()));
+    }
+
+    public void enqueueMessage(String message, Integer authorColorRgb, java.util.List<MessageEmote> emotes) {
+        messageQueue.offer(new QueuedMessage(message, authorColorRgb, emotes));
     }
     
     /**

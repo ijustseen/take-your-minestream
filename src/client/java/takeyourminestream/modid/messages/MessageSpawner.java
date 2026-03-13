@@ -3,6 +3,7 @@ package takeyourminestream.modid.messages;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.sound.SoundEvents;
 
 /**
  * Отвечает за спавн новых сообщений из очереди
@@ -36,7 +37,7 @@ public class MessageSpawner {
                         if (spawnMode == takeyourminestream.modid.config.MessageSpawnMode.HUD_WIDGET) {
                             // Для HUD режима создаем сообщение с нулевой позицией
                             var position = net.minecraft.util.math.Vec3d.ZERO;
-                            var message = new Message(messageText, position, lifecycleManager.getTickCounter(), 0, 0, authorColor);
+                            var message = new Message(messageText, position, lifecycleManager.getTickCounter(), 0, 0, authorColor, net.minecraft.util.math.Vec3d.ZERO, queued.emotes);
                             lifecycleManager.addMessage(message);
                         } else {
                             // Для 3D режимов генерируем позицию в пространстве
@@ -53,7 +54,7 @@ public class MessageSpawner {
                             float pitch = (float)-(MathHelper.atan2(dy, distXZ) * (180.0 / Math.PI));
                             // Фиксированное мировое смещение от глаз игрока (НЕ зависит от взгляда)
                             var worldOffset = position.subtract(playerEyePos);
-                            var message = new Message(messageText, position, lifecycleManager.getTickCounter(), yaw, pitch, authorColor, worldOffset);
+                            var message = new Message(messageText, position, lifecycleManager.getTickCounter(), yaw, pitch, authorColor, worldOffset, queued.emotes);
                             lifecycleManager.addMessage(message);
                         }
                     }
@@ -74,6 +75,7 @@ public class MessageSpawner {
         } else {
             // Добавляем сообщение в очередь
             messageQueue.enqueueMessage(message);
+            playNewMessageSound();
         }
     }
 
@@ -85,8 +87,43 @@ public class MessageSpawner {
             // Не добавляем сообщения, если система на паузе
             if (!paused) {
                 messageQueue.enqueueMessage(message, authorColorRgb);
+                playNewMessageSound();
             }
         }
+    }
+
+    public void setCurrentMessage(String message, Integer authorColorRgb, java.util.List<MessageEmote> emotes) {
+        if (message.isEmpty()) {
+            messageQueue.clear();
+            lifecycleManager.clearAllMessages();
+        } else {
+            if (!paused) {
+                messageQueue.enqueueMessage(message, authorColorRgb, emotes);
+                playNewMessageSound();
+            }
+        }
+    }
+
+    private void playNewMessageSound() {
+        if (!takeyourminestream.modid.ModConfig.isENABLE_MESSAGE_SOUND()) {
+            return;
+        }
+
+        float volume = (float) MathHelper.clamp(takeyourminestream.modid.ModConfig.getMESSAGE_SOUND_VOLUME(), 0.0, 1.0);
+        if (volume <= 0.0f) {
+            return;
+        }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null) {
+            return;
+        }
+
+        client.execute(() -> {
+            if (client.player != null) {
+                client.player.playSound(SoundEvents.BLOCK_NOTE_BLOCK_PLING.value(), volume, 1.25f);
+            }
+        });
     }
     
     /**

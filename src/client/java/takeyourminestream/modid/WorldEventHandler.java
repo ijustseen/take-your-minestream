@@ -41,6 +41,14 @@ public class WorldEventHandler {
                 Logger.info("Система сообщений снята с паузы (вход в мир)");
             }
             PinnedMessageStore.loadForCurrentWorld(messageSpawner.getLifecycleManager());
+
+            var app = TakeYourMineStreamClient.getInstance();
+            if (ModConfig.isAUTO_CONNECT_IRC_ON_JOIN()
+                && app != null
+                && app.getTwitchManager() != null
+                && !app.getTwitchManager().isConnected()) {
+                app.getTwitchManager().connect(messageSpawner);
+            }
         }
     }
     

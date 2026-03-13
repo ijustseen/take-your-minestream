@@ -5,6 +5,8 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -19,6 +21,8 @@ public class MessageClickHandler {
     private static final int PANEL_PADDING_Y = 4;
     private static final int PIN_ICON_SIZE = 8;
     private static final int PIN_ICON_MARGIN = 1;
+    private static final int EMOTE_ICON_SIZE = 12;
+    private static final int EMOTE_ICON_SPACING = 1;
 
     public static final class MessageHit {
         private final Message message;
@@ -126,11 +130,19 @@ public class MessageClickHandler {
         }
 
         TextRenderer textRenderer = client.textRenderer;
-        List<OrderedText> wrappedText = textRenderer.wrapLines(Text.of(message.getText()), 120);
-        float totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
-        int maxTextWidth = 0;
-        for (OrderedText line : wrappedText) {
-            maxTextWidth = Math.max(maxTextWidth, textRenderer.getWidth(line));
+        boolean hasEmotes = !message.getEmotes().isEmpty();
+        float totalTextHeight;
+        int maxTextWidth;
+        if (hasEmotes) {
+            totalTextHeight = textRenderer.fontHeight;
+            maxTextWidth = getEmoteAwareLineWidth(textRenderer, message.getText(), message.getEmotes());
+        } else {
+            List<OrderedText> wrappedText = textRenderer.wrapLines(Text.of(message.getText()), 120);
+            totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
+            maxTextWidth = 0;
+            for (OrderedText line : wrappedText) {
+                maxTextWidth = Math.max(maxTextWidth, textRenderer.getWidth(line));
+            }
         }
 
         int panelWidth = maxTextWidth + PANEL_PADDING_X * 2;
@@ -141,15 +153,26 @@ public class MessageClickHandler {
         double rectWidth = panelWidth * finalScale;
         double rectHeight = panelHeight * finalScale;
 
-        Vec3d localOrigin = rayOrigin.subtract(panelCenter);
-        Vec3d localDir = rayDir;
+        Matrix4f worldFromLocal = new Matrix4f()
+            .translation((float) panelCenter.x, (float) panelCenter.y, (float) panelCenter.z)
+            .rotateY((float) Math.toRadians(-message.getYaw()))
+            .rotateX((float) Math.toRadians(message.getPitch()));
+        Matrix4f localFromWorld = new Matrix4f(worldFromLocal).invert();
 
-        double yawRad = Math.toRadians(message.getYaw());
-        double pitchRad = Math.toRadians(message.getPitch());
-        localOrigin = rotateX(localOrigin, -pitchRad);
-        localOrigin = rotateY(localOrigin, +yawRad);
-        localDir = rotateX(localDir, -pitchRad);
-        localDir = rotateY(localDir, +yawRad);
+        Vector3f localOriginV = localFromWorld.transformPosition(
+            new Vector3f((float) rayOrigin.x, (float) rayOrigin.y, (float) rayOrigin.z)
+        );
+        Vec3d rayEnd = rayOrigin.add(rayDir);
+        Vector3f localRayEndV = localFromWorld.transformPosition(
+            new Vector3f((float) rayEnd.x, (float) rayEnd.y, (float) rayEnd.z)
+        );
+
+        Vec3d localOrigin = new Vec3d(localOriginV.x, localOriginV.y, localOriginV.z);
+        Vec3d localDir = new Vec3d(
+            localRayEndV.x - localOriginV.x,
+            localRayEndV.y - localOriginV.y,
+            localRayEndV.z - localOriginV.z
+        ).normalize();
 
         double denom = localDir.z;
         if (Math.abs(denom) < 1e-6) {
@@ -162,21 +185,28 @@ public class MessageClickHandler {
         }
 
         Vec3d hitLocal = localOrigin.add(localDir.multiply(t));
-        boolean insidePanel = Math.abs(hitLocal.x) <= rectWidth / 2.0 && Math.abs(hitLocal.y) <= rectHeight / 2.0;
+
+        // Переводим попадание из world-local в "пиксельные" координаты панели,
+        // используя те же формулы, что и в MessageRenderer (включая инверсию Y).
+        double textSpaceX = (hitLocal.x / finalScale) + (maxTextWidth / 2.0);
+        double textSpaceY = (-hitLocal.y / finalScale) + (totalTextHeight / 2.0);
+
+        double panelX0 = -PANEL_PADDING_X;
+        double panelY0 = -PANEL_PADDING_Y;
+        double panelX1 = panelX0 + panelWidth;
+        double panelY1 = panelY0 + panelHeight;
+
+        boolean insidePanel = textSpaceX >= panelX0 && textSpaceX <= panelX1
+            && textSpaceY >= panelY0 && textSpaceY <= panelY1;
         boolean insidePinIcon = false;
         if (message.isPinned()) {
-            double iconCenterX = rectWidth / 2.0 + PIN_ICON_MARGIN * finalScale;
-            double iconCenterYTop = -rectHeight / 2.0 - PIN_ICON_MARGIN * finalScale;
-            double iconCenterYBottom = rectHeight / 2.0 + PIN_ICON_MARGIN * finalScale;
-            double hitRadius = PIN_ICON_SIZE * finalScale * 0.9;
+            double pinX0 = panelWidth - PANEL_PADDING_X - (PIN_ICON_SIZE / 2.0) + PIN_ICON_MARGIN;
+            double pinY0 = -PANEL_PADDING_Y - (PIN_ICON_SIZE / 2.0) - PIN_ICON_MARGIN;
+            double pinX1 = pinX0 + PIN_ICON_SIZE;
+            double pinY1 = pinY0 + PIN_ICON_SIZE;
 
-            double dxTop = hitLocal.x - iconCenterX;
-            double dyTop = hitLocal.y - iconCenterYTop;
-            double dxBottom = hitLocal.x - iconCenterX;
-            double dyBottom = hitLocal.y - iconCenterYBottom;
-
-            insidePinIcon = (dxTop * dxTop + dyTop * dyTop) <= (hitRadius * hitRadius)
-                || (dxBottom * dxBottom + dyBottom * dyBottom) <= (hitRadius * hitRadius);
+            insidePinIcon = textSpaceX >= pinX0 && textSpaceX <= pinX1
+                && textSpaceY >= pinY0 && textSpaceY <= pinY1;
         }
 
         if (!insidePanel && !insidePinIcon) {
@@ -186,19 +216,23 @@ public class MessageClickHandler {
         return new MessageHit(message, t, insidePinIcon);
     }
 
-    private static Vec3d rotateY(Vec3d v, double angleRad) {
-        double cos = Math.cos(angleRad);
-        double sin = Math.sin(angleRad);
-        double x = v.x * cos + v.z * sin;
-        double z = -v.x * sin + v.z * cos;
-        return new Vec3d(x, v.y, z);
-    }
-
-    private static Vec3d rotateX(Vec3d v, double angleRad) {
-        double cos = Math.cos(angleRad);
-        double sin = Math.sin(angleRad);
-        double y = v.y * cos - v.z * sin;
-        double z = v.y * sin + v.z * cos;
-        return new Vec3d(v.x, y, z);
+    private static int getEmoteAwareLineWidth(TextRenderer textRenderer, String text, java.util.List<MessageEmote> emotes) {
+        int width = 0;
+        int cursor = 0;
+        java.util.List<MessageEmote> sorted = new java.util.ArrayList<>(emotes);
+        sorted.sort(Comparator.comparingInt(MessageEmote::getStartIndex));
+        for (MessageEmote emote : sorted) {
+            if (emote.getStartIndex() < 0 || emote.getEndIndex() < emote.getStartIndex() || emote.getEndIndex() >= text.length()) continue;
+            if (emote.getStartIndex() < cursor) continue;
+            if (emote.getStartIndex() > cursor) {
+                width += textRenderer.getWidth(text.substring(cursor, emote.getStartIndex()));
+            }
+            width += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
+            cursor = emote.getEndIndex() + 1;
+        }
+        if (cursor < text.length()) {
+            width += textRenderer.getWidth(text.substring(cursor));
+        }
+        return width;
     }
 }

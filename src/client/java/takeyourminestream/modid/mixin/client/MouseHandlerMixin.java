@@ -51,6 +51,10 @@ public class MouseHandlerMixin {
             }
 
             if (action == 1) {
+                // Разрешаем интеракцию с сообщениями только с пустой главной рукой
+                if (!client.player.getMainHandStack().isEmpty()) {
+                    return;
+                }
                 if (interactionManager.onRightMousePressed(client)) {
                     ci.cancel();
                 }
@@ -70,6 +74,11 @@ public class MouseHandlerMixin {
 
         // Проверяем только левую кнопку мыши (button == 0) и нажатие (action == 1)
         if (button != 0 || action != 1) {
+            return;
+        }
+
+        // Разрешаем удаление сообщений только с пустой главной рукой
+        if (!client.player.getMainHandStack().isEmpty()) {
             return;
         }
         

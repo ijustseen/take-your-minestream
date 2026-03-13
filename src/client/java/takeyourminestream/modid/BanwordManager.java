@@ -22,7 +22,19 @@ public class BanwordManager implements IBanwordManager {
     private static final Logger LOGGER = Logger.getLogger(BanwordManager.class.getName());
     private static final String RESOURCE_PATH = "/assets/take-your-minestream/banned_words.json";
     private static final String USER_FILE_NAME = "take-your-minestream-banwords.json";
+    private static final Path USER_FILE_PATH;
     private static BanwordManager instance;
+
+    static {
+        Path newPath = StoragePaths.getModRootDir().resolve(USER_FILE_NAME);
+        Path legacyPath = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);
+        try {
+            StoragePaths.ensureModRootDir();
+        } catch (Exception ignored) {
+        }
+        StoragePaths.migrateFileIfNeeded(legacyPath, newPath);
+        USER_FILE_PATH = newPath;
+    }
     
     private final Set<String> banwords = new HashSet<>();
 
@@ -55,7 +67,7 @@ public class BanwordManager implements IBanwordManager {
 
         // Загрузка пользовательского файла и слияние
         try {
-            Path userFile = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);
+            Path userFile = USER_FILE_PATH;
             if (Files.exists(userFile)) {
                 try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(userFile), StandardCharsets.UTF_8)) {
                     Type listType = new TypeToken<List<String>>(){}.getType();
@@ -135,7 +147,8 @@ public class BanwordManager implements IBanwordManager {
 
     private void saveUserBanwords() {
         try {
-            Path userFile = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);
+            Path userFile = USER_FILE_PATH;
+            Files.createDirectories(userFile.getParent());
             List<String> list = banwords.stream().sorted().toList();
             try (BufferedWriter writer = Files.newBufferedWriter(userFile, StandardCharsets.UTF_8)) {
                 new Gson().toJson(list, writer);

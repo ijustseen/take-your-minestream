@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -19,7 +20,22 @@ import java.util.logging.Logger;
 public class ConfigManager implements IConfigManager {
     private static final Logger LOGGER = Logger.getLogger(ConfigManager.class.getName());
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final File CONFIG_FILE = new File(FabricLoader.getInstance().getConfigDir().toFile(), "take-your-minestream.json");
+    private static final File CONFIG_FILE;
+
+    static {
+        Path modRoot = StoragePaths.getModRootDir();
+        Path newConfigPath = modRoot.resolve("take-your-minestream.json");
+        Path legacyConfigPath = FabricLoader.getInstance().getConfigDir().resolve("take-your-minestream.json");
+        Path legacyConfigInFolder = StoragePaths.getLegacyModRootDir().resolve("take-your-minestream.json");
+
+        try {
+            StoragePaths.ensureModRootDir();
+        } catch (IOException ignored) {
+        }
+        StoragePaths.migrateFileIfNeeded(legacyConfigPath, newConfigPath);
+        StoragePaths.migrateFileIfNeeded(legacyConfigInFolder, newConfigPath);
+        CONFIG_FILE = newConfigPath.toFile();
+    }
     
     private static ConfigManager instance;
     private ModConfigData configData;
@@ -59,6 +75,10 @@ public class ConfigManager implements IConfigManager {
 
     @Override
     public void saveConfig() {
+        File parent = CONFIG_FILE.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
         try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
             GSON.toJson(configData, writer);
             updateConfigCache();
@@ -119,6 +139,15 @@ public class ConfigManager implements IConfigManager {
             case "enableClickToRemove":
                 configData.setEnableClickToRemove((Boolean) value);
                 break;
+            case "enableMessageSound":
+                configData.setEnableMessageSound((Boolean) value);
+                break;
+            case "messageSoundVolume":
+                if (value instanceof Number) configData.setMessageSoundVolume(((Number) value).doubleValue());
+                break;
+            case "autoConnectIrcOnJoin":
+                configData.setAutoConnectIrcOnJoin((Boolean) value);
+                break;
             default:
                 LOGGER.warning("Неизвестный ключ конфигурации: " + key);
                 return;
@@ -147,6 +176,9 @@ public class ConfigManager implements IConfigManager {
         configCache.put("showMessageBackground", configData.isShowMessageBackground());
         configCache.put("followPlayer", configData.isFollowPlayer());
         configCache.put("enableClickToRemove", configData.isEnableClickToRemove());
+        configCache.put("enableMessageSound", configData.isEnableMessageSound());
+        configCache.put("messageSoundVolume", configData.getMessageSoundVolume());
+        configCache.put("autoConnectIrcOnJoin", configData.isAutoConnectIrcOnJoin());
     }
 
     public ModConfigData getConfigData() {

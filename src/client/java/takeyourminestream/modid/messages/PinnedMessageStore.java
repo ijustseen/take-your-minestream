@@ -3,11 +3,11 @@ package takeyourminestream.modid.messages;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.Vec3d;
+import takeyourminestream.modid.StoragePaths;
 import takeyourminestream.modid.utils.Logger;
 
 import java.io.IOException;
@@ -28,7 +28,7 @@ import java.util.Locale;
  */
 public final class PinnedMessageStore {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final String STORE_DIR = "take-your-minestream/pinned-messages";
+    private static final String STORE_DIR = "pinned-messages";
     private static final Type FILE_TYPE = new TypeToken<PinnedMessagesFile>() {}.getType();
 
     private PinnedMessageStore() {}
@@ -65,9 +65,19 @@ public final class PinnedMessageStore {
                     lifecycleManager.getTickCounter(),
                     entry.yaw,
                     entry.pitch,
-                    entry.authorColorRgb
+                    entry.authorColorRgb,
+                    Vec3d.ZERO,
+                    entry.emotes != null ? entry.emotes.stream()
+                        .map(e -> new MessageEmote(e.provider, e.emoteId, e.emoteCode, e.startIndex, e.endIndex))
+                        .collect(java.util.stream.Collectors.toList()) : java.util.Collections.emptyList()
                 );
                 message.setPinned(true);
+                // Предзагружаем текстуры эмоутов для закреплённых сообщений
+                if (entry.emotes != null) {
+                    for (PinnedEmoteEntry emote : entry.emotes) {
+                        TwitchEmoteTextureCache.preload(emote.provider, emote.emoteId);
+                    }
+                }
                 lifecycleManager.addPinnedMessage(message);
             }
             Logger.info("Загружено закреплённых сообщений: " + data.messages.size());
@@ -97,6 +107,17 @@ public final class PinnedMessageStore {
                 entry.yaw = message.getYaw();
                 entry.pitch = message.getPitch();
                 entry.authorColorRgb = message.getAuthorColorRgb();
+                entry.emotes = message.getEmotes().stream()
+                    .map(e -> {
+                        PinnedEmoteEntry pe = new PinnedEmoteEntry();
+                        pe.provider = e.getProvider();
+                        pe.emoteId = e.getEmoteId();
+                        pe.emoteCode = e.getEmoteCode();
+                        pe.startIndex = e.getStartIndex();
+                        pe.endIndex = e.getEndIndex();
+                        return pe;
+                    })
+                    .collect(java.util.stream.Collectors.toList());
                 return entry;
             })
             .toList();
@@ -143,10 +164,12 @@ public final class PinnedMessageStore {
     }
 
     private static Path getStorageFile(MinecraftClient client) {
-        Path configDir = FabricLoader.getInstance().getConfigDir();
+        Path modRoot = StoragePaths.getModRootDir();
+        Path legacyRoot = StoragePaths.getLegacyModRootDir();
+        StoragePaths.migrateDirectoryIfNeeded(legacyRoot.resolve(STORE_DIR), modRoot.resolve(STORE_DIR));
         String worldKey = resolveWorldKey(client);
         String fileName = sanitize(worldKey) + "-" + shortHash(worldKey) + ".json";
-        return configDir.resolve(STORE_DIR).resolve(fileName);
+        return modRoot.resolve(STORE_DIR).resolve(fileName);
     }
 
     private static String resolveWorldKey(MinecraftClient client) {
@@ -205,5 +228,14 @@ public final class PinnedMessageStore {
         float yaw;
         float pitch;
         Integer authorColorRgb;
+        List<PinnedEmoteEntry> emotes;
+    }
+
+    private static final class PinnedEmoteEntry {
+        String provider;
+        String emoteId;
+        String emoteCode;
+        int startIndex;
+        int endIndex;
     }
 }

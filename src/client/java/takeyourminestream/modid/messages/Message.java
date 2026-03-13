@@ -7,6 +7,7 @@ import net.minecraft.util.math.Vec3d;
  */
 public class Message {
     private final String text;
+    private final java.util.List<MessageEmote> emotes;
     private Vec3d position;
     private Vec3d previousPosition;
     private final long spawnTick;
@@ -25,15 +26,20 @@ public class Message {
     private boolean pinned;
     
     public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch) {
-        this(text, position, spawnTick, yaw, pitch, null, Vec3d.ZERO);
+        this(text, position, spawnTick, yaw, pitch, null, Vec3d.ZERO, java.util.Collections.emptyList());
     }
 
     public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch, Integer authorColorRgb) {
-        this(text, position, spawnTick, yaw, pitch, authorColorRgb, Vec3d.ZERO);
+        this(text, position, spawnTick, yaw, pitch, authorColorRgb, Vec3d.ZERO, java.util.Collections.emptyList());
     }
 
     public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch, Integer authorColorRgb, Vec3d targetOffsetFromEye) {
+        this(text, position, spawnTick, yaw, pitch, authorColorRgb, targetOffsetFromEye, java.util.Collections.emptyList());
+    }
+
+    public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch, Integer authorColorRgb, Vec3d targetOffsetFromEye, java.util.List<MessageEmote> emotes) {
         this.text = text;
+        this.emotes = emotes == null ? java.util.Collections.emptyList() : java.util.List.copyOf(emotes);
         this.position = position;
         this.spawnTick = spawnTick;
         this.frozenTicks = 0;
@@ -50,6 +56,10 @@ public class Message {
     
     public String getText() { 
         return text; 
+    }
+
+    public java.util.List<MessageEmote> getEmotes() {
+        return emotes;
     }
     
     public Vec3d getPosition() { 

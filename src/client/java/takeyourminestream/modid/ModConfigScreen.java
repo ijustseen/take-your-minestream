@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import takeyourminestream.modid.config.MessageSpawnMode;
 import takeyourminestream.modid.config.MessageScale;
 import takeyourminestream.modid.widget.MessageScaleSliderWidget;
+import takeyourminestream.modid.widget.MessageSoundVolumeSliderWidget;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -154,6 +155,30 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(automoderationButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.automoderation", "takeyourminestream.config.automoderation.desc", ConfigEntryType.TOGGLE, automoderationButton, ConfigCategory.GENERAL));
 
+        ButtonWidget messageSoundButton = ButtonWidget.builder(
+            Text.translatable(ModConfig.isENABLE_MESSAGE_SOUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
+            btn -> {
+                ModConfig.setENABLE_MESSAGE_SOUND(!ModConfig.isENABLE_MESSAGE_SOUND());
+                btn.setMessage(Text.translatable(ModConfig.isENABLE_MESSAGE_SOUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(messageSoundButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.message_sound", "takeyourminestream.config.message_sound.desc", ConfigEntryType.TOGGLE, messageSoundButton, ConfigCategory.GENERAL));
+
+        MessageSoundVolumeSliderWidget messageSoundVolumeSlider = new MessageSoundVolumeSliderWidget(0, 0, CONTROL_WIDTH, 20);
+        this.addDrawableChild(messageSoundVolumeSlider);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.message_sound_volume", "takeyourminestream.config.message_sound_volume.desc", ConfigEntryType.SLIDER, messageSoundVolumeSlider, ConfigCategory.GENERAL));
+
+        ButtonWidget autoConnectIrcButton = ButtonWidget.builder(
+            Text.translatable(ModConfig.isAUTO_CONNECT_IRC_ON_JOIN() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
+            btn -> {
+                ModConfig.setAUTO_CONNECT_IRC_ON_JOIN(!ModConfig.isAUTO_CONNECT_IRC_ON_JOIN());
+                btn.setMessage(Text.translatable(ModConfig.isAUTO_CONNECT_IRC_ON_JOIN() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(autoConnectIrcButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.auto_connect_irc", "takeyourminestream.config.auto_connect_irc.desc", ConfigEntryType.TOGGLE, autoConnectIrcButton, ConfigCategory.GENERAL));
+
         // Кнопка настроек банвордов под флагом автомодерации
         ButtonWidget banwordsButton = ButtonWidget.builder(
             Text.translatable("takeyourminestream.config.banwords_config"),
@@ -259,6 +284,8 @@ public class ModConfigScreen extends Screen {
                 ((TextFieldWidget) entry.widget).visible = entry.category == currentCategory;
             } else if (entry.widget instanceof MessageScaleSliderWidget) {
                 ((MessageScaleSliderWidget) entry.widget).visible = entry.category == currentCategory;
+            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget) {
+                ((MessageSoundVolumeSliderWidget) entry.widget).visible = entry.category == currentCategory;
             }
         }
         updateEntryPositions();
@@ -279,6 +306,8 @@ public class ModConfigScreen extends Screen {
                 ((TextFieldWidget) entry.widget).setPosition(rightX, y);
             } else if (entry.widget instanceof MessageScaleSliderWidget) {
                 ((MessageScaleSliderWidget) entry.widget).setPosition(rightX, y);
+            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget) {
+                ((MessageSoundVolumeSliderWidget) entry.widget).setPosition(rightX, y);
             }
             
             y += ENTRY_HEIGHT + ENTRY_SPACING;

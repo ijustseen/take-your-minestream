@@ -260,7 +260,8 @@ public class MessageLifecycleManager {
             message.getYaw(),
             message.getPitch(),
             message.getAuthorColorRgb(),
-            targetOffset
+            targetOffset,
+            message.getEmotes()
         );
         replacement.setPinned(false);
 

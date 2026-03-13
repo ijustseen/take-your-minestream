@@ -11,6 +11,8 @@ import takeyourminestream.modid.ModConfig;
 import net.minecraft.util.math.RotationAxis;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Comparator;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.util.Identifier;
 import org.lwjgl.opengl.GL11;
@@ -29,6 +31,8 @@ public class MessageRenderer {
     private final MessageLifecycleManager lifecycleManager;
     private final MessageParticleManager particleManager;
     private final java.util.WeakHashMap<Message, SmoothingState> smoothing = new java.util.WeakHashMap<>();
+    // Для диагностики: логируем рендер эмоута только один раз на ID
+    private static final java.util.Set<String> EMOTE_RENDER_LOGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
     
     private static final Identifier PANEL_TEXTURE = Identifier.of("take-your-minestream", "textures/gui/message_panel.png");
     private static final Identifier PIN_TEXTURE = Identifier.of("take-your-minestream", "textures/gui/pin.png");
@@ -40,6 +44,9 @@ public class MessageRenderer {
     private static final int PIN_ICON_SIZE = 8;
     private static final int PIN_ICON_MARGIN = 1;
     private static final float PIN_ICON_Z_OFFSET = -0.02f;
+    private static final int EMOTE_ICON_SIZE = 12;
+    private static final int EMOTE_ICON_SPACING = 1;
+    private static final float EMOTE_ICON_Z_OFFSET = 0.02f;
 
     public MessageRenderer(MessageLifecycleManager lifecycleManager, MessageParticleManager particleManager) {
         this.lifecycleManager = lifecycleManager;
@@ -116,13 +123,15 @@ public class MessageRenderer {
         float finalScale = baseScale * configScale;
         matrices.scale(finalScale, -finalScale, finalScale);
 
-        List<OrderedText> wrappedText = textRenderer.wrapLines(Text.of(message.getText()), 120);
-        float totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
-        // Найти максимальную ширину среди всех строк
-        int maxTextWidth = 0;
-        for (OrderedText line : wrappedText) {
-            int w = textRenderer.getWidth(line);
-            if (w > maxTextWidth) maxTextWidth = w;
+        boolean hasEmotes = !message.getEmotes().isEmpty();
+        List<OrderedText> wrappedText = hasEmotes ? java.util.Collections.emptyList() : textRenderer.wrapLines(Text.of(message.getText()), 120);
+        float totalTextHeight = hasEmotes ? textRenderer.fontHeight : wrappedText.size() * textRenderer.fontHeight;
+        int maxTextWidth = hasEmotes ? getEmoteAwareLineWidth(textRenderer, message.getText(), message.getEmotes()) : 0;
+        if (!hasEmotes) {
+            for (OrderedText line : wrappedText) {
+                int w = textRenderer.getWidth(line);
+                if (w > maxTextWidth) maxTextWidth = w;
+            }
         }
         int panelWidth = maxTextWidth + PANEL_PADDING_X * 2;
         int panelHeight = (int)totalTextHeight + PANEL_PADDING_Y * 2;
@@ -133,20 +142,24 @@ public class MessageRenderer {
             renderPanel9Slice(matrices, -PANEL_PADDING_X, -PANEL_PADDING_Y, panelWidth, panelHeight, 1.0f, consumers, 1.0f, 1.0f, 1.0f);
         }
         // Рендерим текст
-        for (int i = 0; i < wrappedText.size(); i++) {
-            int alphaInt = 0xFF << 24;
-            int color = (0xFFFFFF) | alphaInt;
-            textRenderer.draw(wrappedText.get(i),
-                              0.0F,
-                              (float)i * textRenderer.fontHeight,
-                             color,
-                              true,
-                              matrices.peek().getPositionMatrix(),
-                              consumers,
-                              TextRenderer.TextLayerType.POLYGON_OFFSET,
-                              0,
-                              0xF000F0
-                              );
+        int alphaInt = 0xFF << 24;
+        int color = (0xFFFFFF) | alphaInt;
+        if (hasEmotes) {
+            renderLineWithEmotes(matrices, textRenderer, consumers, message.getText(), message.getEmotes(), color);
+        } else {
+            for (int i = 0; i < wrappedText.size(); i++) {
+                textRenderer.draw(wrappedText.get(i),
+                                0.0F,
+                                (float)i * textRenderer.fontHeight,
+                                color,
+                                true,
+                                matrices.peek().getPositionMatrix(),
+                                consumers,
+                                TextRenderer.TextLayerType.POLYGON_OFFSET,
+                                0,
+                                0xF000F0
+                                );
+            }
         }
         if (message.isPinned()) {
             renderPinIcon(matrices, panelWidth, consumers);
@@ -294,5 +307,131 @@ public class MessageRenderer {
         consumer.vertex(mat, x0, y1, z).color(1f, 1f, 1f, 1.0f).texture(u0, v1).overlay(overlay).light(light).normal(0, 0, -1);
         consumer.vertex(mat, x1, y1, z).color(1f, 1f, 1f, 1.0f).texture(u1, v1).overlay(overlay).light(light).normal(0, 0, -1);
         consumer.vertex(mat, x1, y0, z).color(1f, 1f, 1f, 1.0f).texture(u1, v0).overlay(overlay).light(light).normal(0, 0, -1);
+    }
+
+    private int getEmoteAwareLineWidth(TextRenderer textRenderer, String text, List<MessageEmote> emotes) {
+        int width = 0;
+        int cursor = 0;
+        for (MessageEmote emote : getSortedValidEmotes(text, emotes)) {
+            if (emote.getStartIndex() > cursor) {
+                width += textRenderer.getWidth(text.substring(cursor, emote.getStartIndex()));
+            }
+            width += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
+            cursor = emote.getEndIndex() + 1;
+        }
+        if (cursor < text.length()) {
+            width += textRenderer.getWidth(text.substring(cursor));
+        }
+        return width;
+    }
+
+    private void renderLineWithEmotes(MatrixStack matrices,
+                                      TextRenderer textRenderer,
+                                      VertexConsumerProvider consumers,
+                                      String text,
+                                      List<MessageEmote> emotes,
+                                      int color) {
+        List<MessageEmote> sortedEmotes = getSortedValidEmotes(text, emotes);
+        int cursor = 0;
+        float x = 0.0f;
+
+        for (MessageEmote emote : sortedEmotes) {
+            if (emote.getStartIndex() > cursor) {
+                String segment = text.substring(cursor, emote.getStartIndex());
+                textRenderer.draw(segment,
+                    x,
+                    0.0F,
+                    color,
+                    true,
+                    matrices.peek().getPositionMatrix(),
+                    consumers,
+                    TextRenderer.TextLayerType.POLYGON_OFFSET,
+                    0,
+                    0xF000F0
+                );
+                x += textRenderer.getWidth(segment);
+            }
+
+            Identifier emoteTexture = TwitchEmoteTextureCache.getTextureIdentifier(emote.getProvider(), emote.getEmoteId());
+            if (emoteTexture != null) {
+                if (EMOTE_RENDER_LOGGED.add("draw:" + emote.getEmoteId())) {
+                    System.out.println("[TYMS-Emote-Render] Drawing emote quad id=" + emote.getEmoteId() + " tex=" + emoteTexture + " x=" + x);
+                }
+                VertexConsumer consumer = consumers.getBuffer(RenderLayer.getText(emoteTexture));
+                Matrix4f mat = matrices.peek().getPositionMatrix();
+                int iconX = Math.round(x);
+                int iconY = -1;
+                drawQuadIcon(consumer,
+                    mat,
+                    iconX,
+                    iconY,
+                    iconX + EMOTE_ICON_SIZE,
+                    iconY + EMOTE_ICON_SIZE,
+                    EMOTE_ICON_Z_OFFSET,
+                    0f,
+                    0f,
+                    1f,
+                    1f
+                );
+                x += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
+            } else {
+                if (EMOTE_RENDER_LOGGED.add("fallback:" + emote.getEmoteId())) {
+                    System.out.println("[TYMS-Emote-Render] Emote " + emote.getEmoteId() + " not loaded yet, showing fallback text");
+                }
+                // Fallback: show emote code as text while texture is loading/failed
+                String code = emote.getEmoteCode();
+                textRenderer.draw(code,
+                    x,
+                    0.0F,
+                    color,
+                    true,
+                    matrices.peek().getPositionMatrix(),
+                    consumers,
+                    TextRenderer.TextLayerType.POLYGON_OFFSET,
+                    0,
+                    0xF000F0
+                );
+                x += textRenderer.getWidth(code) + EMOTE_ICON_SPACING;
+            }
+            cursor = emote.getEndIndex() + 1;
+        }
+
+        if (cursor < text.length()) {
+            String tail = text.substring(cursor);
+            textRenderer.draw(tail,
+                x,
+                0.0F,
+                color,
+                true,
+                matrices.peek().getPositionMatrix(),
+                consumers,
+                TextRenderer.TextLayerType.POLYGON_OFFSET,
+                0,
+                0xF000F0
+            );
+        }
+    }
+
+    private List<MessageEmote> getSortedValidEmotes(String text, List<MessageEmote> emotes) {
+        if (emotes == null || emotes.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        List<MessageEmote> sorted = new ArrayList<>(emotes);
+        sorted.sort(Comparator.comparingInt(MessageEmote::getStartIndex));
+
+        List<MessageEmote> valid = new ArrayList<>();
+        int nextAllowedStart = 0;
+        for (MessageEmote emote : sorted) {
+            if (emote.getStartIndex() < 0 || emote.getEndIndex() < emote.getStartIndex() || emote.getEndIndex() >= text.length()) {
+                continue;
+            }
+            if (emote.getStartIndex() < nextAllowedStart) {
+                continue;
+            }
+            valid.add(emote);
+            nextAllowedStart = emote.getEndIndex() + 1;
+        }
+        return valid;
     }
 } 

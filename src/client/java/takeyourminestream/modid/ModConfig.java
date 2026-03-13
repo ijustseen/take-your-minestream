@@ -122,4 +122,31 @@ public class ModConfig {
     public static void setENABLE_CLICK_TO_REMOVE(boolean value) {
         ConfigManager.getInstance().setConfigValue("enableClickToRemove", value);
     }
+
+    public static boolean isENABLE_MESSAGE_SOUND() {
+        Object value = ConfigManager.getInstance().getConfigValue("enableMessageSound");
+        return value != null ? (Boolean) value : true;
+    }
+
+    public static void setENABLE_MESSAGE_SOUND(boolean value) {
+        ConfigManager.getInstance().setConfigValue("enableMessageSound", value);
+    }
+
+    public static double getMESSAGE_SOUND_VOLUME() {
+        Object value = ConfigManager.getInstance().getConfigValue("messageSoundVolume");
+        return value instanceof Number ? ((Number) value).doubleValue() : 0.45;
+    }
+
+    public static void setMESSAGE_SOUND_VOLUME(double value) {
+        ConfigManager.getInstance().setConfigValue("messageSoundVolume", value);
+    }
+
+    public static boolean isAUTO_CONNECT_IRC_ON_JOIN() {
+        Object value = ConfigManager.getInstance().getConfigValue("autoConnectIrcOnJoin");
+        return value != null && (Boolean) value;
+    }
+
+    public static void setAUTO_CONNECT_IRC_ON_JOIN(boolean value) {
+        ConfigManager.getInstance().setConfigValue("autoConnectIrcOnJoin", value);
+    }
 } 

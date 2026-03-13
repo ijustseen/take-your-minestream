@@ -23,6 +23,9 @@ public class ModConfigData {
     private boolean showMessageBackground = true;
     private boolean followPlayer = false;
     private boolean enableClickToRemove = true;
+    private boolean enableMessageSound = true;
+    private double messageSoundVolume = 0.45;
+    private boolean autoConnectIrcOnJoin = false;
 
     // Геттеры
     public String getTwitchChannelName() { return twitchChannelName; }
@@ -42,6 +45,9 @@ public class ModConfigData {
     public boolean isShowMessageBackground() { return showMessageBackground; }
     public boolean isFollowPlayer() { return followPlayer; }
     public boolean isEnableClickToRemove() { return enableClickToRemove; }
+    public boolean isEnableMessageSound() { return enableMessageSound; }
+    public double getMessageSoundVolume() { return messageSoundVolume; }
+    public boolean isAutoConnectIrcOnJoin() { return autoConnectIrcOnJoin; }
 
     // Сеттеры
     public void setTwitchChannelName(String twitchChannelName) { this.twitchChannelName = twitchChannelName; }
@@ -61,6 +67,9 @@ public class ModConfigData {
     public void setShowMessageBackground(boolean showMessageBackground) { this.showMessageBackground = showMessageBackground; }
     public void setFollowPlayer(boolean followPlayer) { this.followPlayer = followPlayer; }
     public void setEnableClickToRemove(boolean enableClickToRemove) { this.enableClickToRemove = enableClickToRemove; }
+    public void setEnableMessageSound(boolean enableMessageSound) { this.enableMessageSound = enableMessageSound; }
+    public void setMessageSoundVolume(double messageSoundVolume) { this.messageSoundVolume = messageSoundVolume; }
+    public void setAutoConnectIrcOnJoin(boolean autoConnectIrcOnJoin) { this.autoConnectIrcOnJoin = autoConnectIrcOnJoin; }
     
     // Методы для обратной совместимости
     public boolean isMessagesInFrontOfPlayerOnly() { 
