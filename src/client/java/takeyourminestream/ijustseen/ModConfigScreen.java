@@ -19,6 +19,7 @@ import java.util.List;
 public class ModConfigScreen extends Screen {
     private final @Nullable Screen parent;
     private String initialChannelName;
+    private String hoveredDescriptionKey;
     
     // Категории настроек
     private enum ConfigCategory {
@@ -42,14 +43,20 @@ public class ModConfigScreen extends Screen {
     private List<ConfigEntry> configEntries = new ArrayList<>();
     
     // Параметры интерфейса
-    private static final int HEADER_HEIGHT = 50;
-    private static final int FOOTER_HEIGHT = 30;
-    private static final int CATEGORY_BUTTON_HEIGHT = 20;
+    private static final int HEADER_HEIGHT = 46;
+    private static final int FOOTER_HEIGHT = 36;
+    private static final int CATEGORY_BUTTON_HEIGHT = 22;
     private static final int ENTRY_HEIGHT = 24;
-    private static final int ENTRY_SPACING = 4;
-    private static final int SIDE_MARGIN = 20;
+    private static final int ENTRY_SPACING = 6;
+    private static final int CONTENT_PADDING = 10;
+    private static final int CATEGORY_TOP_MARGIN = 12;
+    private static final int CATEGORY_TO_CONTENT_GAP = 6;
+    private static final int CONTENT_TO_FOOTER_GAP = 2;
+    private static final int SIDE_MARGIN = 24;
     private static final int LABEL_WIDTH = 200;
-    private static final int CONTROL_WIDTH = 120;
+    private static final int CONTROL_WIDTH = 170;
+    private static final int CONTROL_HEIGHT = 20;
+    private static final int DESCRIPTION_HEIGHT = 20;
     
     private int scrollOffset = 0;
 
@@ -102,12 +109,15 @@ public class ModConfigScreen extends Screen {
     
     private void createCategoryButtons() {
         categoryButtons.clear();
-        int buttonWidth = 80;
-        int totalWidth = ConfigCategory.values().length * buttonWidth;
+        int count = ConfigCategory.values().length;
+        int buttonSpacing = 6;
+        int availableWidth = this.width - SIDE_MARGIN * 2 - buttonSpacing * (count - 1);
+        int buttonWidth = Math.max(86, Math.min(140, availableWidth / count));
+        int totalWidth = count * buttonWidth + buttonSpacing * (count - 1);
         int startX = (this.width - totalWidth) / 2;
-        int y = HEADER_HEIGHT - CATEGORY_BUTTON_HEIGHT - 5;
+        int y = CATEGORY_TOP_MARGIN;
         
-        for (int i = 0; i < ConfigCategory.values().length; i++) {
+        for (int i = 0; i < count; i++) {
             ConfigCategory category = ConfigCategory.values()[i];
             ButtonWidget button = ButtonWidget.builder(
                 category.getText(),
@@ -116,7 +126,7 @@ public class ModConfigScreen extends Screen {
                     updateCategoryVisibility();
                     updateCategoryButtons();
                 }
-            ).dimensions(startX + i * buttonWidth, y, buttonWidth, CATEGORY_BUTTON_HEIGHT).build();
+            ).dimensions(startX + i * (buttonWidth + buttonSpacing), y, buttonWidth, CATEGORY_BUTTON_HEIGHT).build();
             
             categoryButtons.add(button);
             this.addDrawableChild(button);
@@ -298,38 +308,28 @@ public class ModConfigScreen extends Screen {
     }
     
     private void updateCategoryVisibility() {
+        clampScrollOffset();
         for (ConfigEntry entry : configEntries) {
-            if (entry.widget instanceof ButtonWidget) {
-                ((ButtonWidget) entry.widget).visible = entry.category == currentCategory;
-            } else if (entry.widget instanceof TextFieldWidget) {
-                ((TextFieldWidget) entry.widget).visible = entry.category == currentCategory;
-            } else if (entry.widget instanceof MessageScaleSliderWidget) {
-                ((MessageScaleSliderWidget) entry.widget).visible = entry.category == currentCategory;
-            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget) {
-                ((MessageSoundVolumeSliderWidget) entry.widget).visible = entry.category == currentCategory;
-            }
+            setWidgetVisible(entry.widget, entry.category == currentCategory);
         }
         updateEntryPositions();
     }
     
     private void updateEntryPositions() {
-        int contentTop = HEADER_HEIGHT + 10;
-        int y = contentTop - scrollOffset;
-        int leftX = SIDE_MARGIN;
+        int contentTop = getContentTop();
+        int contentBottom = getContentBottom();
+        int y = contentTop + CONTENT_PADDING - scrollOffset;
         int rightX = this.width - SIDE_MARGIN - CONTROL_WIDTH;
         
         for (ConfigEntry entry : configEntries) {
-            if (entry.category != currentCategory) continue;
-            
-            if (entry.widget instanceof ButtonWidget) {
-                ((ButtonWidget) entry.widget).setPosition(rightX, y);
-            } else if (entry.widget instanceof TextFieldWidget) {
-                ((TextFieldWidget) entry.widget).setPosition(rightX, y);
-            } else if (entry.widget instanceof MessageScaleSliderWidget) {
-                ((MessageScaleSliderWidget) entry.widget).setPosition(rightX, y);
-            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget) {
-                ((MessageSoundVolumeSliderWidget) entry.widget).setPosition(rightX, y);
+            if (entry.category != currentCategory) {
+                setWidgetVisible(entry.widget, false);
+                continue;
             }
+
+            setWidgetPosition(entry.widget, rightX, y);
+            boolean visibleInViewport = isElementVisible(y, contentTop, contentBottom);
+            setWidgetVisible(entry.widget, visibleInViewport);
             
             y += ENTRY_HEIGHT + ENTRY_SPACING;
         }
@@ -339,7 +339,7 @@ public class ModConfigScreen extends Screen {
     
     private void createBottomButtons() {
         int centerX = this.width / 2;
-        int buttonY = this.height - FOOTER_HEIGHT;
+        int buttonY = this.height - FOOTER_HEIGHT + 8;
         int buttonWidth = 100;
         int buttonSpacing = 10;
         
@@ -418,49 +418,127 @@ public class ModConfigScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // Обновляем позиции элементов при каждом рендере
         updateEntryPositions();
+        hoveredDescriptionKey = null;
+
+        List<Object> temporarilyHidden = new ArrayList<>();
+        for (ConfigEntry entry : configEntries) {
+            if (entry.category != currentCategory) continue;
+            if (entry.widget instanceof ButtonWidget) {
+                ButtonWidget w = (ButtonWidget) entry.widget;
+                if (w.visible) {
+                    w.visible = false;
+                    temporarilyHidden.add(w);
+                }
+            } else if (entry.widget instanceof TextFieldWidget) {
+                TextFieldWidget w = (TextFieldWidget) entry.widget;
+                if (w.visible) {
+                    w.visible = false;
+                    temporarilyHidden.add(w);
+                }
+            } else if (entry.widget instanceof MessageScaleSliderWidget) {
+                MessageScaleSliderWidget w = (MessageScaleSliderWidget) entry.widget;
+                if (w.visible) {
+                    w.visible = false;
+                    temporarilyHidden.add(w);
+                }
+            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget) {
+                MessageSoundVolumeSliderWidget w = (MessageSoundVolumeSliderWidget) entry.widget;
+                if (w.visible) {
+                    w.visible = false;
+                    temporarilyHidden.add(w);
+                }
+            }
+        }
         
         super.render(context, mouseX, mouseY, delta);
+
+        for (Object widget : temporarilyHidden) {
+            setWidgetVisible(widget, true);
+        }
         
-        // Заголовок
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 10, 0xFFFFFF);
         
-        // Область для отображения настроек - от верха экрана до кнопок внизу
-        int contentTop = HEADER_HEIGHT;
-        int contentBottom = this.height - FOOTER_HEIGHT - 10;
+        int contentTop = getContentTop();
+        int contentBottom = getContentBottom();
         
-        // Рендерим фон области настроек (используем padding как в MessageHistoryScreen)
-        int padding = 10;
-        context.fill(padding, contentTop, this.width - padding, contentBottom, 0x40000000);
+        context.fill(CONTENT_PADDING, contentTop, this.width - CONTENT_PADDING, contentBottom, 0x4A000000);
         
-        // Рендерим лейблы с учетом прокрутки (СТАРЫЙ РАБОЧИЙ ПОДХОД)
-        renderLabels(context, contentTop, contentBottom);
-        
-        // Индикатор прокрутки
+        context.enableScissor(CONTENT_PADDING, contentTop, this.width - CONTENT_PADDING, contentBottom);
+        renderLabels(context, mouseX, mouseY, contentTop, contentBottom);
+        renderConfigWidgets(context, mouseX, mouseY, delta, contentTop, contentBottom);
+        context.disableScissor();
         renderScrollbar(context, contentTop, contentBottom);
+
+        int descTop = contentBottom + 4;
+        int descBottom = Math.min(this.height - FOOTER_HEIGHT + 2, descTop + DESCRIPTION_HEIGHT);
+        context.fill(CONTENT_PADDING, descTop, this.width - CONTENT_PADDING, descBottom, 0x35000000);
+
+        Text description = hoveredDescriptionKey == null
+            ? Text.translatable("takeyourminestream.config.title")
+            : Text.translatable(hoveredDescriptionKey);
+
+        context.drawText(
+            this.textRenderer,
+            description,
+            CONTENT_PADDING + 8,
+            descTop + DESCRIPTION_HEIGHT - this.textRenderer.fontHeight - 2,
+            0xFFDDDDDD,
+            false
+        );
+    }
+
+    private void renderConfigWidgets(DrawContext context, int mouseX, int mouseY, float delta, int contentTop, int contentBottom) {
+        for (ConfigEntry entry : configEntries) {
+            if (entry.category != currentCategory) continue;
+
+            if (entry.widget instanceof ButtonWidget) {
+                ButtonWidget widget = (ButtonWidget) entry.widget;
+                if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    widget.render(context, mouseX, mouseY, delta);
+                }
+            } else if (entry.widget instanceof TextFieldWidget) {
+                TextFieldWidget widget = (TextFieldWidget) entry.widget;
+                if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    widget.render(context, mouseX, mouseY, delta);
+                }
+            } else if (entry.widget instanceof MessageScaleSliderWidget) {
+                MessageScaleSliderWidget widget = (MessageScaleSliderWidget) entry.widget;
+                if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    widget.render(context, mouseX, mouseY, delta);
+                }
+            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget) {
+                MessageSoundVolumeSliderWidget widget = (MessageSoundVolumeSliderWidget) entry.widget;
+                if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    widget.render(context, mouseX, mouseY, delta);
+                }
+            }
+        }
     }
     
-    private void renderLabels(DrawContext context, int contentTop, int contentBottom) {
+    private void renderLabels(DrawContext context, int mouseX, int mouseY, int contentTop, int contentBottom) {
         int labelColor = 0xFFFFFFFF;
         int fontHeight = this.textRenderer.fontHeight;
         
-        // Лейблы идут от левой границы области контента (используем padding)
-        int padding = 10;
-        int labelX = padding + 10;
+        int labelX = CONTENT_PADDING + 10;
+        int rowLeft = CONTENT_PADDING + 4;
+        int rowRight = this.width - CONTENT_PADDING - 4;
         
-        // Вычисляем позиции элементов с учетом скролла
-        int baseY = contentTop + 10 - scrollOffset;
+        int baseY = contentTop + CONTENT_PADDING - scrollOffset;
         int currentY = baseY;
         
-        // Рендерим лейблы для текущей категории
         for (ConfigEntry entry : configEntries) {
             if (entry.category != currentCategory) continue;
             
             if (isElementVisible(currentY, contentTop, contentBottom)) {
-                // Лейбл выравнивается по левому краю
+                boolean hovered = mouseX >= rowLeft && mouseX <= rowRight && mouseY >= currentY && mouseY <= currentY + ENTRY_HEIGHT;
+                context.fill(rowLeft, currentY, rowRight, currentY + ENTRY_HEIGHT, hovered ? 0x30FFFFFF : 0x20000000);
                 context.drawText(this.textRenderer, Text.translatable(entry.labelKey), 
                     labelX, currentY + (20 - fontHeight) / 2, labelColor, true);
+
+                if (hovered) {
+                    hoveredDescriptionKey = entry.descriptionKey;
+                }
             }
             currentY += ENTRY_HEIGHT + ENTRY_SPACING;
         }
@@ -482,7 +560,7 @@ public class ModConfigScreen extends Screen {
     }
     
     private boolean isElementVisible(int elementY, int contentTop, int contentBottom) {
-        return elementY + 20 > contentTop && elementY < contentBottom;
+        return elementY + ENTRY_HEIGHT > contentTop && elementY < contentBottom;
     }
     
     private List<String> wrapText(String text, int maxWidth) {
@@ -523,7 +601,10 @@ public class ModConfigScreen extends Screen {
                 count++;
             }
         }
-        return count * (ENTRY_HEIGHT + ENTRY_SPACING) + 20;
+        if (count == 0) {
+            return CONTENT_PADDING * 2;
+        }
+        return count * ENTRY_HEIGHT + (count - 1) * ENTRY_SPACING + CONTENT_PADDING * 2;
     }
     
     private void renderScrollbar(DrawContext context, int contentTop, int contentBottom) {
@@ -550,11 +631,64 @@ public class ModConfigScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        int contentTop = getContentTop();
+        int contentBottom = getContentBottom();
+        if (mouseY < contentTop || mouseY > contentBottom) {
+            return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        }
+
         int totalContentHeight = getTotalContentHeight();
-        int visibleContentHeight = this.height - HEADER_HEIGHT - FOOTER_HEIGHT - 20;
+        int visibleContentHeight = getVisibleContentHeight();
         int maxScroll = Math.max(0, totalContentHeight - visibleContentHeight);
         scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset - (int)(verticalAmount * 20)));
+        updateEntryPositions();
         return true;
+    }
+
+    private int getCategoryButtonsBottom() {
+        return CATEGORY_TOP_MARGIN + CATEGORY_BUTTON_HEIGHT;
+    }
+
+    private int getContentTop() {
+        return getCategoryButtonsBottom() + CATEGORY_TO_CONTENT_GAP;
+    }
+
+    private int getContentBottom() {
+        return this.height - FOOTER_HEIGHT - CONTENT_TO_FOOTER_GAP - DESCRIPTION_HEIGHT - 2;
+    }
+
+    private int getVisibleContentHeight() {
+        return getContentBottom() - getContentTop();
+    }
+
+    private void clampScrollOffset() {
+        int maxScroll = Math.max(0, getTotalContentHeight() - getVisibleContentHeight());
+        scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
+    }
+
+    private void setWidgetVisible(Object widget, boolean visible) {
+        if (widget instanceof ButtonWidget) {
+            ((ButtonWidget) widget).visible = visible;
+        } else if (widget instanceof TextFieldWidget) {
+            ((TextFieldWidget) widget).visible = visible;
+        } else if (widget instanceof MessageScaleSliderWidget) {
+            ((MessageScaleSliderWidget) widget).visible = visible;
+        } else if (widget instanceof MessageSoundVolumeSliderWidget) {
+            ((MessageSoundVolumeSliderWidget) widget).visible = visible;
+        }
+    }
+
+    private void setWidgetPosition(Object widget, int x, int y) {
+        int centeredY = y + (ENTRY_HEIGHT - CONTROL_HEIGHT) / 2;
+        if (widget instanceof ButtonWidget) {
+            ((ButtonWidget) widget).setPosition(x, centeredY);
+        } else if (widget instanceof TextFieldWidget) {
+            ((TextFieldWidget) widget).setPosition(x, centeredY);
+        } else if (widget instanceof MessageScaleSliderWidget) {
+            ((MessageScaleSliderWidget) widget).setPosition(x, centeredY);
+        } else if (widget instanceof MessageSoundVolumeSliderWidget) {
+            ((MessageSoundVolumeSliderWidget) widget).setPosition(x, centeredY);
+        }
     }
 
     @Override
