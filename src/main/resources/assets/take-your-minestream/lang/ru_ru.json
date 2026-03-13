@@ -1,5 +1,7 @@
 {
   "takeyourminestream.config.title": "Настройки MineStream",
+  "takeyourminestream.config.chance_for_spawn": "Шанс спавна",
+  "takeyourminestream.config.chance_for_spawn.desc": "Вероятность появления сообщения",
   "takeyourminestream.config.channel_name": "Имя Twitch-канала:",
   "takeyourminestream.config.message_lifetime_seconds": "Время жизни (сек):",
   "takeyourminestream.config.message_lifetime_seconds.desc": "Как долго сообщения остаются видимыми (в секундах)",
@@ -38,6 +40,12 @@
   "takeyourminestream.config.category.behavior": "Поведение",
   "takeyourminestream.config.channel_name.desc": "Имя Twitch-канала для подключения",
   "takeyourminestream.config.automoderation.desc": "Включить автоматическую фильтрацию запрещенных слов",
+  "takeyourminestream.config.message_sound": "Звук нового сообщения:",
+  "takeyourminestream.config.message_sound.desc": "Проигрывать уведомление при появлении нового сообщения в чате",
+  "takeyourminestream.config.message_sound_volume": "Громкость уведомления (0-1):",
+  "takeyourminestream.config.message_sound_volume.desc": "Громкость звука уведомления о новом сообщении",
+  "takeyourminestream.config.auto_connect_irc": "Автоподключение IRC при входе:",
+  "takeyourminestream.config.auto_connect_irc.desc": "Автоматически подключаться к Twitch IRC при входе в мир/на сервер",
   "takeyourminestream.config.message_lifetime.desc": "Как долго сообщения остаются видимыми (в тиках)",
   "takeyourminestream.config.message_fall.desc": "Как долго сообщения падают (в тиках)",
   "takeyourminestream.config.message_scale.desc": "Размер отображаемых сообщений",
@@ -63,5 +71,7 @@
   "takeyourminestream.twitch.error.disconnect": "Ошибка при отключении от Twitch: %s",
   "takeyourminestream.twitch.error.reconnect": "Ошибка при переподключении к Twitch: %s",
   "key.takeyourminestream.openconfig": "Открыть настройки MineStream",
-  "category.takeyourminestream.general": "Take Your MineStream"
+  "key.takeyourminestream.startandstop": "Запуск/остановка IRC-подключения",
+  "key.categories.takeyourminestream": "Take Your MineStream",
+  "key.category.takeyourminestream.main": "Take Your MineStream"
 }
