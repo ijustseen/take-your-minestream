@@ -1,5 +1,7 @@
 {
   "takeyourminestream.config.title": "Настройки MineStream",
+  "takeyourminestream.config.chance_for_spawn": "Шанс спавна",
+  "takeyourminestream.config.chance_for_spawn.desc": "Вероятность появления сообщения",
   "takeyourminestream.config.channel_name": "Имя Twitch-канала:",
   "takeyourminestream.config.message_lifetime_seconds": "Время жизни (сек):",
   "takeyourminestream.config.message_lifetime_seconds.desc": "Как долго сообщения остаются видимыми (в секундах)",
@@ -69,5 +71,6 @@
   "takeyourminestream.twitch.error.disconnect": "Ошибка при отключении от Twitch: %s",
   "takeyourminestream.twitch.error.reconnect": "Ошибка при переподключении к Twitch: %s",
   "key.takeyourminestream.openconfig": "Открыть настройки MineStream",
-  "category.takeyourminestream.general": "Take Your MineStream"
+  "key.takeyourminestream.startandstop": "Запуск/остановка IRC-подключения",
+  "key.categories.takeyourminestream": "Take Your MineStream"
 }

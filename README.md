@@ -35,7 +35,7 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 - `/minestream twitch start` | `/minestream twitch stop` — control Twitch connection
 - `/minestream banword add|remove|list` — manage content filter
 - `/minestream help` — list all commands
-- Keybinds: `]` open config
+- Keybinds: `]` open config, `[` quick IRC start/stop toggle
 
 ## Configuration highlights
 
@@ -43,6 +43,7 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 - Message timing: lifetime, fall duration, spawn intervals
 - Visuals: scale, colors, particle effects
 - Moderation: banned words list and censor behavior
+- Interaction note: message click/pin interactions work only with an empty main hand
 
 ## Build from source
 

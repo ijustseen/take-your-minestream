@@ -17,6 +17,7 @@ import takeyourminestream.ijustseen.utils.Logger;
  * Менеджер привязок клавиш
  */
 public class KeyBindingManager {
+    private static final String KEY_CATEGORY = "key.categories.takeyourminestream";
     private final ITwitchManager twitchManager;
     private final MessageSpawner messageSpawner;
     private KeyBinding openConfigScreenKeyBinding;
@@ -33,14 +34,14 @@ public class KeyBindingManager {
             "key.takeyourminestream.openconfig",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_RIGHT_BRACKET, // Клавиша ']'
-            "key.categories.misc"
+            KEY_CATEGORY
         ));
 
         startAndStopMessagesKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.takeyourminestream.startandstop",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_LEFT_BRACKET, // Клавиша '['
-            "key.categories.misc"
+                KEY_CATEGORY
         ));
 
         // Обработка нажатия клавиш
