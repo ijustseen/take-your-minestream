@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.4.0] - 2026-03-13
+
+### MAJOR UPDATE
+
+- Emotes rendering added and stabilized:
+  - Twitch emotes from IRC tags
+  - 7TV emotes (global + channel)
+  - Animated 7TV GIF rendering with frame timing
+  - Local disk cache for Twitch and 7TV emotes
+- Config storage moved from `config/` to top-level `take-your-minestream/` folder
+  - Main JSON config moved inside this folder
+  - Legacy data migration added
+- Message interaction hitboxes fixed to match visual panel/pin geometry under rotations
+- Message interactions (remove/pin/unpin/drag) now work only with empty main hand
+- Auto IRC connect on world/server join added (config toggle)
+
+## [1.3.0] - 2026-03-07
+
+- Now you can pin messages
+- Massages behavior fixes with
+- Pinned messages can be copied from world in config folder
+- IRC fix
+
 ## [1.2.0] - 2024-11-12
 
 ### Added

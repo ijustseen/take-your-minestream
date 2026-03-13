@@ -12,7 +12,7 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 
 ## Compatibility
 
-- Works with modern Minecraft versions supported by Fabric
+- Target branch compatibility: Minecraft 1.21.10 (Fabric)
 - Requires Fabric Loader and Fabric API
 - See releases for exact version support
 
@@ -35,7 +35,7 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 - `/minestream twitch start` | `/minestream twitch stop` — control Twitch connection
 - `/minestream banword add|remove|list` — manage content filter
 - `/minestream help` — list all commands
-- Keybinds: `]` open config; ~~`[` toggle Twitch connection~~
+- Keybinds: `]` open config, `[` quick IRC start/stop toggle
 
 ## Configuration highlights
 
@@ -43,6 +43,7 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 - Message timing: lifetime, fall duration, spawn intervals
 - Visuals: scale, colors, particle effects
 - Moderation: banned words list and censor behavior
+- Interaction note: message click/pin interactions work only with an empty main hand
 
 ## Build from source
 
@@ -54,11 +55,8 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 
 For developers working on this mod:
 
-- **[MINECRAFT_1.21.10_GUIDE.md](MINECRAFT_1.21.10_GUIDE.md)** - Complete guide for Minecraft 1.21.10 update
-  - API changes and fixes
-  - Custom rendering system
-  - Usage examples
-  - Troubleshooting
+- **[RENDERING_GUIDE.md](RENDERING_GUIDE.md)** - Current rendering and emote flow
+- **[src/client/java/takeyourminestream/ijustseen/messages/README.md](src/client/java/takeyourminestream/ijustseen/messages/README.md)** - Message system architecture details
 
 ## License
 

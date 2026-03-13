@@ -1,5 +1,7 @@
 {
   "takeyourminestream.config.title": "MineStream 设置",
+  "takeyourminestream.config.chance_for_spawn": "生成概率",
+  "takeyourminestream.config.chance_for_spawn.desc": "消息出现的概率",
   "takeyourminestream.config.channel_name": "Twitch 频道名：",
   "takeyourminestream.config.message_lifetime_seconds": "消息存活时间（秒）：",
   "takeyourminestream.config.message_lifetime_seconds.desc": "消息保持可见的时长（秒）",
@@ -59,5 +61,7 @@
   "takeyourminestream.twitch.error.disconnect": "断开 Twitch 时出错：%s",
   "takeyourminestream.twitch.error.reconnect": "重新连接 Twitch 时出错：%s",
   "key.takeyourminestream.openconfig": "打开 MineStream 设置",
-  "category.takeyourminestream.general": "Take Your MineStream"
+  "key.takeyourminestream.startandstop": "启动/停止 IRC 连接",
+  "key.categories.takeyourminestream": "Take Your MineStream",
+  "key.category.takeyourminestream.main": "Take Your MineStream"
 }
