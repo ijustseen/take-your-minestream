@@ -1,20 +1,44 @@
 package takeyourminestream.ijustseen;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.messages.PinnedMessageStore;
 import takeyourminestream.ijustseen.utils.Logger;
 
 public class WorldEventHandler {
+    private static String lastDimensionKey;
 
     public static void register(MessageSpawner messageSpawner) {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             onWorldJoin(messageSpawner);
+            if (client.world != null) {
+                lastDimensionKey = client.world.getRegistryKey().getValue().toString();
+            }
         });
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             onWorldLeave(messageSpawner);
+            lastDimensionKey = null;
+        });
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client == null || client.world == null || messageSpawner == null) {
+                return;
+            }
+
+            String currentDimensionKey = client.world.getRegistryKey().getValue().toString();
+            if (lastDimensionKey == null) {
+                lastDimensionKey = currentDimensionKey;
+                return;
+            }
+
+            if (!lastDimensionKey.equals(currentDimensionKey)) {
+                lastDimensionKey = currentDimensionKey;
+                PinnedMessageStore.loadForCurrentWorld(messageSpawner.getLifecycleManager());
+                Logger.info("Dimension changed, pinned messages reloaded for " + currentDimensionKey);
+            }
         });
 
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
@@ -56,7 +80,7 @@ public class WorldEventHandler {
             }
             PinnedMessageStore.saveForCurrentWorld(messageSpawner.getLifecycleManager());
             messageSpawner.pause();
-            TakeYourMineStreamClient.LOGGER.info("Message system paused (left world");
+            TakeYourMineStreamClient.LOGGER.info("Message system paused (left world)");
         }
     }
 }
