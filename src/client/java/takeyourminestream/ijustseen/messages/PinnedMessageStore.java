@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Хранилище закреплённых сообщений на уровне мира/сервера.
+ * Хранилище закреплённых сообщений на уровне мира/сервера + измерения.
  */
 public final class PinnedMessageStore {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -41,8 +41,18 @@ public final class PinnedMessageStore {
 
         removeAllPinnedInMemory(lifecycleManager);
 
-        Path file = getStorageFile(client);
-        ensureFileExists(file, resolveWorldKey(client));
+        Path currentScopedFile = getStorageFile(client);
+        Path file = currentScopedFile;
+
+        if (Files.notExists(currentScopedFile)) {
+            Path legacyFile = getLegacyStorageFile(client);
+            if (Files.exists(legacyFile)) {
+                file = legacyFile;
+            } else {
+                ensureFileExists(currentScopedFile, resolveWorldDimensionKey(client));
+                file = currentScopedFile;
+            }
+        }
 
         if (!Files.exists(file)) {
             return;
@@ -93,7 +103,7 @@ public final class PinnedMessageStore {
         }
 
         Path file = getStorageFile(client);
-        String worldKey = resolveWorldKey(client);
+        String worldKey = resolveWorldDimensionKey(client);
 
         List<PinnedMessageEntry> entries = lifecycleManager.getActiveMessages().stream()
             .filter(Message::isPinned)
@@ -167,12 +177,23 @@ public final class PinnedMessageStore {
         Path modRoot = StoragePaths.getModRootDir();
         Path legacyRoot = StoragePaths.getLegacyModRootDir();
         StoragePaths.migrateDirectoryIfNeeded(legacyRoot.resolve(STORE_DIR), modRoot.resolve(STORE_DIR));
-        String worldKey = resolveWorldKey(client);
+        String worldKey = resolveWorldDimensionKey(client);
         String fileName = sanitize(worldKey) + "-" + shortHash(worldKey) + ".json";
         return modRoot.resolve(STORE_DIR).resolve(fileName);
     }
 
-    private static String resolveWorldKey(MinecraftClient client) {
+    private static Path getLegacyStorageFile(MinecraftClient client) {
+        Path modRoot = StoragePaths.getModRootDir();
+        String legacyWorldKey = resolveBaseWorldKey(client);
+        String legacyFileName = sanitize(legacyWorldKey) + "-" + shortHash(legacyWorldKey) + ".json";
+        return modRoot.resolve(STORE_DIR).resolve(legacyFileName);
+    }
+
+    private static String resolveWorldDimensionKey(MinecraftClient client) {
+        return resolveBaseWorldKey(client) + "|dimension:" + resolveDimensionKey(client);
+    }
+
+    private static String resolveBaseWorldKey(MinecraftClient client) {
         ServerInfo serverInfo = client.getCurrentServerEntry();
         if (serverInfo != null && serverInfo.address != null && !serverInfo.address.isBlank()) {
             return "server:" + serverInfo.address.toLowerCase(Locale.ROOT).trim();
@@ -189,11 +210,15 @@ public final class PinnedMessageStore {
             }
         }
 
+        return "unknown-world";
+    }
+
+    private static String resolveDimensionKey(MinecraftClient client) {
         if (client.world != null) {
-            return "world-registry:" + client.world.getRegistryKey().getValue();
+            return client.world.getRegistryKey().getValue().toString();
         }
 
-        return "unknown-world";
+        return "unknown-dimension";
     }
 
     private static String sanitize(String input) {
