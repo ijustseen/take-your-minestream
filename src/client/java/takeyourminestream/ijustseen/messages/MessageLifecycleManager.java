@@ -2,7 +2,7 @@ package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.MathHelper;
-import takeyourminestream.ijustseen.ModConfig;
+import takeyourminestream.ijustseen.config.ModConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,8 +37,8 @@ public class MessageLifecycleManager {
         
         tickCounter++;
         // Плавное следование за игроком (только для 3D режимов)
-        if (takeyourminestream.ijustseen.ModConfig.isFOLLOW_PLAYER()
-                && takeyourminestream.ijustseen.ModConfig.getMESSAGE_SPAWN_MODE() != takeyourminestream.ijustseen.config.MessageSpawnMode.HUD_WIDGET) {
+        if (takeyourminestream.ijustseen.config.ModConfig.isFOLLOW_PLAYER()
+                && takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SPAWN_MODE() != takeyourminestream.ijustseen.config.MessageSpawnMode.HUD_WIDGET) {
             var eyePos = client.player.getEyePos();
             // Время сглаживания (в тиках)
             float positionSmoothTime = 14.0f;   // больше инерции
@@ -163,6 +163,50 @@ public class MessageLifecycleManager {
         }
     }
     
+    public void addReplayMessage(Message message) {
+        activeMessages.add(message);
+    }
+
+    public Message findPinnedForHistory(Message historyMessage) {
+        if (historyMessage == null) {
+            return null;
+        }
+        long sourceId = historyMessage.getId();
+        for (Message active : activeMessages) {
+            Long linkedId = active.getHistorySourceId();
+            if (active.isPinned() && linkedId != null && linkedId == sourceId) {
+                return active;
+            }
+        }
+        return null;
+    }
+
+    public boolean isVisibleInWorld(Message historyMessage) {
+        if (historyMessage == null) {
+            return false;
+        }
+        for (Message active : activeMessages) {
+            if (active == historyMessage) {
+                return true;
+            }
+            Long linkedId = active.getHistorySourceId();
+            if (active.isPinned() && linkedId != null && historyMessage.getId() == linkedId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isPinnedInWorld(Message historyMessage) {
+        if (historyMessage == null) {
+            return false;
+        }
+        if (historyMessage.isPinned() && activeMessages.contains(historyMessage)) {
+            return true;
+        }
+        return findPinnedForHistory(historyMessage) != null;
+    }
+
     /**
      * Очищает все активные сообщения
      */

@@ -31,7 +31,7 @@ public class MessageSpawner {
                     if (queued != null) {
                         String messageText = queued.text;
                         Integer authorColor = queued.authorColorRgb;
-                        var spawnMode = takeyourminestream.ijustseen.ModConfig.getMESSAGE_SPAWN_MODE();
+                        var spawnMode = takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SPAWN_MODE();
                         
                         // В HUD режиме создаем сообщение без 3D позиции
                         if (spawnMode == takeyourminestream.ijustseen.config.MessageSpawnMode.HUD_WIDGET) {
@@ -105,11 +105,11 @@ public class MessageSpawner {
     }
 
     private void playNewMessageSound() {
-        if (!takeyourminestream.ijustseen.ModConfig.isENABLE_MESSAGE_SOUND()) {
+        if (!takeyourminestream.ijustseen.config.ModConfig.isENABLE_MESSAGE_SOUND()) {
             return;
         }
 
-        float volume = (float) MathHelper.clamp(takeyourminestream.ijustseen.ModConfig.getMESSAGE_SOUND_VOLUME(), 0.0, 1.0);
+        float volume = (float) MathHelper.clamp(takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SOUND_VOLUME(), 0.0, 1.0);
         if (volume <= 0.0f) {
             return;
         }

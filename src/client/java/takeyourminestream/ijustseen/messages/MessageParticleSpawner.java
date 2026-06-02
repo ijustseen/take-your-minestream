@@ -5,7 +5,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.text.Text;
 import net.minecraft.text.OrderedText;
 import net.minecraft.util.math.Vec3d;
-import takeyourminestream.ijustseen.ModConfig;
+import takeyourminestream.ijustseen.config.ModConfig;
 
 import java.awt.Color;
 import java.util.ArrayList;

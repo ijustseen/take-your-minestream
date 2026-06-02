@@ -3,12 +3,15 @@ package takeyourminestream.ijustseen;
 import net.fabricmc.api.ClientModInitializer;
 import org.slf4j.LoggerFactory;
 import takeyourminestream.ijustseen.filtering.BanwordManager;
+import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.filtering.FilteringManager;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.messages.MessageSystemFactory;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
 import takeyourminestream.ijustseen.interfaces.ITwitchManager;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
+import takeyourminestream.ijustseen.config.ConfigManager;
+import takeyourminestream.ijustseen.integration.twitch.TwitchManager;
 import takeyourminestream.ijustseen.commands.CommandManager;
 import takeyourminestream.ijustseen.input.KeyBindingManager;
 import takeyourminestream.ijustseen.utils.Logger;
@@ -24,6 +27,7 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
     private IConfigManager configManager;
     private ITwitchManager twitchManager;
     private IBanwordManager banwordManager;
+    private BlockedUsernameManager blockedUsernameManager;
     private FilteringManager filteringManager;
     private MessageSpawner messageSpawner;
     private CommandManager commandManager;
@@ -44,6 +48,7 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         // Инициализация менеджеров
         configManager = ConfigManager.getInstance();
         banwordManager = BanwordManager.getInstance();
+        blockedUsernameManager = BlockedUsernameManager.getInstance();
         filteringManager = FilteringManager.getInstance();
         twitchManager = TwitchManager.getInstance(configManager);
         
@@ -51,7 +56,7 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         messageSpawner = MessageSystemFactory.createMessageSystem();
         
         // Инициализация менеджеров команд и клавиш
-        commandManager = new CommandManager(twitchManager, banwordManager, messageSpawner);
+        commandManager = new CommandManager(twitchManager, banwordManager, blockedUsernameManager, messageSpawner);
         keyBindingManager = new KeyBindingManager(twitchManager, messageSpawner);
         
         // Регистрация команд и клавиш
@@ -78,6 +83,10 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
 
     public IBanwordManager getBanwordManager() {
         return banwordManager;
+    }
+
+    public BlockedUsernameManager getBlockedUsernameManager() {
+        return blockedUsernameManager;
     }
 
     public FilteringManager getFilteringManager() {return filteringManager;}

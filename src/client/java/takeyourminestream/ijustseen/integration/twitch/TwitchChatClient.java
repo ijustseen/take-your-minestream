@@ -1,7 +1,8 @@
-package takeyourminestream.ijustseen;
+package takeyourminestream.ijustseen.integration.twitch;
 
 import net.minecraft.client.MinecraftClient;
 import takeyourminestream.ijustseen.filtering.BanwordManager;
+import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.filtering.FilteringManager;
 import takeyourminestream.ijustseen.messages.MessageEmote;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
@@ -12,7 +13,8 @@ import javax.net.ssl.SSLSocketFactory;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.Collections;
-import takeyourminestream.ijustseen.ModConfig;
+import takeyourminestream.ijustseen.config.ModConfig;
+import takeyourminestream.ijustseen.config.ConfigManager;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -152,19 +154,11 @@ public class TwitchChatClient {
 
             message = message.replace("͏", "").trim();
 
-            // skip if regular expression bans it
-            if (FilteringManager.getInstance().fitsRegexp(message)) {
-                return;
-            }
-            // skip if chance did not proc
-            if (MinecraftClient.getInstance().player.getRandom().nextInt(100) > ConfigManager.getInstance().getConfigData().getChanceForSpawn()) {
-                return;
-            }
-
             String displayName = user;
             Integer rgb = null;
             String emotesTag = null;
             String roomId = null;
+            String badgesTag = null;
             if (tagsPart != null) {
                 String[] tags = tagsPart.split(";");
                 for (String tag : tags) {
@@ -181,8 +175,27 @@ public class TwitchChatClient {
                         emotesTag = val;
                     } else if (key.equals("room-id") && !val.isEmpty()) {
                         roomId = val;
+                    } else if (key.equals("badges")) {
+                        badgesTag = val;
                     }
                 }
+            }
+
+            if (ModConfig.isENABLE_USERNAME_BLOCKLIST() && BlockedUsernameManager.getInstance().isBlocked(displayName, user)) {
+                return;
+            }
+
+            if (!ModConfig.getCHAT_ROLE_FILTER().passes(badgesTag)) {
+                return;
+            }
+
+            // skip if regular expression bans it
+            if (FilteringManager.getInstance().fitsRegexp(message)) {
+                return;
+            }
+            // skip if chance did not proc
+            if (MinecraftClient.getInstance().player.getRandom().nextInt(100) > ConfigManager.getInstance().getConfigData().getChanceForSpawn()) {
+                return;
             }
 
             if (roomId != null) {

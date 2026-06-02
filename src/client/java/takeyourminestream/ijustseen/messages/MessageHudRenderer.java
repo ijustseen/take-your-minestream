@@ -6,7 +6,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.text.OrderedText;
-import takeyourminestream.ijustseen.ModConfig;
+import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.config.MessageSpawnMode;
 
 import java.util.ArrayList;

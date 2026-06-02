@@ -70,7 +70,7 @@ public class MouseHandlerMixin {
         }
 
         // Проверяем, включена ли функция удаления кликом
-        if (!takeyourminestream.ijustseen.ModConfig.isENABLE_CLICK_TO_REMOVE()) {
+        if (!takeyourminestream.ijustseen.config.ModConfig.isENABLE_CLICK_TO_REMOVE()) {
             return;
         }
 

@@ -7,6 +7,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import takeyourminestream.ijustseen.core.MessagePanelConstants;
 import takeyourminestream.ijustseen.utils.CameraPositionCompat;
 
 import java.util.Collection;
@@ -17,11 +18,7 @@ import java.util.List;
  * Обработчик кликов по сообщениям
  */
 public class MessageClickHandler {
-    private static final float CLICK_DISTANCE = 100.0f; // Максимальная дистанция для клика
-    private static final int PANEL_PADDING_X = 6;
-    private static final int PANEL_PADDING_Y = 4;
-    private static final int PIN_ICON_SIZE = 8;
-    private static final int PIN_ICON_MARGIN = 1;
+    private static final float CLICK_DISTANCE = 100.0f;
     private static final int EMOTE_ICON_SIZE = 12;
     private static final int EMOTE_ICON_SPACING = 1;
 
@@ -146,10 +143,10 @@ public class MessageClickHandler {
             }
         }
 
-        int panelWidth = maxTextWidth + PANEL_PADDING_X * 2;
-        int panelHeight = (int) totalTextHeight + PANEL_PADDING_Y * 2;
+        int panelWidth = maxTextWidth + MessagePanelConstants.PADDING_X * 2;
+        int panelHeight = (int) totalTextHeight + MessagePanelConstants.PADDING_Y * 2;
         float baseScale = 0.025f;
-        float configScale = takeyourminestream.ijustseen.ModConfig.getMESSAGE_SCALE().getScale();
+        float configScale = takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SCALE().getScale();
         float finalScale = baseScale * configScale;
         double rectWidth = panelWidth * finalScale;
         double rectHeight = panelHeight * finalScale;
@@ -192,8 +189,8 @@ public class MessageClickHandler {
         double textSpaceX = (hitLocal.x / finalScale) + (maxTextWidth / 2.0);
         double textSpaceY = (-hitLocal.y / finalScale) + (totalTextHeight / 2.0);
 
-        double panelX0 = -PANEL_PADDING_X;
-        double panelY0 = -PANEL_PADDING_Y;
+        double panelX0 = -MessagePanelConstants.PADDING_X;
+        double panelY0 = -MessagePanelConstants.PADDING_Y;
         double panelX1 = panelX0 + panelWidth;
         double panelY1 = panelY0 + panelHeight;
 
@@ -201,10 +198,10 @@ public class MessageClickHandler {
             && textSpaceY >= panelY0 && textSpaceY <= panelY1;
         boolean insidePinIcon = false;
         if (message.isPinned()) {
-            double pinX0 = panelWidth - PANEL_PADDING_X - (PIN_ICON_SIZE / 2.0) + PIN_ICON_MARGIN;
-            double pinY0 = -PANEL_PADDING_Y - (PIN_ICON_SIZE / 2.0) - PIN_ICON_MARGIN;
-            double pinX1 = pinX0 + PIN_ICON_SIZE;
-            double pinY1 = pinY0 + PIN_ICON_SIZE;
+            double pinX0 = panelWidth - MessagePanelConstants.PADDING_X - (MessagePanelConstants.PIN_ICON_SIZE / 2.0) + MessagePanelConstants.PIN_ICON_MARGIN;
+            double pinY0 = -MessagePanelConstants.PADDING_Y - (MessagePanelConstants.PIN_ICON_SIZE / 2.0) - MessagePanelConstants.PIN_ICON_MARGIN;
+            double pinX1 = pinX0 + MessagePanelConstants.PIN_ICON_SIZE;
+            double pinY1 = pinY0 + MessagePanelConstants.PIN_ICON_SIZE;
 
             insidePinIcon = textSpaceX >= pinX0 && textSpaceX <= pinX1
                 && textSpaceY >= pinY0 && textSpaceY <= pinY1;
@@ -214,7 +211,7 @@ public class MessageClickHandler {
             return null;
         }
 
-        return new MessageHit(message, t, true);
+        return new MessageHit(message, t, insidePinIcon);
     }
 
     private static int getEmoteAwareLineWidth(TextRenderer textRenderer, String text, java.util.List<MessageEmote> emotes) {

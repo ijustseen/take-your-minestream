@@ -1,4 +1,4 @@
-package takeyourminestream.ijustseen;
+package takeyourminestream.ijustseen.config;
 
 import takeyourminestream.ijustseen.config.ModConfigData;
 
@@ -148,5 +148,23 @@ public class ModConfig {
 
     public static void setAUTO_CONNECT_IRC_ON_JOIN(boolean value) {
         ConfigManager.getInstance().setConfigValue("autoConnectIrcOnJoin", value);
+    }
+
+    public static takeyourminestream.ijustseen.config.ChatRoleFilter getCHAT_ROLE_FILTER() {
+        Object value = ConfigManager.getInstance().getConfigValue("chatRoleFilter");
+        return value instanceof takeyourminestream.ijustseen.config.ChatRoleFilter filter ? filter : takeyourminestream.ijustseen.config.ChatRoleFilter.ALL;
+    }
+
+    public static void setCHAT_ROLE_FILTER(takeyourminestream.ijustseen.config.ChatRoleFilter value) {
+        ConfigManager.getInstance().setConfigValue("chatRoleFilter", value);
+    }
+
+    public static boolean isENABLE_USERNAME_BLOCKLIST() {
+        Object value = ConfigManager.getInstance().getConfigValue("enableUsernameBlocklist");
+        return value == null || (Boolean) value;
+    }
+
+    public static void setENABLE_USERNAME_BLOCKLIST(boolean value) {
+        ConfigManager.getInstance().setConfigValue("enableUsernameBlocklist", value);
     }
 } 

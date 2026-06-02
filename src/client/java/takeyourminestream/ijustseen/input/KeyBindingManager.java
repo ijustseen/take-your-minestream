@@ -5,11 +5,11 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
-import takeyourminestream.ijustseen.ConfigManager;
+import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
-import takeyourminestream.ijustseen.TwitchManager;
+import takeyourminestream.ijustseen.integration.twitch.TwitchManager;
 import takeyourminestream.ijustseen.interfaces.ITwitchManager;
-import takeyourminestream.ijustseen.ModConfigScreen;
+import takeyourminestream.ijustseen.ui.screen.ModConfigScreen;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.utils.Logger;
 

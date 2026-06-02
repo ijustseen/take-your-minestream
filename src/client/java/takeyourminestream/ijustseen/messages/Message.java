@@ -1,11 +1,15 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.util.math.Vec3d;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Модель данных для отображаемого сообщения
  */
 public class Message {
+    private static final AtomicLong NEXT_ID = new AtomicLong(1);
+
+    private final long id = NEXT_ID.getAndIncrement();
     private final String text;
     private final java.util.List<MessageEmote> emotes;
     private Vec3d position;
@@ -24,6 +28,7 @@ public class Message {
     // Отстающая базовая ориентация (yaw), вокруг которой вращается локальное смещение
     private float followBasisYaw;
     private boolean pinned;
+    private Long historySourceId;
     
     public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch) {
         this(text, position, spawnTick, yaw, pitch, null, Vec3d.ZERO, java.util.Collections.emptyList());
@@ -97,6 +102,9 @@ public class Message {
     public float getPreviousPitch() { return previousPitch; }
     public boolean isPinned() { return pinned; }
     public void setPinned(boolean pinned) { this.pinned = pinned; }
+    public long getId() { return id; }
+    public Long getHistorySourceId() { return historySourceId; }
+    public void setHistorySourceId(Long historySourceId) { this.historySourceId = historySourceId; }
     
     /**
      * Вычисляет эффективный возраст сообщения с учетом замороженного времени

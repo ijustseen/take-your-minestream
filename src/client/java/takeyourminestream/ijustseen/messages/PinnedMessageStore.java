@@ -7,7 +7,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.Vec3d;
-import takeyourminestream.ijustseen.StoragePaths;
+import takeyourminestream.ijustseen.core.storage.StoragePaths;
 import takeyourminestream.ijustseen.utils.Logger;
 
 import java.io.IOException;

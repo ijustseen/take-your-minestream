@@ -27,6 +27,8 @@ public class ModConfigData {
     private double messageSoundVolume = 0.45;
     private boolean autoConnectIrcOnJoin = false;
     private int chanceForSpawn = 100;
+    private ChatRoleFilter chatRoleFilter = ChatRoleFilter.ALL;
+    private boolean enableUsernameBlocklist = true;
 
     // Геттеры
     public int getChanceForSpawn() { return chanceForSpawn; }
@@ -50,6 +52,8 @@ public class ModConfigData {
     public boolean isEnableMessageSound() { return enableMessageSound; }
     public double getMessageSoundVolume() { return messageSoundVolume; }
     public boolean isAutoConnectIrcOnJoin() { return autoConnectIrcOnJoin; }
+    public ChatRoleFilter getChatRoleFilter() { return chatRoleFilter; }
+    public boolean isEnableUsernameBlocklist() { return enableUsernameBlocklist; }
 
     // Сеттеры
     public void setChanceForSpawn(int chanceForSpawn) { this.chanceForSpawn = chanceForSpawn; }
@@ -73,6 +77,8 @@ public class ModConfigData {
     public void setEnableMessageSound(boolean enableMessageSound) { this.enableMessageSound = enableMessageSound; }
     public void setMessageSoundVolume(double messageSoundVolume) { this.messageSoundVolume = messageSoundVolume; }
     public void setAutoConnectIrcOnJoin(boolean autoConnectIrcOnJoin) { this.autoConnectIrcOnJoin = autoConnectIrcOnJoin; }
+    public void setChatRoleFilter(ChatRoleFilter chatRoleFilter) { this.chatRoleFilter = chatRoleFilter != null ? chatRoleFilter : ChatRoleFilter.ALL; }
+    public void setEnableUsernameBlocklist(boolean enableUsernameBlocklist) { this.enableUsernameBlocklist = enableUsernameBlocklist; }
     
     // Методы для обратной совместимости
     public boolean isMessagesInFrontOfPlayerOnly() { 

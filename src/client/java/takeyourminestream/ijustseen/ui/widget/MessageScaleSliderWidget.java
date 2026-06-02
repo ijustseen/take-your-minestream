@@ -1,8 +1,8 @@
-package takeyourminestream.ijustseen.widget;
+package takeyourminestream.ijustseen.ui.widget;
 
 import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.text.Text;
-import takeyourminestream.ijustseen.ModConfig;
+import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.config.MessageScale;
 
 /**

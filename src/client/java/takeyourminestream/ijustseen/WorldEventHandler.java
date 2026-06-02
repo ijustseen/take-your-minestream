@@ -3,6 +3,7 @@ package takeyourminestream.ijustseen;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.messages.PinnedMessageStore;
 import takeyourminestream.ijustseen.utils.Logger;

@@ -1,4 +1,4 @@
-package takeyourminestream.ijustseen;
+package takeyourminestream.ijustseen.core.storage;
 
 import net.fabricmc.loader.api.FabricLoader;
 

@@ -1,8 +1,9 @@
-package takeyourminestream.ijustseen;
+package takeyourminestream.ijustseen.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import takeyourminestream.ijustseen.config.ModConfigData;
+import takeyourminestream.ijustseen.core.storage.StoragePaths;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
@@ -151,6 +152,12 @@ public class ConfigManager implements IConfigManager {
             case "autoConnectIrcOnJoin":
                 configData.setAutoConnectIrcOnJoin((Boolean) value);
                 break;
+            case "chatRoleFilter":
+                configData.setChatRoleFilter((takeyourminestream.ijustseen.config.ChatRoleFilter) value);
+                break;
+            case "enableUsernameBlocklist":
+                configData.setEnableUsernameBlocklist((Boolean) value);
+                break;
             default:
                 LOGGER.warning("Неизвестный ключ конфигурации: " + key);
                 return;
@@ -183,6 +190,8 @@ public class ConfigManager implements IConfigManager {
         configCache.put("enableMessageSound", configData.isEnableMessageSound());
         configCache.put("messageSoundVolume", configData.getMessageSoundVolume());
         configCache.put("autoConnectIrcOnJoin", configData.isAutoConnectIrcOnJoin());
+        configCache.put("chatRoleFilter", configData.getChatRoleFilter());
+        configCache.put("enableUsernameBlocklist", configData.isEnableUsernameBlocklist());
     }
 
     public ModConfigData getConfigData() {

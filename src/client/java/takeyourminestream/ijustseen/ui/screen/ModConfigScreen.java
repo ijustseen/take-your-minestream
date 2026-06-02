@@ -1,4 +1,4 @@
-package takeyourminestream.ijustseen;
+package takeyourminestream.ijustseen.ui.screen;
 
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -11,8 +11,13 @@ import net.minecraft.client.font.TextRenderer;
 import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.config.MessageScale;
 import takeyourminestream.ijustseen.config.MessageSpawnMode;
-import takeyourminestream.ijustseen.widget.MessageScaleSliderWidget;
-import takeyourminestream.ijustseen.widget.MessageSoundVolumeSliderWidget;
+import takeyourminestream.ijustseen.config.ChatRoleFilter;
+import takeyourminestream.ijustseen.config.ConfigManager;
+import takeyourminestream.ijustseen.config.ModConfig;
+import takeyourminestream.ijustseen.integration.twitch.TwitchManager;
+import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.ui.widget.MessageScaleSliderWidget;
+import takeyourminestream.ijustseen.ui.widget.MessageSoundVolumeSliderWidget;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -203,6 +208,34 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(regexpButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.regexps", "takeyourminestream.config.regexps.desc", ConfigEntryType.BUTTON, regexpButton, ConfigCategory.GENERAL));
 
+        ButtonWidget roleFilterButton = ButtonWidget.builder(
+            getRoleFilterButtonText(),
+            btn -> {
+                ChatRoleFilter nextFilter = ModConfig.getCHAT_ROLE_FILTER().next();
+                ModConfig.setCHAT_ROLE_FILTER(nextFilter);
+                btn.setMessage(getRoleFilterButtonText());
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(roleFilterButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.role_filter", "takeyourminestream.config.role_filter.desc", ConfigEntryType.BUTTON, roleFilterButton, ConfigCategory.GENERAL));
+
+        ButtonWidget usernameBlocklistToggle = ButtonWidget.builder(
+            Text.translatable(ModConfig.isENABLE_USERNAME_BLOCKLIST() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
+            btn -> {
+                ModConfig.setENABLE_USERNAME_BLOCKLIST(!ModConfig.isENABLE_USERNAME_BLOCKLIST());
+                btn.setMessage(Text.translatable(ModConfig.isENABLE_USERNAME_BLOCKLIST() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(usernameBlocklistToggle);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.username_blocklist", "takeyourminestream.config.username_blocklist.desc", ConfigEntryType.TOGGLE, usernameBlocklistToggle, ConfigCategory.GENERAL));
+
+        ButtonWidget blockedUsersButton = ButtonWidget.builder(
+            Text.translatable("takeyourminestream.config.blocked_users_config"),
+            btn -> this.client.setScreen(new BlockedUsernameConfigScreen(this))
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(blockedUsersButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.blocked_users", "takeyourminestream.config.blocked_users.desc", ConfigEntryType.BUTTON, blockedUsersButton, ConfigCategory.GENERAL));
+
         TextFieldWidget chanceForSpawnField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.chance_for_spawn"));
         chanceForSpawnField.setText(ConfigManager.getInstance().getConfigValue("chanceForSpawn").toString());
         chanceForSpawnField.setChangedListener(s -> {
@@ -368,6 +401,17 @@ public class ModConfigScreen extends Screen {
         }).dimensions(centerX + buttonWidth / 2 + buttonSpacing, buttonY, buttonWidth, 20).build());
     }
 
+
+    private Text getRoleFilterButtonText() {
+        return switch (ModConfig.getCHAT_ROLE_FILTER()) {
+            case SUBSCRIBERS -> Text.translatable("takeyourminestream.config.role_filter.subscribers");
+            case VIP -> Text.translatable("takeyourminestream.config.role_filter.vip");
+            case MODS -> Text.translatable("takeyourminestream.config.role_filter.mods");
+            case SUB_OR_VIP -> Text.translatable("takeyourminestream.config.role_filter.sub_or_vip");
+            case SUB_OR_MOD -> Text.translatable("takeyourminestream.config.role_filter.sub_or_mod");
+            default -> Text.translatable("takeyourminestream.config.role_filter.all");
+        };
+    }
 
     private Text getSpawnModeButtonText() {
         var mode = ModConfig.getMESSAGE_SPAWN_MODE();

@@ -4,7 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.util.Identifier;
-import takeyourminestream.ijustseen.StoragePaths;
+import takeyourminestream.ijustseen.core.storage.StoragePaths;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

@@ -1,4 +1,4 @@
-package takeyourminestream.ijustseen;
+package takeyourminestream.ijustseen.integration.twitch;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;

@@ -3,7 +3,7 @@ package takeyourminestream.ijustseen.filtering;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
-import takeyourminestream.ijustseen.StoragePaths;
+import takeyourminestream.ijustseen.core.storage.StoragePaths;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.InputStreamReader;
