@@ -13,6 +13,29 @@ public final class MessagePanelGuiRenderer {
         drawPanel(context, x, y, width, height, 1.0f);
     }
 
+    public static void drawPinIcon(DrawContext context, int panelX, int panelY, int panelWidth, float alpha) {
+        int pinX = panelX + panelWidth - MessagePanelConstants.PADDING_X
+            - (MessagePanelConstants.PIN_ICON_SIZE / 2)
+            + MessagePanelConstants.PIN_ICON_MARGIN;
+        int pinY = panelY - (MessagePanelConstants.PIN_ICON_SIZE / 2) - MessagePanelConstants.PIN_ICON_MARGIN;
+        int color = alpha >= 1.0f ? -1 : ((int) (alpha * 255.0f) << 24) | 0xFFFFFF;
+        context.drawTexture(
+            RenderPipelines.GUI_TEXTURED,
+            MessagePanelConstants.PIN_TEXTURE,
+            pinX,
+            pinY,
+            0,
+            0,
+            MessagePanelConstants.PIN_ICON_SIZE,
+            MessagePanelConstants.PIN_ICON_SIZE,
+            MessagePanelConstants.PIN_ICON_SIZE,
+            MessagePanelConstants.PIN_ICON_SIZE,
+            MessagePanelConstants.PIN_ICON_SIZE,
+            MessagePanelConstants.PIN_ICON_SIZE,
+            color
+        );
+    }
+
     public static void drawPanel(DrawContext context, int x, int y, int width, int height, float alpha) {
         int color = alpha >= 1.0f ? -1 : ((int) (alpha * 255.0f) << 24) | 0xFFFFFF;
         for (MessagePanel9Slice.GuiSlice slice : MessagePanel9Slice.guiSlices(x, y, width, height)) {

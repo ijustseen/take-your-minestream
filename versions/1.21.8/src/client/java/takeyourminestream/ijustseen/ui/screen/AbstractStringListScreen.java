@@ -5,7 +5,6 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
-import net.minecraft.client.gui.Click;
 import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 
@@ -118,9 +117,10 @@ public abstract class AbstractStringListScreen extends Screen {
         context.drawText(this.textRenderer, Text.of("x"), btnX + (REMOVE_BTN_SIZE / 2) - 2, y + (REMOVE_BTN_SIZE / 2) - 4, 0xFFFFFFFF, true);
     }
 
-    protected boolean handleListMouseClicked(double mouseX, double mouseY, int button) {
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) {
-            return false;
+            return super.mouseClicked(mouseX, mouseY, button);
         }
 
         int y = listTop() + PADDING - scrollOffset;
@@ -137,15 +137,7 @@ public abstract class AbstractStringListScreen extends Screen {
             }
             y += LINE_HEIGHT;
         }
-        return false;
-    }
-
-    @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
-        if (handleListMouseClicked(click.x(), click.y(), click.button())) {
-            return true;
-        }
-        return super.mouseClicked(click, doubled);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override

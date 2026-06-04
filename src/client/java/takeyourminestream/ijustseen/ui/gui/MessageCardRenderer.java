@@ -30,14 +30,11 @@ public final class MessageCardRenderer {
         int y,
         float alpha,
         boolean hovered,
-        boolean visibleInWorld
+        boolean visibleInWorld,
+        boolean pinnedInWorld
     ) {
-        float panelAlpha = visibleInWorld ? alpha : alpha * 0.42f;
+        float panelAlpha = visibleInWorld ? alpha : alpha * 0.55f;
         MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), panelAlpha);
-
-        if (!visibleInWorld) {
-            context.fill(x, y, x + layout.width(), y + layout.height(), 0x70000000);
-        }
 
         int innerX = x + MessagePanelConstants.PADDING_X;
         int innerY = y + MessagePanelConstants.PADDING_Y;
@@ -75,6 +72,10 @@ public final class MessageCardRenderer {
         for (OrderedText line : layout.bodyLines()) {
             context.drawText(textRenderer, line, innerX, innerY, bodyColor, false);
             innerY += textRenderer.fontHeight;
+        }
+
+        if (pinnedInWorld) {
+            MessagePanelGuiRenderer.drawPinIcon(context, x, y, layout.width(), panelAlpha);
         }
 
         return new DrawResult(usernameHitbox);

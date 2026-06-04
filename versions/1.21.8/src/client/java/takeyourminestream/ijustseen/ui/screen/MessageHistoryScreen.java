@@ -7,8 +7,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.input.KeyInput;
 import takeyourminestream.ijustseen.core.MessagePanelConstants;
 import takeyourminestream.ijustseen.core.text.ChatMessageParser;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
@@ -275,7 +273,8 @@ public class MessageHistoryScreen extends Screen {
         );
     }
 
-    private boolean handleHistoryMouseClicked(double mouseX, double mouseY, int button) {
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int mx = (int) mouseX;
         int my = (int) mouseY;
 
@@ -308,15 +307,7 @@ public class MessageHistoryScreen extends Screen {
             return true;
         }
 
-        return false;
-    }
-
-    @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
-        if (handleHistoryMouseClicked(click.x(), click.y(), click.button())) {
-            return true;
-        }
-        return super.mouseClicked(click, doubled);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private void handleAction(HistoryMessageActionPopup.Entry entry, HistoryCard card) {
@@ -359,13 +350,13 @@ public class MessageHistoryScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (actionPopup.isOpen() && input.key() == GLFW.GLFW_KEY_ESCAPE) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (actionPopup.isOpen() && keyCode == GLFW.GLFW_KEY_ESCAPE) {
             actionPopup.close();
             selectedCard = null;
             return true;
         }
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

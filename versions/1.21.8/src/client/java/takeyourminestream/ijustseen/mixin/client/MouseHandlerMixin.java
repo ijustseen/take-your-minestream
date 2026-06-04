@@ -2,7 +2,6 @@ package takeyourminestream.ijustseen.mixin.client;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
-import net.minecraft.client.input.MouseInput;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.sound.SoundEvents;
 import org.spongepowered.asm.mixin.Final;
@@ -17,17 +16,13 @@ import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 
 import java.util.ArrayList;
 
-/** Mixin для обработки кликов по сообщениям (1.21.10+). */
+/** Mixin для обработки кликов по сообщениям (Minecraft 1.21.8). */
 @Mixin(Mouse.class)
 public class MouseHandlerMixin {
     @Shadow @Final private MinecraftClient client;
 
     @Inject(method = "onMouseButton", at = @At("HEAD"), cancellable = true)
-    private void onMouseButton(long window, MouseInput input, int action, CallbackInfo ci) {
-        handleMouseButton(input.button(), action, ci);
-    }
-
-    private void handleMouseButton(int button, int action, CallbackInfo ci) {
+    private void onMouseButton(long window, int button, int action, int mods, CallbackInfo ci) {
         if (client.player == null || client.world == null) {
             return;
         }

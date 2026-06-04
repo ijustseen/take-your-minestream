@@ -14,6 +14,8 @@ public final class MessagePanelConstants {
     public static final int PADDING_Y = 4;
     public static final int PIN_ICON_SIZE = 8;
     public static final int PIN_ICON_MARGIN = 1;
+    /** Насколько иконка закрепа выступает над/вбок от панели (половина размера + отступ). */
+    public static final int PIN_ICON_OVERFLOW = (PIN_ICON_SIZE / 2) + PIN_ICON_MARGIN;
 
     private MessagePanelConstants() {}
 }

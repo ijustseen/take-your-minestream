@@ -7,7 +7,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
-import net.minecraft.client.gui.Click;
 import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
@@ -139,54 +138,46 @@ public class BanwordConfigScreen extends Screen {
         // Мы не создаём много кнопок, чтобы не перегружать экран.
     }
 
-    private boolean handleBanwordMouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) {
-            return false;
-        }
-
-        int top = 40;
-        int bottom = this.height - 60;
-        int y = top + PADDING - scrollOffset;
-        int rightMargin = 4;
-        int btnX = this.width - PADDING - rightMargin - REMOVE_BTN_SIZE;
-        for (int i = 0; i < banwordList.size(); i++) {
-            if (y + LINE_HEIGHT > top + PADDING && y < bottom - PADDING) {
-                int btnY = y;
-                String word = banwordList.get(i);
-
-                if (mouseX >= btnX && mouseX <= btnX + REMOVE_BTN_SIZE && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
-                    banwordManager.removeBanword(word);
-                    revealedWords.remove(word);
-                    reloadList();
-                    return true;
-                }
-
-                String toggleLabel = revealedWords.contains(word)
-                    ? Text.translatable("takeyourminestream.banwords.hide").getString()
-                    : Text.translatable("takeyourminestream.banwords.show").getString();
-                int labelWidth = this.textRenderer.getWidth(toggleLabel);
-                int toggleW = Math.max(labelWidth + TOGGLE_BTN_PADDING * 2, 28);
-                int toggleX = btnX - BETWEEN_BUTTONS_SPACING - toggleW;
-                if (mouseX >= toggleX && mouseX <= toggleX + toggleW && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
-                    if (revealedWords.contains(word)) {
-                        revealedWords.remove(word);
-                    } else {
-                        revealedWords.add(word);
-                    }
-                    return true;
-                }
-            }
-            y += LINE_HEIGHT;
-        }
-        return false;
-    }
-
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
-        if (handleBanwordMouseClicked(click.x(), click.y(), click.button())) {
-            return true;
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        
+        if (button == 0) {
+            int top = 40;
+            int bottom = this.height - 60;
+            int y = top + PADDING - scrollOffset;
+            int rightMargin = 4;
+            int btnX = this.width - PADDING - rightMargin - REMOVE_BTN_SIZE;
+            for (int i = 0; i < banwordList.size(); i++) {
+                if (y + LINE_HEIGHT > top + PADDING && y < bottom - PADDING) {
+                    int btnY = y;
+                    String word = banwordList.get(i);
+
+                    // Область крестика удаления
+                    if (mouseX >= btnX && mouseX <= btnX + REMOVE_BTN_SIZE && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
+                        banwordManager.removeBanword(word);
+                        revealedWords.remove(word);
+                        reloadList();
+                        return true;
+                    }
+
+                    // Область кнопки Показать/Скрыть
+                    String toggleLabel = revealedWords.contains(word) ? Text.translatable("takeyourminestream.banwords.hide").getString() : Text.translatable("takeyourminestream.banwords.show").getString();
+                    int labelWidth = this.textRenderer.getWidth(toggleLabel);
+                    int toggleW = Math.max(labelWidth + TOGGLE_BTN_PADDING * 2, 28);
+                    int toggleX = btnX - BETWEEN_BUTTONS_SPACING - toggleW;
+                    if (mouseX >= toggleX && mouseX <= toggleX + toggleW && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
+                        if (revealedWords.contains(word)) {
+                            revealedWords.remove(word);
+                        } else {
+                            revealedWords.add(word);
+                        }
+                        return true;
+                    }
+                }
+                y += LINE_HEIGHT;
+            }
         }
-        return super.mouseClicked(click, doubled);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override

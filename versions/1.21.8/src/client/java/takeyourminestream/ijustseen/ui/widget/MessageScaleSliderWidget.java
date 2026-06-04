@@ -2,7 +2,6 @@ package takeyourminestream.ijustseen.ui.widget;
 
 import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.text.Text;
-import net.minecraft.client.gui.Click;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.config.MessageScale;
 
@@ -39,14 +38,14 @@ public class MessageScaleSliderWidget extends SliderWidget {
     }
     
     @Override
-    public void onClick(Click click, boolean doubled) {
-        super.onClick(click, doubled);
+    public void onClick(double mouseX, double mouseY) {
+        super.onClick(mouseX, mouseY);
         applyValue();
     }
 
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
-        boolean result = super.mouseDragged(click, deltaX, deltaY);
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        boolean result = super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
         if (result) {
             applyValue();
         }

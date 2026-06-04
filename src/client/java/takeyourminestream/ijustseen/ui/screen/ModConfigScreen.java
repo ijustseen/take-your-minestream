@@ -151,37 +151,13 @@ public class ModConfigScreen extends Screen {
     private void createConfigEntries() {
         configEntries.clear();
         TextRenderer textRenderer = this.textRenderer;
-        
-        // Общие настройки
+
+        // Общие: Twitch, фильтрация чата, частота появления
         TextFieldWidget channelNameField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.channel_name"));
         channelNameField.setText(ModConfig.getTWITCH_CHANNEL_NAME());
         channelNameField.setChangedListener(s -> ConfigManager.getInstance().setConfigValue("twitchChannelName", s));
         this.addDrawableChild(channelNameField);
         configEntries.add(new ConfigEntry("takeyourminestream.config.channel_name", "takeyourminestream.config.channel_name.desc", ConfigEntryType.TEXT_FIELD, channelNameField, ConfigCategory.GENERAL));
-        
-        ButtonWidget automoderationButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isENABLE_AUTOMODERATION() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setENABLE_AUTOMODERATION(!ModConfig.isENABLE_AUTOMODERATION());
-                btn.setMessage(Text.translatable(ModConfig.isENABLE_AUTOMODERATION() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(automoderationButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.automoderation", "takeyourminestream.config.automoderation.desc", ConfigEntryType.TOGGLE, automoderationButton, ConfigCategory.GENERAL));
-
-        ButtonWidget messageSoundButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isENABLE_MESSAGE_SOUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setENABLE_MESSAGE_SOUND(!ModConfig.isENABLE_MESSAGE_SOUND());
-                btn.setMessage(Text.translatable(ModConfig.isENABLE_MESSAGE_SOUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(messageSoundButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_sound", "takeyourminestream.config.message_sound.desc", ConfigEntryType.TOGGLE, messageSoundButton, ConfigCategory.GENERAL));
-
-        MessageSoundVolumeSliderWidget messageSoundVolumeSlider = new MessageSoundVolumeSliderWidget(0, 0, CONTROL_WIDTH, 20);
-        this.addDrawableChild(messageSoundVolumeSlider);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_sound_volume", "takeyourminestream.config.message_sound_volume.desc", ConfigEntryType.SLIDER, messageSoundVolumeSlider, ConfigCategory.GENERAL));
 
         ButtonWidget autoConnectIrcButton = ButtonWidget.builder(
             Text.translatable(ModConfig.isAUTO_CONNECT_IRC_ON_JOIN() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
@@ -193,7 +169,16 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(autoConnectIrcButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.auto_connect_irc", "takeyourminestream.config.auto_connect_irc.desc", ConfigEntryType.TOGGLE, autoConnectIrcButton, ConfigCategory.GENERAL));
 
-        // Кнопка настроек банвордов под флагом автомодерации
+        ButtonWidget automoderationButton = ButtonWidget.builder(
+            Text.translatable(ModConfig.isENABLE_AUTOMODERATION() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
+            btn -> {
+                ModConfig.setENABLE_AUTOMODERATION(!ModConfig.isENABLE_AUTOMODERATION());
+                btn.setMessage(Text.translatable(ModConfig.isENABLE_AUTOMODERATION() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(automoderationButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.automoderation", "takeyourminestream.config.automoderation.desc", ConfigEntryType.TOGGLE, automoderationButton, ConfigCategory.GENERAL));
+
         ButtonWidget banwordsButton = ButtonWidget.builder(
             Text.translatable("takeyourminestream.config.banwords_config"),
             btn -> this.client.setScreen(new BanwordConfigScreen(this))
@@ -202,8 +187,8 @@ public class ModConfigScreen extends Screen {
         configEntries.add(new ConfigEntry("takeyourminestream.config.banwords", "takeyourminestream.config.banwords.desc", ConfigEntryType.BUTTON, banwordsButton, ConfigCategory.GENERAL));
 
         ButtonWidget regexpButton = ButtonWidget.builder(
-                Text.translatable("takeyourminestream.config.regexps_config"),
-                btn -> this.client.setScreen(new RegexpConfigScreen(this))
+            Text.translatable("takeyourminestream.config.regexps_config"),
+            btn -> this.client.setScreen(new RegexpConfigScreen(this))
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(regexpButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.regexps", "takeyourminestream.config.regexps.desc", ConfigEntryType.BUTTON, regexpButton, ConfigCategory.GENERAL));
@@ -250,8 +235,24 @@ public class ModConfigScreen extends Screen {
         });
         this.addDrawableChild(chanceForSpawnField);
         configEntries.add(new ConfigEntry("takeyourminestream.config.chance_for_spawn", "takeyourminestream.config.chance_for_spawn.desc", ConfigEntryType.TEXT_FIELD, chanceForSpawnField, ConfigCategory.GENERAL));
-        
-        // Настройки сообщений
+
+        // Сообщения: вид, время жизни, звук
+        ButtonWidget spawnModeButton = ButtonWidget.builder(
+            getSpawnModeButtonText(),
+            btn -> {
+                var currentMode = ModConfig.getMESSAGE_SPAWN_MODE();
+                var nextMode = currentMode.next();
+                ModConfig.setMESSAGE_SPAWN_MODE(nextMode);
+                btn.setMessage(getSpawnModeButtonText());
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(spawnModeButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.spawn_mode_label", "takeyourminestream.config.spawn_mode.desc", ConfigEntryType.BUTTON, spawnModeButton, ConfigCategory.MESSAGES));
+
+        MessageScaleSliderWidget messageScaleSlider = new MessageScaleSliderWidget(0, 0, CONTROL_WIDTH, 20);
+        this.addDrawableChild(messageScaleSlider);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.message_scale", "takeyourminestream.config.message_scale.desc", ConfigEntryType.SLIDER, messageScaleSlider, ConfigCategory.MESSAGES));
+
         TextFieldWidget messageLifetimeField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.message_lifetime_seconds"));
         Object lifeSec = ConfigManager.getInstance().getConfigValue("messageLifetimeSeconds");
         double lifeSeconds = lifeSec instanceof Number ? ((Number) lifeSec).doubleValue() : (ModConfig.getMESSAGE_LIFETIME_TICKS() / 20.0);
@@ -271,24 +272,7 @@ public class ModConfigScreen extends Screen {
         });
         this.addDrawableChild(messageFallField);
         configEntries.add(new ConfigEntry("takeyourminestream.config.message_fall_seconds", "takeyourminestream.config.message_fall_seconds.desc", ConfigEntryType.TEXT_FIELD, messageFallField, ConfigCategory.MESSAGES));
-        
-        MessageScaleSliderWidget messageScaleSlider = new MessageScaleSliderWidget(0, 0, CONTROL_WIDTH, 20);
-        this.addDrawableChild(messageScaleSlider);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_scale", "takeyourminestream.config.message_scale.desc", ConfigEntryType.SLIDER, messageScaleSlider, ConfigCategory.MESSAGES));
-        
-        ButtonWidget spawnModeButton = ButtonWidget.builder(
-            getSpawnModeButtonText(),
-            btn -> {
-                var currentMode = ModConfig.getMESSAGE_SPAWN_MODE();
-                var nextMode = currentMode.next();
-                ModConfig.setMESSAGE_SPAWN_MODE(nextMode);
-                btn.setMessage(getSpawnModeButtonText());
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(spawnModeButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.spawn_mode_label", "takeyourminestream.config.spawn_mode.desc", ConfigEntryType.BUTTON, spawnModeButton, ConfigCategory.MESSAGES));
-        
-        // Новый флаг: отображение фона сообщений
+
         ButtonWidget showBgButton = ButtonWidget.builder(
             Text.translatable(ModConfig.isSHOW_MESSAGE_BACKGROUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
             btn -> {
@@ -298,8 +282,22 @@ public class ModConfigScreen extends Screen {
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(showBgButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.show_message_bg", "takeyourminestream.config.show_message_bg.desc", ConfigEntryType.TOGGLE, showBgButton, ConfigCategory.MESSAGES));
-        
-        // Настройки поведения
+
+        ButtonWidget messageSoundButton = ButtonWidget.builder(
+            Text.translatable(ModConfig.isENABLE_MESSAGE_SOUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
+            btn -> {
+                ModConfig.setENABLE_MESSAGE_SOUND(!ModConfig.isENABLE_MESSAGE_SOUND());
+                btn.setMessage(Text.translatable(ModConfig.isENABLE_MESSAGE_SOUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(messageSoundButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.message_sound", "takeyourminestream.config.message_sound.desc", ConfigEntryType.TOGGLE, messageSoundButton, ConfigCategory.MESSAGES));
+
+        MessageSoundVolumeSliderWidget messageSoundVolumeSlider = new MessageSoundVolumeSliderWidget(0, 0, CONTROL_WIDTH, 20);
+        this.addDrawableChild(messageSoundVolumeSlider);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.message_sound_volume", "takeyourminestream.config.message_sound_volume.desc", ConfigEntryType.SLIDER, messageSoundVolumeSlider, ConfigCategory.MESSAGES));
+
+        // Поведение в мире
         ButtonWidget freezingButton = ButtonWidget.builder(
             Text.translatable(ModConfig.isENABLE_FREEZING_ON_VIEW() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
             btn -> {
@@ -309,8 +307,15 @@ public class ModConfigScreen extends Screen {
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(freezingButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.freezing_on_view", "takeyourminestream.config.freezing_on_view.desc", ConfigEntryType.TOGGLE, freezingButton, ConfigCategory.BEHAVIOR));
-        
-        // Новый флаг: Следовать за игроком (для 3D режимов)
+
+        TextFieldWidget maxFreezeDistanceField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.max_freeze_distance"));
+        maxFreezeDistanceField.setText(String.valueOf(ModConfig.getMAX_FREEZE_DISTANCE()));
+        maxFreezeDistanceField.setChangedListener(s -> {
+            try { ConfigManager.getInstance().setConfigValue("maxFreezeDistance", Double.parseDouble(s)); } catch (NumberFormatException ignored) {}
+        });
+        this.addDrawableChild(maxFreezeDistanceField);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.max_freeze_distance", "takeyourminestream.config.max_freeze_distance.desc", ConfigEntryType.TEXT_FIELD, maxFreezeDistanceField, ConfigCategory.BEHAVIOR));
+
         ButtonWidget followPlayerButton = ButtonWidget.builder(
             Text.translatable(ModConfig.isFOLLOW_PLAYER() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
             btn -> {
@@ -330,14 +335,6 @@ public class ModConfigScreen extends Screen {
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(clickToRemoveButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.click_to_remove", "takeyourminestream.config.click_to_remove.desc", ConfigEntryType.TOGGLE, clickToRemoveButton, ConfigCategory.BEHAVIOR));
-
-        TextFieldWidget maxFreezeDistanceField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.max_freeze_distance"));
-        maxFreezeDistanceField.setText(String.valueOf(ModConfig.getMAX_FREEZE_DISTANCE()));
-        maxFreezeDistanceField.setChangedListener(s -> {
-            try { ConfigManager.getInstance().setConfigValue("maxFreezeDistance", Double.parseDouble(s)); } catch (NumberFormatException ignored) {}
-        });
-        this.addDrawableChild(maxFreezeDistanceField);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.max_freeze_distance", "takeyourminestream.config.max_freeze_distance.desc", ConfigEntryType.TEXT_FIELD, maxFreezeDistanceField, ConfigCategory.BEHAVIOR));
     }
     
     private void updateCategoryVisibility() {

@@ -12,12 +12,16 @@ public final class HistoryMessageActionPopup {
     private static final int BUTTON_HEIGHT = 20;
     private static final int PADDING = 4;
     private static final int GAP = 2;
+    private static final int BUTTON_BG = 0x90404040;
+    private static final int BUTTON_BG_HOVER = 0xC0686868;
+    private static final int BUTTON_BG_HOVER_BORDER = 0xFF909090;
 
     private Entry[] entries = new Entry[0];
     private int x;
     private int y;
     private int height;
     private boolean open;
+    private Entry hoveredEntry;
 
     public boolean isOpen() {
         return open;
@@ -39,17 +43,21 @@ public final class HistoryMessageActionPopup {
         x = Math.max(8, x);
         y = Math.max(8, y);
         open = true;
+        hoveredEntry = null;
     }
 
     public void close() {
         open = false;
         entries = new Entry[0];
+        hoveredEntry = null;
     }
 
-    public void render(DrawContext context, TextRenderer textRenderer) {
+    public void render(DrawContext context, TextRenderer textRenderer, int mouseX, int mouseY) {
         if (!open) {
             return;
         }
+
+        hoveredEntry = hitTest(mouseX, mouseY);
 
         context.fill(x, y, x + WIDTH, y + height, 0xE0101010);
         context.fill(x, y, x + WIDTH, y + 1, 0xFF555555);
@@ -59,11 +67,20 @@ public final class HistoryMessageActionPopup {
 
         int buttonY = y + PADDING;
         for (Entry entry : entries) {
-            context.fill(x + PADDING, buttonY, x + WIDTH - PADDING, buttonY + BUTTON_HEIGHT, 0x90404040);
+            int left = x + PADDING;
+            int right = x + WIDTH - PADDING;
+            boolean hovered = entry == hoveredEntry;
+            context.fill(left, buttonY, right, buttonY + BUTTON_HEIGHT, hovered ? BUTTON_BG_HOVER : BUTTON_BG);
+            if (hovered) {
+                context.fill(left, buttonY, right, buttonY + 1, BUTTON_BG_HOVER_BORDER);
+                context.fill(left, buttonY + BUTTON_HEIGHT - 1, right, buttonY + BUTTON_HEIGHT, BUTTON_BG_HOVER_BORDER);
+            }
+
             Text label = labelFor(entry);
-            int textX = x + PADDING + 6;
+            int textX = left + 6;
             int textY = buttonY + (BUTTON_HEIGHT - textRenderer.fontHeight) / 2;
-            context.drawText(textRenderer, label, textX, textY, 0xFFFFFFFF, false);
+            int textColor = hovered ? 0xFFFFFFFF : 0xFFDDDDDD;
+            context.drawText(textRenderer, label, textX, textY, textColor, false);
             buttonY += BUTTON_HEIGHT + GAP;
         }
     }

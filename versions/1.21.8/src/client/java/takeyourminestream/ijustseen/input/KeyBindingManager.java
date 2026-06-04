@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
@@ -18,8 +17,7 @@ import takeyourminestream.ijustseen.utils.Logger;
  * Менеджер привязок клавиш
  */
 public class KeyBindingManager {
-    private static final KeyBinding.Category KEY_CATEGORY =
-        KeyBinding.Category.create(Identifier.of("takeyourminestream", "key_category"));
+    private static final String KEY_CATEGORY = "key.categories.takeyourminestream";
     private final ITwitchManager twitchManager;
     private final MessageSpawner messageSpawner;
     private KeyBinding openConfigScreenKeyBinding;

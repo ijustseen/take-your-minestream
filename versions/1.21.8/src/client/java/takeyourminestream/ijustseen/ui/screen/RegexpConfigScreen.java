@@ -1,23 +1,23 @@
 package takeyourminestream.ijustseen.ui.screen;
 
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
-import net.minecraft.client.gui.Click;
 import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.filtering.FilteringManager;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class BanwordConfigScreen extends Screen {
+public class RegexpConfigScreen extends Screen {
     private final @Nullable Screen parent;
-    private IBanwordManager banwordManager;
+    private FilteringManager filteringManager;
     private TextFieldWidget inputField;
     private int scrollOffset = 0;
     private static final int LINE_HEIGHT = 14;
@@ -28,14 +28,14 @@ public class BanwordConfigScreen extends Screen {
     private final List<String> banwordList = new ArrayList<>();
     private final java.util.Set<String> revealedWords = new java.util.HashSet<>();
 
-    public BanwordConfigScreen(@Nullable Screen parent) {
+    public RegexpConfigScreen(@Nullable Screen parent) {
         super(Text.translatable("takeyourminestream.banwords.title"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
-        this.banwordManager = TakeYourMineStreamClient.getInstance().getBanwordManager();
+        this.filteringManager = TakeYourMineStreamClient.getInstance().getFilteringManager();
         reloadList();
 
         TextRenderer tr = this.textRenderer;
@@ -51,13 +51,12 @@ public class BanwordConfigScreen extends Screen {
 
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("takeyourminestream.banwords.add"), btn -> {
             String word = inputField.getText();
-            if (word != null && !word.trim().isEmpty()) {
-                String normalized = word.trim().toLowerCase();
-                banwordManager.addBanword(normalized);
+            if (word != null) {
+                filteringManager.addRegexp(word);
                 inputField.setText("");
                 reloadList();
                 // Прокрутить к добавленному слову, чтобы пользователь его увидел
-                int idx = banwordList.indexOf(normalized);
+                int idx = banwordList.indexOf(word);
                 int top = 40;
                 int bottom = this.height - 60;
                 int visible = bottom - top - PADDING * 2;
@@ -73,15 +72,8 @@ public class BanwordConfigScreen extends Screen {
 
     private void reloadList() {
         banwordList.clear();
-        banwordList.addAll(banwordManager.getBanwords());
+        banwordList.addAll(filteringManager.getRegexps());
         banwordList.sort(String::compareTo);
-    }
-
-    private static String maskWord(String word) {
-        if (word == null) return "";
-        String trimmed = word.trim();
-        if (trimmed.length() <= 2) return trimmed;
-        return trimmed.substring(0, 2) + "*".repeat(trimmed.length() - 2);
     }
 
     @Override
@@ -101,10 +93,7 @@ public class BanwordConfigScreen extends Screen {
         for (int i = 0; i < banwordList.size(); i++) {
             String word = banwordList.get(i);
             if (y + LINE_HEIGHT > top + PADDING && y < bottom - PADDING) {
-                // Текст слова (замаскированный по умолчанию)
-                boolean isRevealed = revealedWords.contains(word);
-                String toDisplay = isRevealed ? word : maskWord(word);
-                context.drawText(this.textRenderer, Text.literal(toDisplay), textX, y, 0xFFFFFFFF, true);
+                context.drawText(this.textRenderer, Text.literal(word), textX, y, 0xFFFFFFFF, true);
 
                 // Кнопка удаления (крестик)
                 int rightMargin = 4; // небольшой отступ от правой границы фоновой панели
@@ -118,19 +107,6 @@ public class BanwordConfigScreen extends Screen {
                 int xCenter = btnX + (REMOVE_BTN_SIZE / 2) - 2;
                 int yCenter = btnY + (REMOVE_BTN_SIZE / 2) - 4;
                 context.drawText(this.textRenderer, Text.of("x"), xCenter, yCenter, 0xFFFFFFFF, true);
-
-                // Кнопка просмотра/скрытия слева от крестика
-                String toggleLabel = isRevealed ? Text.translatable("takeyourminestream.banwords.hide").getString() : Text.translatable("takeyourminestream.banwords.show").getString();
-                int labelWidth = this.textRenderer.getWidth(toggleLabel);
-                int toggleW = Math.max(labelWidth + TOGGLE_BTN_PADDING * 2, 28);
-                int toggleX = btnX - BETWEEN_BUTTONS_SPACING - toggleW;
-                int toggleY = y;
-                boolean toggleHovered = mouseX >= toggleX && mouseX <= toggleX + toggleW && mouseY >= toggleY && mouseY <= toggleY + REMOVE_BTN_SIZE;
-                int toggleBg = toggleHovered ? 0xA05577FF : 0x804477FF; // синий оттенок
-                context.fill(toggleX, toggleY, toggleX + toggleW, toggleY + REMOVE_BTN_SIZE, toggleBg);
-                int textXCenter = toggleX + (toggleW - labelWidth) / 2;
-                int textYCenter = toggleY + (REMOVE_BTN_SIZE - this.textRenderer.fontHeight) / 2;
-                context.drawText(this.textRenderer, Text.of(toggleLabel), textXCenter, textYCenter, 0xFFFFFFFF, true);
             }
             y += LINE_HEIGHT;
         }
@@ -139,54 +115,46 @@ public class BanwordConfigScreen extends Screen {
         // Мы не создаём много кнопок, чтобы не перегружать экран.
     }
 
-    private boolean handleBanwordMouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) {
-            return false;
-        }
-
-        int top = 40;
-        int bottom = this.height - 60;
-        int y = top + PADDING - scrollOffset;
-        int rightMargin = 4;
-        int btnX = this.width - PADDING - rightMargin - REMOVE_BTN_SIZE;
-        for (int i = 0; i < banwordList.size(); i++) {
-            if (y + LINE_HEIGHT > top + PADDING && y < bottom - PADDING) {
-                int btnY = y;
-                String word = banwordList.get(i);
-
-                if (mouseX >= btnX && mouseX <= btnX + REMOVE_BTN_SIZE && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
-                    banwordManager.removeBanword(word);
-                    revealedWords.remove(word);
-                    reloadList();
-                    return true;
-                }
-
-                String toggleLabel = revealedWords.contains(word)
-                    ? Text.translatable("takeyourminestream.banwords.hide").getString()
-                    : Text.translatable("takeyourminestream.banwords.show").getString();
-                int labelWidth = this.textRenderer.getWidth(toggleLabel);
-                int toggleW = Math.max(labelWidth + TOGGLE_BTN_PADDING * 2, 28);
-                int toggleX = btnX - BETWEEN_BUTTONS_SPACING - toggleW;
-                if (mouseX >= toggleX && mouseX <= toggleX + toggleW && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
-                    if (revealedWords.contains(word)) {
-                        revealedWords.remove(word);
-                    } else {
-                        revealedWords.add(word);
-                    }
-                    return true;
-                }
-            }
-            y += LINE_HEIGHT;
-        }
-        return false;
-    }
-
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
-        if (handleBanwordMouseClicked(click.x(), click.y(), click.button())) {
-            return true;
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        
+        if (button == 0) {
+            int top = 40;
+            int bottom = this.height - 60;
+            int y = top + PADDING - scrollOffset;
+            int rightMargin = 4;
+            int btnX = this.width - PADDING - rightMargin - REMOVE_BTN_SIZE;
+            for (int i = 0; i < banwordList.size(); i++) {
+                if (y + LINE_HEIGHT > top + PADDING && y < bottom - PADDING) {
+                    int btnY = y;
+                    String word = banwordList.get(i);
+
+                    // Область крестика удаления
+                    if (mouseX >= btnX && mouseX <= btnX + REMOVE_BTN_SIZE && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
+                        filteringManager.removeRegexp(word);
+                        revealedWords.remove(word);
+                        reloadList();
+                        return true;
+                    }
+
+                    // Область кнопки Показать/Скрыть
+                    String toggleLabel = revealedWords.contains(word) ? Text.translatable("takeyourminestream.banwords.hide").getString() : Text.translatable("takeyourminestream.banwords.show").getString();
+                    int labelWidth = this.textRenderer.getWidth(toggleLabel);
+                    int toggleW = Math.max(labelWidth + TOGGLE_BTN_PADDING * 2, 28);
+                    int toggleX = btnX - BETWEEN_BUTTONS_SPACING - toggleW;
+                    if (mouseX >= toggleX && mouseX <= toggleX + toggleW && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
+                        if (revealedWords.contains(word)) {
+                            revealedWords.remove(word);
+                        } else {
+                            revealedWords.add(word);
+                        }
+                        return true;
+                    }
+                }
+                y += LINE_HEIGHT;
+            }
         }
-        return super.mouseClicked(click, doubled);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override

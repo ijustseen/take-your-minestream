@@ -9,25 +9,63 @@ import java.util.Arrays;
 import java.util.List;
 
 public final class RenderLayerCompat {
-    private static final List<String> PREFERRED_METHOD_NAMES = Arrays.asList(
+    private static final List<String> NEW_ENTITY_METHOD_NAMES = Arrays.asList(
+        "entityTranslucent",
+        "entityCutoutNoCull",
+        "entityCutoutNoCullZOffset",
+        "entitySolid"
+    );
+
+    private static final List<String> LEGACY_ENTITY_METHOD_NAMES = Arrays.asList(
         "getEntityTranslucent",
         "method_23580",
-        "getText",
         "getEntityCutoutNoCull",
         "getEntityCutoutNoCullZOffset",
         "getEntitySolid"
     );
 
+    private static final List<String> NEW_TEXT_METHOD_NAMES = List.of("text");
+    private static final List<String> LEGACY_TEXT_METHOD_NAMES = Arrays.asList(
+        "getText",
+        "getGuiTextured",
+        "method_23582"
+    );
+
     private static volatile Method cachedEntityTextureMethod;
+    private static volatile Method cachedTextLayerMethod;
+    private static volatile Class<?> cachedLayerHostClass;
 
     private RenderLayerCompat() {
     }
 
     public static RenderLayer getEntityTextureLayer(Identifier texture) {
-        Method method = cachedEntityTextureMethod;
+        return invokeLayerMethod(cachedEntityTextureMethod, texture, true, true);
+    }
+
+    public static RenderLayer getTextLayer(Identifier texture) {
+        RenderLayer textLayer = invokeLayerMethod(cachedTextLayerMethod, texture, false, false);
+        if (textLayer != null) {
+            return textLayer;
+        }
+        return getEntityTextureLayer(texture);
+    }
+
+    private static RenderLayer invokeLayerMethod(
+        Method cached,
+        Identifier texture,
+        boolean cacheEntityField,
+        boolean entityMethods
+    ) {
+        Method method = cached;
         if (method == null) {
-            method = resolveEntityTextureMethod();
-            cachedEntityTextureMethod = method;
+            List<String> newNames = entityMethods ? NEW_ENTITY_METHOD_NAMES : NEW_TEXT_METHOD_NAMES;
+            List<String> legacyNames = entityMethods ? LEGACY_ENTITY_METHOD_NAMES : LEGACY_TEXT_METHOD_NAMES;
+            method = resolveLayerMethod(newNames, legacyNames);
+            if (cacheEntityField) {
+                cachedEntityTextureMethod = method;
+            } else {
+                cachedTextLayerMethod = method;
+            }
         }
 
         if (method != null) {
@@ -37,26 +75,52 @@ public final class RenderLayerCompat {
                     return renderLayer;
                 }
             } catch (ReflectiveOperationException ignored) {
-                cachedEntityTextureMethod = null;
+                if (cacheEntityField) {
+                    cachedEntityTextureMethod = null;
+                } else {
+                    cachedTextLayerMethod = null;
+                }
             }
         }
 
-        return RenderLayer.getEntitySolid(texture);
+        return null;
     }
 
-    private static Method resolveEntityTextureMethod() {
-        Method[] methods = RenderLayer.class.getMethods();
+    private static Method resolveLayerMethod(List<String> newApiNames, List<String> legacyApiNames) {
+        Method method = findLayerMethod(loadNewLayerHostClass(), newApiNames);
+        if (method != null) {
+            return method;
+        }
+        return findLayerMethod(RenderLayer.class, legacyApiNames);
+    }
 
-        for (String preferredName : PREFERRED_METHOD_NAMES) {
+    private static Class<?> loadNewLayerHostClass() {
+        Class<?> host = cachedLayerHostClass;
+        if (host != null) {
+            return host;
+        }
+        try {
+            host = Class.forName("net.minecraft.client.render.RenderLayers");
+            cachedLayerHostClass = host;
+            return host;
+        } catch (ClassNotFoundException ignored) {
+            cachedLayerHostClass = RenderLayer.class;
+            return RenderLayer.class;
+        }
+    }
+
+    private static Method findLayerMethod(Class<?> host, List<String> preferredNames) {
+        Method[] methods = host.getMethods();
+        for (String preferredName : preferredNames) {
             for (Method method : methods) {
-                if (isMatchingEntityTextureMethod(method) && preferredName.equals(method.getName())) {
+                if (isMatchingLayerMethod(method) && preferredName.equals(method.getName())) {
                     return method;
                 }
             }
         }
 
         for (Method method : methods) {
-            if (isMatchingEntityTextureMethod(method)) {
+            if (isMatchingLayerMethod(method)) {
                 return method;
             }
         }
@@ -64,7 +128,7 @@ public final class RenderLayerCompat {
         return null;
     }
 
-    private static boolean isMatchingEntityTextureMethod(Method method) {
+    private static boolean isMatchingLayerMethod(Method method) {
         return Modifier.isStatic(method.getModifiers())
             && method.getReturnType() == RenderLayer.class
             && method.getParameterCount() == 1

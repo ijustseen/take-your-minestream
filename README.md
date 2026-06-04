@@ -12,14 +12,14 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 
 ## Compatibility
 
-- Target branch compatibility: Minecraft 1.21.7 / 1.21.8 (Fabric)
-- Requires Fabric Loader and Fabric API
-- See releases for exact version support
+- Minecraft **1.21.8**, **1.21.10**, **1.21.11** (Fabric) — separate `.jar` per version
+- Requires Fabric Loader ≥0.16.14 and Fabric API
+- Optional: Mod Menu
 
 ## Installation
 
-1. Install Fabric Loader (see supported versions above)
-2. Download the mod `.jar`
+1. Install Fabric Loader for your Minecraft version
+2. Download the matching mod jar (e.g. `tyms-1.4.1+1.21.10.jar`)
 3. Put the `.jar` into your `mods` folder
 4. Launch the game
 
@@ -47,9 +47,19 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 
 ## Build from source
 
+Multi-version build uses [Stonecutter](https://stonecutter.kikugie.dev/) (one codebase, three jars).
+
 ```bash
-./gradlew build
+# Build all supported versions; jars land in build/libs/<mod.version>/
+./gradlew build buildAndCollect
+
+# Run client for the active version (see stonecutter.gradle.kts, default 1.21.11)
+./gradlew runActive
 ```
+
+Switch the version used for IDE/`src` editing: Gradle task **Set active project to …** or edit `stonecutter active "…"` in `stonecutter.gradle.kts`.
+
+Version-specific dependencies live in `versions/<mc>/gradle.properties`. Minecraft 1.21.8 uses override sources in `versions/1.21.8/src/client/java/` (older GUI/render APIs).
 
 ## Development
 
