@@ -5,6 +5,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
+import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 
 /** Экран управления чёрным списком ников. */
 public class BlockedUsernameConfigScreen extends AbstractStringListScreen {
@@ -43,11 +44,15 @@ public class BlockedUsernameConfigScreen extends AbstractStringListScreen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        var hiddenButtons = takeyourminestream.ijustseen.ui.gui.ScreenUiHelper.hideButtons(this);
         super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 10, 0xFFFFFF);
+        takeyourminestream.ijustseen.ui.gui.ScreenUiHelper.restoreButtons(hiddenButtons);
+        ModUiTheme.drawTitle(context, this.textRenderer, this.title, this.width);
         renderDefaultList(context, mouseX, mouseY, (ctx, entry, textX, y, mx, my) -> {
-            ctx.drawText(this.textRenderer, Text.literal(entry), textX, y, 0xFFFFFFFF, true);
+            ctx.drawText(this.textRenderer, Text.literal(entry), textX, y, ModUiTheme.TEXT_PRIMARY, true);
             drawRemoveButton(ctx, y, mx, my);
         });
+        renderInputChrome(context);
+        renderThemedChrome(context, mouseX, mouseY);
     }
 }

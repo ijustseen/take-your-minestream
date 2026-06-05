@@ -1,8 +1,11 @@
 package takeyourminestream.ijustseen.ui.screen;
 
 import net.minecraft.client.gui.screen.Screen;
+import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
@@ -24,10 +27,11 @@ import java.util.List;
 
 /** Экран истории сообщений с контекстным меню действий. */
 public class MessageHistoryScreen extends Screen {
-    private static final int SIDE_PADDING = 16;
+    private static final int LIST_PADDING = 10;
     private static final int HEADER_HEIGHT = 36;
     private static final int FOOTER_HEIGHT = 36;
     private static final int CARD_SPACING = 6;
+    private static final int COLUMN_GAP = 12;
     private static final int SCROLLBAR_WIDTH = 6;
     private static final int SCROLLBAR_MARGIN = 4;
 
@@ -36,9 +40,14 @@ public class MessageHistoryScreen extends Screen {
     private final BlockedUsernameManager blockedUsernameManager = BlockedUsernameManager.getInstance();
     private final HistoryMessageActionPopup actionPopup = new HistoryMessageActionPopup();
 
-    private int scrollOffset = 0;
+    private int historyScrollOffset = 0;
+    private int pinnedScrollOffset = 0;
     private int contentMaxWidth = 0;
-    private int contentLeft = 0;
+    private int panelWidth = 0;
+    private int groupLeft = 0;
+    private int groupWidth = 0;
+    private int historyPanelLeft = 0;
+    private int pinnedPanelLeft = 0;
     private int contentTop = 0;
     private int contentBottom = 0;
 
@@ -48,10 +57,13 @@ public class MessageHistoryScreen extends Screen {
     private Object[] feedbackArgs;
     private long feedbackUntilMs;
 
-    private int cachedHistorySize = -1;
+    private long cachedFirstMessageId = -1L;
+    private long cachedLastMessageId = -1L;
+    private long cachedPinnedSignature = -1L;
     private int cachedWidth = -1;
     private int cachedHeight = -1;
     private final List<HistoryCard> historyCards = new ArrayList<>();
+    private final List<HistoryCard> pinnedCards = new ArrayList<>();
 
     public MessageHistoryScreen(@Nullable Screen parent, MessageLifecycleManager lifecycleManager) {
         super(Text.translatable("takeyourminestream.history.title"));
@@ -91,44 +103,105 @@ public class MessageHistoryScreen extends Screen {
         ).dimensions(centerX + buttonWidth / 2 + buttonSpacing, buttonY, buttonWidth, 20).build());
     }
 
+    private static int computeColumnPanelWidth() {
+        return LIST_PADDING * 2
+            + SCROLLBAR_WIDTH
+            + SCROLLBAR_MARGIN
+            + MessagePanelConstants.MESSAGE_WRAP_WIDTH
+            + MessagePanelConstants.PADDING_X * 2;
+    }
+
+    private int getListContentLeft(int panelLeft) {
+        return panelLeft + LIST_PADDING;
+    }
+
+    private int getListContentWidth() {
+        return panelWidth - LIST_PADDING * 2 - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN;
+    }
+
+    private long computePinnedSignature() {
+        long signature = 0L;
+        for (Message message : lifecycleManager.getAllPinnedMessages()) {
+            signature = signature * 31L + message.getId();
+        }
+        return signature;
+    }
+
     private boolean needsLayoutRefresh() {
-        int historySize = lifecycleManager.getMessageHistorySize();
-        if (historySize != cachedHistorySize || this.width != cachedWidth || this.height != cachedHeight) {
+        List<Message> allMessages = lifecycleManager.getAllMessages();
+        long firstId = allMessages.isEmpty() ? -1L : allMessages.get(0).getId();
+        long lastId = allMessages.isEmpty() ? -1L : allMessages.get(allMessages.size() - 1).getId();
+        long pinnedSignature = computePinnedSignature();
+        if (firstId != cachedFirstMessageId || lastId != cachedLastMessageId || pinnedSignature != cachedPinnedSignature) {
             return true;
         }
-        return historyCards.isEmpty() && historySize > 0;
+        return this.width != cachedWidth || this.height != cachedHeight;
     }
 
     private void updateLayout() {
-        cachedHistorySize = lifecycleManager.getMessageHistorySize();
+        int previousHistoryHeight = getTotalContentHeight(historyCards);
+        int previousPinnedHeight = getTotalContentHeight(pinnedCards);
+        int visibleHeight = getVisibleListHeight();
+        boolean stickHistoryToBottom = previousHistoryHeight > visibleHeight
+            && historyScrollOffset >= previousHistoryHeight - visibleHeight - 4;
+        boolean stickPinnedToBottom = previousPinnedHeight > visibleHeight
+            && pinnedScrollOffset >= previousPinnedHeight - visibleHeight - 4;
+
         cachedWidth = this.width;
         cachedHeight = this.height;
         historyCards.clear();
+        pinnedCards.clear();
 
         if (this.textRenderer == null) {
             return;
         }
 
-        contentLeft = SIDE_PADDING;
+        panelWidth = Math.min(
+            computeColumnPanelWidth(),
+            Math.max(computeColumnPanelWidth(), (this.width - COLUMN_GAP - 16) / 2)
+        );
+        groupWidth = panelWidth * 2 + COLUMN_GAP;
+        groupLeft = Math.max(8, (this.width - groupWidth) / 2);
+        historyPanelLeft = groupLeft;
+        pinnedPanelLeft = groupLeft + panelWidth + COLUMN_GAP;
         contentTop = HEADER_HEIGHT;
         contentBottom = this.height - FOOTER_HEIGHT;
-        contentMaxWidth = this.width - SIDE_PADDING * 2 - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN;
+        contentMaxWidth = MessageCardLayout.getWrapWidth(getListContentWidth());
 
         List<Message> allMessages = lifecycleManager.getAllMessages();
-        int y = contentTop + MessageCardLayout.USERNAME_ROW_HEIGHT / 2;
+        cachedFirstMessageId = allMessages.isEmpty() ? -1L : allMessages.get(0).getId();
+        cachedLastMessageId = allMessages.isEmpty() ? -1L : allMessages.get(allMessages.size() - 1).getId();
+        cachedPinnedSignature = computePinnedSignature();
 
-        for (int i = 0; i < allMessages.size(); i++) {
-            Message message = allMessages.get(i);
+        buildCardList(allMessages, getListContentLeft(historyPanelLeft), historyCards);
+        buildCardList(lifecycleManager.getAllPinnedMessages(), getListContentLeft(pinnedPanelLeft), pinnedCards);
+
+        int historyHeight = getTotalContentHeight(historyCards);
+        int pinnedHeight = getTotalContentHeight(pinnedCards);
+        if (stickHistoryToBottom) {
+            historyScrollOffset = GuiScrollbar.clampScroll(Integer.MAX_VALUE, historyHeight, visibleHeight);
+        } else {
+            historyScrollOffset = GuiScrollbar.clampScroll(historyScrollOffset, historyHeight, visibleHeight);
+        }
+
+        if (stickPinnedToBottom) {
+            pinnedScrollOffset = GuiScrollbar.clampScroll(Integer.MAX_VALUE, pinnedHeight, visibleHeight);
+        } else {
+            pinnedScrollOffset = GuiScrollbar.clampScroll(pinnedScrollOffset, pinnedHeight, visibleHeight);
+        }
+    }
+
+    private void buildCardList(List<Message> messages, int listLeft, List<HistoryCard> target) {
+        int y = contentTop + LIST_PADDING;
+        for (Message message : messages) {
             ChatMessageParser.ParsedMessage parsed = ChatMessageParser.parse(message.getText());
             MessageCardLayout.Layout layout = MessageCardLayout.compute(textRenderer, message.getText(), contentMaxWidth);
             if (lifecycleManager.isPinnedInWorld(message)) {
                 y += MessagePanelConstants.PIN_ICON_OVERFLOW;
             }
-            historyCards.add(new HistoryCard(message, parsed, layout, contentLeft, y));
+            target.add(new HistoryCard(message, parsed, layout, listLeft, y));
             y += layout.height() + CARD_SPACING;
         }
-
-        scrollOffset = GuiScrollbar.clampScroll(scrollOffset, getTotalContentHeight(), contentBottom - contentTop);
     }
 
     @Override
@@ -137,62 +210,115 @@ public class MessageHistoryScreen extends Screen {
             updateLayout();
         }
 
+        var hiddenButtons = ScreenUiHelper.hideButtons(this);
         super.render(context, mouseX, mouseY, delta);
+        ScreenUiHelper.restoreButtons(hiddenButtons);
 
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 10, 0xFFFFFF);
+        ModUiTheme.drawTitle(context, this.textRenderer, this.title, this.width);
+
+        Text historyCountText = Text.translatable("takeyourminestream.history.count", lifecycleManager.getMessageHistorySize());
+        int historyCountWidth = this.textRenderer.getWidth(historyCountText);
         context.drawText(
             this.textRenderer,
-            Text.translatable("takeyourminestream.history.count", lifecycleManager.getMessageHistorySize()),
-            SIDE_PADDING,
+            historyCountText,
+            historyPanelLeft + (panelWidth - historyCountWidth) / 2,
             22,
-            0xFFAAAAAA,
+            ModUiTheme.TEXT_MUTED,
             false
         );
 
-        context.enableScissor(contentLeft, contentTop, this.width - SIDE_PADDING, contentBottom);
-        renderHistoryCards(context, mouseX, mouseY);
-        context.disableScissor();
+        Text pinnedTitleText = Text.translatable(
+            "takeyourminestream.history.pinned_count",
+            lifecycleManager.getAllPinnedMessages().size()
+        );
+        int pinnedTitleWidth = this.textRenderer.getWidth(pinnedTitleText);
+        context.drawText(
+            this.textRenderer,
+            pinnedTitleText,
+            pinnedPanelLeft + (panelWidth - pinnedTitleWidth) / 2,
+            22,
+            ModUiTheme.TEXT_MUTED,
+            false
+        );
 
-        if (getTotalContentHeight() > contentBottom - contentTop) {
-            GuiScrollbar.draw(
-                context,
-                this.width - SIDE_PADDING - SCROLLBAR_WIDTH,
-                contentTop,
-                contentBottom,
-                scrollOffset,
-                getTotalContentHeight()
-            );
-        }
+        renderColumn(context, mouseX, mouseY, historyPanelLeft, historyCards, historyScrollOffset);
+        renderColumn(context, mouseX, mouseY, pinnedPanelLeft, pinnedCards, pinnedScrollOffset);
 
         renderFooterHint(context);
         updateHoverState(mouseX, mouseY);
         renderTooltip(context, mouseX, mouseY);
 
         if (actionPopup.isOpen()) {
-            context.fill(0, 0, this.width, this.height, 0x40000000);
+            ModUiTheme.drawScreenDim(context, this.width, this.height);
             actionPopup.render(context, this.textRenderer, mouseX, mouseY);
         }
 
         renderFeedback(context);
+        ScreenUiHelper.renderAllButtons(context, mouseX, mouseY, this);
     }
 
-    private void renderHistoryCards(DrawContext context, int mouseX, int mouseY) {
-        if (historyCards.isEmpty()) {
-            Text emptyText = Text.translatable("takeyourminestream.history.empty").formatted(Formatting.GRAY);
-            context.drawCenteredTextWithShadow(
-                this.textRenderer,
-                emptyText,
-                this.width / 2,
-                contentTop + (contentBottom - contentTop) / 2 - this.textRenderer.fontHeight / 2,
-                0xFF888888
+    private void renderColumn(
+        DrawContext context,
+        int mouseX,
+        int mouseY,
+        int panelLeft,
+        List<HistoryCard> cards,
+        int scrollOffset
+    ) {
+        ModUiTheme.drawBorderedPanel(
+            context,
+            panelLeft,
+            contentTop,
+            panelWidth,
+            contentBottom - contentTop
+        );
+
+        int contentLeft = getListContentLeft(panelLeft);
+        int contentRight = panelLeft + panelWidth - LIST_PADDING;
+        context.enableScissor(
+            contentLeft,
+            contentTop + LIST_PADDING,
+            contentRight,
+            contentBottom - LIST_PADDING
+        );
+        renderCards(context, cards, scrollOffset, contentLeft, panelLeft == pinnedPanelLeft);
+        context.disableScissor();
+
+        if (getTotalContentHeight(cards) > getVisibleListHeight()) {
+            int scrollTop = contentTop + LIST_PADDING;
+            int scrollBottom = contentBottom - LIST_PADDING;
+            GuiScrollbar.draw(
+                context,
+                contentRight - SCROLLBAR_WIDTH,
+                scrollTop,
+                scrollBottom,
+                scrollOffset,
+                getTotalContentHeight(cards)
             );
+        }
+    }
+
+    private void renderCards(
+        DrawContext context,
+        List<HistoryCard> cards,
+        int scrollOffset,
+        int contentLeft,
+        boolean pinnedColumn
+    ) {
+        if (cards.isEmpty()) {
+            Text emptyText = pinnedColumn
+                ? Text.translatable("takeyourminestream.history.pinned_empty").formatted(Formatting.GRAY)
+                : Text.translatable("takeyourminestream.history.empty").formatted(Formatting.GRAY);
+            renderWrappedEmptyHint(context, emptyText, contentLeft);
             return;
         }
 
-        for (HistoryCard card : historyCards) {
+        for (HistoryCard card : cards) {
             int drawY = card.y - scrollOffset;
             int pinOverflow = lifecycleManager.isPinnedInWorld(card.message) ? MessagePanelConstants.PIN_ICON_OVERFLOW : 0;
-            if (drawY + card.layout.height() < contentTop || drawY - pinOverflow > contentBottom) {
+            int listTop = contentTop + LIST_PADDING;
+            int listBottom = contentBottom - LIST_PADDING;
+            if (drawY + card.layout.height() < listTop || drawY - pinOverflow > listBottom) {
                 continue;
             }
 
@@ -217,20 +343,47 @@ public class MessageHistoryScreen extends Screen {
         }
     }
 
+    private void renderWrappedEmptyHint(DrawContext context, Text emptyText, int contentLeft) {
+        int contentWidth = getListContentWidth();
+        List<OrderedText> lines = this.textRenderer.wrapLines(emptyText, contentWidth);
+        int blockHeight = lines.size() * this.textRenderer.fontHeight;
+        int startY = contentTop + (contentBottom - contentTop) / 2 - blockHeight / 2;
+        for (int i = 0; i < lines.size(); i++) {
+            OrderedText line = lines.get(i);
+            int lineWidth = this.textRenderer.getWidth(line);
+            context.drawTextWithShadow(
+                this.textRenderer,
+                line,
+                contentLeft + (contentWidth - lineWidth) / 2,
+                startY + i * this.textRenderer.fontHeight,
+                0xFF888888
+            );
+        }
+    }
+
     private void updateHoverState(int mouseX, int mouseY) {
         hoveredCard = null;
         if (actionPopup.isOpen()) {
             return;
         }
 
-        for (HistoryCard card : historyCards) {
+        HistoryCard card = findCardAt(historyCards, historyScrollOffset, mouseX, mouseY);
+        if (card != null) {
+            hoveredCard = card;
+            return;
+        }
+        hoveredCard = findCardAt(pinnedCards, pinnedScrollOffset, mouseX, mouseY);
+    }
+
+    private HistoryCard findCardAt(List<HistoryCard> cards, int scrollOffset, int mouseX, int mouseY) {
+        for (HistoryCard card : cards) {
             int drawY = card.y - scrollOffset;
             if (mouseX >= card.x && mouseX <= card.x + card.layout.width()
                 && mouseY >= drawY && mouseY <= drawY + card.layout.height()) {
-                hoveredCard = card;
-                return;
+                return card;
             }
         }
+        return null;
     }
 
     private void renderTooltip(DrawContext context, int mouseX, int mouseY) {
@@ -254,7 +407,7 @@ public class MessageHistoryScreen extends Screen {
         context.drawTextWithShadow(
             this.textRenderer,
             feedback,
-            this.width / 2 - feedbackWidth / 2,
+            groupLeft + (groupWidth - feedbackWidth) / 2,
             contentBottom + 2,
             0xFF55FF55
         );
@@ -266,15 +419,14 @@ public class MessageHistoryScreen extends Screen {
         context.drawText(
             this.textRenderer,
             helpText,
-            this.width / 2 - textWidth / 2,
+            groupLeft + (groupWidth - textWidth) / 2,
             this.height - FOOTER_HEIGHT - 12,
-            0xFF666666,
+            ModUiTheme.TEXT_DIM,
             false
         );
     }
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    private boolean handleHistoryMouseClicked(double mouseX, double mouseY, int button) {
         int mx = (int) mouseX;
         int my = (int) mouseY;
 
@@ -284,6 +436,7 @@ public class MessageHistoryScreen extends Screen {
                 handleAction(entry, selectedCard);
                 actionPopup.close();
                 selectedCard = null;
+                updateLayout();
                 return true;
             }
             if (!actionPopup.contains(mx, my)) {
@@ -307,6 +460,14 @@ public class MessageHistoryScreen extends Screen {
             return true;
         }
 
+        return false;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (handleHistoryMouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -364,12 +525,25 @@ public class MessageHistoryScreen extends Screen {
         if (actionPopup.isOpen()) {
             return true;
         }
-        scrollOffset = GuiScrollbar.clampScroll(
-            scrollOffset - (int) (verticalAmount * 24),
-            getTotalContentHeight(),
-            contentBottom - contentTop
-        );
-        return true;
+
+        int scrollDelta = (int) (verticalAmount * 24);
+        if (mouseX >= pinnedPanelLeft && mouseX < pinnedPanelLeft + panelWidth) {
+            pinnedScrollOffset = GuiScrollbar.clampScroll(
+                pinnedScrollOffset - scrollDelta,
+                getTotalContentHeight(pinnedCards),
+                getVisibleListHeight()
+            );
+            return true;
+        }
+        if (mouseX >= historyPanelLeft && mouseX < historyPanelLeft + panelWidth) {
+            historyScrollOffset = GuiScrollbar.clampScroll(
+                historyScrollOffset - scrollDelta,
+                getTotalContentHeight(historyCards),
+                getVisibleListHeight()
+            );
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -377,12 +551,17 @@ public class MessageHistoryScreen extends Screen {
         return false;
     }
 
-    private int getTotalContentHeight() {
-        if (historyCards.isEmpty()) {
+    private int getVisibleListHeight() {
+        return contentBottom - contentTop - LIST_PADDING * 2;
+    }
+
+    private int getTotalContentHeight(List<HistoryCard> cards) {
+        if (cards.isEmpty()) {
             return 0;
         }
-        HistoryCard last = historyCards.get(historyCards.size() - 1);
-        return last.y + last.layout.height() - contentTop;
+        HistoryCard last = cards.get(cards.size() - 1);
+        int listTop = contentTop + LIST_PADDING;
+        return last.y + last.layout.height() - listTop + LIST_PADDING;
     }
 
     @Override

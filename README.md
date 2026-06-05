@@ -47,24 +47,18 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 
 ## Build from source
 
-Multi-version build uses [Stonecutter](https://stonecutter.kikugie.dev/) (one codebase, three jars).
+Multi-version build uses [Stonecutter](https://stonecutter.kikugie.dev/) (one codebase, three jars). See **[BUILD.md](BUILD.md)** for full commands.
 
 ```bash
-# Build all supported versions; jars land in build/libs/<mod.version>/
-./gradlew build buildAndCollect
-
-# Run client for the active version (see stonecutter.gradle.kts, default 1.21.11)
-./gradlew runActive
+./gradlew build buildAndCollect   # all versions → build/libs/<mod.version>/
+./gradlew runActive               # run client (active version, default 1.21.11)
 ```
-
-Switch the version used for IDE/`src` editing: Gradle task **Set active project to …** or edit `stonecutter active "…"` in `stonecutter.gradle.kts`.
-
-Version-specific dependencies live in `versions/<mc>/gradle.properties`. Minecraft 1.21.8 uses override sources in `versions/1.21.8/src/client/java/` (older GUI/render APIs).
 
 ## Development
 
 For developers working on this mod:
 
+- **[BUILD.md](BUILD.md)** - Build, run, and Stonecutter version switching
 - **[RENDERING_GUIDE.md](RENDERING_GUIDE.md)** - Current rendering and emote flow
 - **[src/client/java/takeyourminestream/ijustseen/messages/README.md](src/client/java/takeyourminestream/ijustseen/messages/README.md)** - Message system architecture details
 

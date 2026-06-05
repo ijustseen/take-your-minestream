@@ -1,23 +1,25 @@
 package takeyourminestream.ijustseen.ui.screen;
 
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
+import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Базовый экран со скроллируемым списком строк, полем ввода и кнопкой добавления.
- */
+/** Базовый экран со скроллируемым списком строк (1.21.8 input API). */
 public abstract class AbstractStringListScreen extends Screen {
     protected static final int LINE_HEIGHT = 14;
     protected static final int PADDING = 10;
     protected static final int REMOVE_BTN_SIZE = 12;
+    protected static final int LIST_HEADER = 40;
+    protected static final int LIST_FOOTER_RESERVE = 60;
 
     protected final @Nullable Screen parent;
     protected TextFieldWidget inputField;
@@ -75,33 +77,48 @@ public abstract class AbstractStringListScreen extends Screen {
         if (idx < 0) {
             return;
         }
-        int top = 40;
-        int bottom = this.height - 60;
-        int visible = bottom - top - PADDING * 2;
+        int visible = listBottom() - listTop() - PADDING * 2;
         int totalHeight = entries.size() * LINE_HEIGHT;
         int maxScroll = Math.max(0, totalHeight - visible);
         scrollOffset = Math.max(0, Math.min(maxScroll, idx * LINE_HEIGHT - Math.max(0, visible - LINE_HEIGHT)));
     }
 
     protected int listTop() {
-        return 40;
+        return LIST_HEADER;
     }
 
     protected int listBottom() {
-        return this.height - 60;
+        return this.height - LIST_FOOTER_RESERVE;
     }
 
     protected void drawListPanel(DrawContext context) {
-        context.fill(PADDING, listTop(), this.width - PADDING, listBottom(), 0x80000000);
+        ModUiTheme.drawBorderedPanel(context, PADDING, listTop(), this.width - PADDING * 2, listBottom() - listTop());
+    }
+
+    protected void renderInputChrome(DrawContext context) {
+        if (inputField != null && inputField.visible) {
+            ModUiTheme.drawInputFrame(
+                context,
+                inputField.getX(),
+                inputField.getY(),
+                inputField.getWidth(),
+                inputField.getHeight(),
+                inputField.isFocused()
+            );
+        }
     }
 
     protected void renderDefaultList(DrawContext context, int mouseX, int mouseY, EntryRenderer renderer) {
         drawListPanel(context);
         int y = listTop() + PADDING - scrollOffset;
         int textX = PADDING * 2;
+        int rowLeft = PADDING + 2;
+        int rowRight = this.width - PADDING - 2;
 
         for (String entry : entries) {
             if (y + LINE_HEIGHT > listTop() + PADDING && y < listBottom() - PADDING) {
+                boolean rowHovered = ModUiTheme.isHovered(mouseX, mouseY, rowLeft, y, rowRight - rowLeft, LINE_HEIGHT);
+                ModUiTheme.drawListRow(context, rowLeft, y, rowRight, y + LINE_HEIGHT, rowHovered);
                 renderer.render(context, entry, textX, y, mouseX, mouseY);
             }
             y += LINE_HEIGHT;
@@ -110,17 +127,23 @@ public abstract class AbstractStringListScreen extends Screen {
 
     protected void drawRemoveButton(DrawContext context, int y, int mouseX, int mouseY) {
         int btnX = this.width - PADDING - 4 - REMOVE_BTN_SIZE;
-        boolean hovered = mouseX >= btnX && mouseX <= btnX + REMOVE_BTN_SIZE
-            && mouseY >= y && mouseY <= y + REMOVE_BTN_SIZE;
-        int bgColor = hovered ? 0xA0FF7777 : 0x80FF5555;
-        context.fill(btnX, y, btnX + REMOVE_BTN_SIZE, y + REMOVE_BTN_SIZE, bgColor);
-        context.drawText(this.textRenderer, Text.of("x"), btnX + (REMOVE_BTN_SIZE / 2) - 2, y + (REMOVE_BTN_SIZE / 2) - 4, 0xFFFFFFFF, true);
+        boolean hovered = ModUiTheme.isHovered(mouseX, mouseY, btnX, y, REMOVE_BTN_SIZE, REMOVE_BTN_SIZE);
+        ModUiTheme.drawCompactButton(
+            context,
+            this.textRenderer,
+            btnX,
+            y,
+            REMOVE_BTN_SIZE,
+            REMOVE_BTN_SIZE,
+            Text.literal("×"),
+            hovered,
+            ModUiTheme.ButtonVariant.DANGER
+        );
     }
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    protected boolean handleListMouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) {
-            return super.mouseClicked(mouseX, mouseY, button);
+            return false;
         }
 
         int y = listTop() + PADDING - scrollOffset;
@@ -136,6 +159,14 @@ public abstract class AbstractStringListScreen extends Screen {
                 }
             }
             y += LINE_HEIGHT;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (handleListMouseClicked(mouseX, mouseY, button)) {
+            return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
@@ -158,6 +189,10 @@ public abstract class AbstractStringListScreen extends Screen {
         } else {
             this.client.setScreen(null);
         }
+    }
+
+    protected void renderThemedChrome(DrawContext context, int mouseX, int mouseY) {
+        ScreenUiHelper.renderAllButtons(context, mouseX, mouseY, this);
     }
 
     @FunctionalInterface

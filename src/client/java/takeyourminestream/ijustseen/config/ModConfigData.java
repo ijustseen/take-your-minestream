@@ -27,11 +27,13 @@ public class ModConfigData {
     private double messageSoundVolume = 0.45;
     private boolean autoConnectIrcOnJoin = false;
     private int chanceForSpawn = 100;
+    private int messageHistoryMaxSize = 100;
     private ChatRoleFilter chatRoleFilter = ChatRoleFilter.ALL;
     private boolean enableUsernameBlocklist = true;
 
     // Геттеры
     public int getChanceForSpawn() { return chanceForSpawn; }
+    public int getMessageHistoryMaxSize() { return messageHistoryMaxSize; }
     public String getTwitchChannelName() { return twitchChannelName; }
     public int getMessageLifetimeTicks() { return messageLifetimeTicks; }
     public int getMessageFallTicks() { return messageFallTicks; }
@@ -57,6 +59,7 @@ public class ModConfigData {
 
     // Сеттеры
     public void setChanceForSpawn(int chanceForSpawn) { this.chanceForSpawn = chanceForSpawn; }
+    public void setMessageHistoryMaxSize(int messageHistoryMaxSize) { this.messageHistoryMaxSize = Math.max(10, messageHistoryMaxSize); }
     public void setTwitchChannelName(String twitchChannelName) { this.twitchChannelName = twitchChannelName; }
     public void setMessageLifetimeTicks(int messageLifetimeTicks) { this.messageLifetimeTicks = messageLifetimeTicks; }
     public void setMessageFallTicks(int messageFallTicks) { this.messageFallTicks = messageFallTicks; }

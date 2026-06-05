@@ -16,8 +16,13 @@ import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.integration.twitch.TwitchManager;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
+import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
+import takeyourminestream.ijustseen.ui.widget.ChanceForSpawnSliderWidget;
+import takeyourminestream.ijustseen.ui.widget.ConfigIntTextFieldWidget;
 import takeyourminestream.ijustseen.ui.widget.MessageScaleSliderWidget;
 import takeyourminestream.ijustseen.ui.widget.MessageSoundVolumeSliderWidget;
+import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,17 +51,27 @@ public class ModConfigScreen extends Screen {
     private ConfigCategory currentCategory = ConfigCategory.GENERAL;
     private List<ButtonWidget> categoryButtons = new ArrayList<>();
     private List<ConfigEntry> configEntries = new ArrayList<>();
+    private ButtonWidget historyButton;
+    private ButtonWidget twitchButton;
+    private ButtonWidget doneButton;
     
     // Параметры интерфейса
-    private static final int HEADER_HEIGHT = 46;
-    private static final int FOOTER_HEIGHT = 36;
+    private static final int TITLE_Y = 6;
+    private static final int CATEGORY_Y = 24;
+    private static final int HEADER_HEIGHT = 52;
+    private static final int MAIN_PANEL_BOTTOM_MARGIN = 12;
+    private static final int SCROLL_TO_DESCRIPTION_GAP = 4;
+    private static final int DESCRIPTION_TO_BUTTON_GAP = 3;
     private static final int CATEGORY_BUTTON_HEIGHT = 22;
     private static final int ENTRY_HEIGHT = 24;
     private static final int ENTRY_SPACING = 6;
     private static final int CONTENT_PADDING = 10;
-    private static final int CATEGORY_TOP_MARGIN = 12;
+    private static final int FOOTER_BUTTON_HEIGHT = 20;
+    private static final int FOOTER_BUTTON_BOTTOM_PADDING = 10;
+    private static final int FOOTER_ZONE_HEIGHT = FOOTER_BUTTON_HEIGHT + FOOTER_BUTTON_BOTTOM_PADDING;
+    private static final int FOOTER_BUTTON_PADDING = 12;
+    private static final int FOOTER_BUTTON_GAP = 8;
     private static final int CATEGORY_TO_CONTENT_GAP = 6;
-    private static final int CONTENT_TO_FOOTER_GAP = 2;
     private static final int SIDE_MARGIN = 24;
     private static final int LABEL_WIDTH = 200;
     private static final int CONTROL_WIDTH = 170;
@@ -120,7 +135,7 @@ public class ModConfigScreen extends Screen {
         int buttonWidth = Math.max(86, Math.min(140, availableWidth / count));
         int totalWidth = count * buttonWidth + buttonSpacing * (count - 1);
         int startX = (this.width - totalWidth) / 2;
-        int y = CATEGORY_TOP_MARGIN;
+        int y = CATEGORY_Y;
         
         for (int i = 0; i < count; i++) {
             ConfigCategory category = ConfigCategory.values()[i];
@@ -143,8 +158,7 @@ public class ModConfigScreen extends Screen {
     private void updateCategoryButtons() {
         for (int i = 0; i < categoryButtons.size(); i++) {
             ButtonWidget button = categoryButtons.get(i);
-            ConfigCategory category = ConfigCategory.values()[i];
-            button.active = category != currentCategory;
+            button.active = true;
         }
     }
     
@@ -221,20 +235,23 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(blockedUsersButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.blocked_users", "takeyourminestream.config.blocked_users.desc", ConfigEntryType.BUTTON, blockedUsersButton, ConfigCategory.GENERAL));
 
-        TextFieldWidget chanceForSpawnField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.chance_for_spawn"));
-        chanceForSpawnField.setText(ConfigManager.getInstance().getConfigValue("chanceForSpawn").toString());
-        chanceForSpawnField.setChangedListener(s -> {
-            if (s.matches("\\d+")) {
-                try {
-                    int value = Integer.parseInt(s);
-                    if (0 <= value && value <= 100) {
-                        ConfigManager.getInstance().setConfigValue("chanceForSpawn", value);
-                    }
-                } catch (Exception ignored) {}
-            }
-        });
-        this.addDrawableChild(chanceForSpawnField);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.chance_for_spawn", "takeyourminestream.config.chance_for_spawn.desc", ConfigEntryType.TEXT_FIELD, chanceForSpawnField, ConfigCategory.GENERAL));
+        ChanceForSpawnSliderWidget chanceForSpawnSlider = new ChanceForSpawnSliderWidget(0, 0, CONTROL_WIDTH, 20);
+        this.addDrawableChild(chanceForSpawnSlider);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.chance_for_spawn", "takeyourminestream.config.chance_for_spawn.desc", ConfigEntryType.SLIDER, chanceForSpawnSlider, ConfigCategory.GENERAL));
+
+        ConfigIntTextFieldWidget messageHistoryMaxField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourminestream.config.message_history_max"),
+            "messageHistoryMaxSize",
+            10,
+            500
+        );
+        this.addDrawableChild(messageHistoryMaxField);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.message_history_max", "takeyourminestream.config.message_history_max.desc", ConfigEntryType.TEXT_FIELD, messageHistoryMaxField, ConfigCategory.GENERAL));
 
         // Сообщения: вид, время жизни, звук
         ButtonWidget spawnModeButton = ButtonWidget.builder(
@@ -253,23 +270,31 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(messageScaleSlider);
         configEntries.add(new ConfigEntry("takeyourminestream.config.message_scale", "takeyourminestream.config.message_scale.desc", ConfigEntryType.SLIDER, messageScaleSlider, ConfigCategory.MESSAGES));
 
-        TextFieldWidget messageLifetimeField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.message_lifetime_seconds"));
-        Object lifeSec = ConfigManager.getInstance().getConfigValue("messageLifetimeSeconds");
-        double lifeSeconds = lifeSec instanceof Number ? ((Number) lifeSec).doubleValue() : (ModConfig.getMESSAGE_LIFETIME_TICKS() / 20.0);
-        messageLifetimeField.setText(String.format(java.util.Locale.ROOT, "%.2f", lifeSeconds));
-        messageLifetimeField.setChangedListener(s -> {
-            try { ConfigManager.getInstance().setConfigValue("messageLifetimeSeconds", Double.parseDouble(s)); } catch (NumberFormatException ignored) {}
-        });
+        ConfigIntTextFieldWidget messageLifetimeField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourminestream.config.message_lifetime_seconds"),
+            "messageLifetimeSeconds",
+            1,
+            600
+        );
         this.addDrawableChild(messageLifetimeField);
         configEntries.add(new ConfigEntry("takeyourminestream.config.message_lifetime_seconds", "takeyourminestream.config.message_lifetime_seconds.desc", ConfigEntryType.TEXT_FIELD, messageLifetimeField, ConfigCategory.MESSAGES));
-        
-        TextFieldWidget messageFallField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.message_fall_seconds"));
-        Object fallSec = ConfigManager.getInstance().getConfigValue("messageFallSeconds");
-        double fallSeconds = fallSec instanceof Number ? ((Number) fallSec).doubleValue() : (ModConfig.getMESSAGE_FALL_TICKS() / 20.0);
-        messageFallField.setText(String.format(java.util.Locale.ROOT, "%.2f", fallSeconds));
-        messageFallField.setChangedListener(s -> {
-            try { ConfigManager.getInstance().setConfigValue("messageFallSeconds", Double.parseDouble(s)); } catch (NumberFormatException ignored) {}
-        });
+
+        ConfigIntTextFieldWidget messageFallField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourminestream.config.message_fall_seconds"),
+            "messageFallSeconds",
+            0,
+            120
+        );
         this.addDrawableChild(messageFallField);
         configEntries.add(new ConfigEntry("takeyourminestream.config.message_fall_seconds", "takeyourminestream.config.message_fall_seconds.desc", ConfigEntryType.TEXT_FIELD, messageFallField, ConfigCategory.MESSAGES));
 
@@ -308,11 +333,17 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(freezingButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.freezing_on_view", "takeyourminestream.config.freezing_on_view.desc", ConfigEntryType.TOGGLE, freezingButton, ConfigCategory.BEHAVIOR));
 
-        TextFieldWidget maxFreezeDistanceField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.max_freeze_distance"));
-        maxFreezeDistanceField.setText(String.valueOf(ModConfig.getMAX_FREEZE_DISTANCE()));
-        maxFreezeDistanceField.setChangedListener(s -> {
-            try { ConfigManager.getInstance().setConfigValue("maxFreezeDistance", Double.parseDouble(s)); } catch (NumberFormatException ignored) {}
-        });
+        ConfigIntTextFieldWidget maxFreezeDistanceField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourminestream.config.max_freeze_distance"),
+            "maxFreezeDistance",
+            1,
+            128
+        );
         this.addDrawableChild(maxFreezeDistanceField);
         configEntries.add(new ConfigEntry("takeyourminestream.config.max_freeze_distance", "takeyourminestream.config.max_freeze_distance.desc", ConfigEntryType.TEXT_FIELD, maxFreezeDistanceField, ConfigCategory.BEHAVIOR));
 
@@ -346,8 +377,8 @@ public class ModConfigScreen extends Screen {
     }
     
     private void updateEntryPositions() {
-        int contentTop = getContentTop();
-        int contentBottom = getContentBottom();
+        int contentTop = getMainPanelTop();
+        int contentBottom = getScrollBottom();
         int y = contentTop + CONTENT_PADDING - scrollOffset;
         int rightX = this.width - SIDE_MARGIN - CONTROL_WIDTH;
         
@@ -368,34 +399,60 @@ public class ModConfigScreen extends Screen {
 
     
     private void createBottomButtons() {
-        int centerX = this.width / 2;
-        int buttonY = this.height - FOOTER_HEIGHT + 8;
-        int buttonWidth = 100;
-        int buttonSpacing = 10;
-        
-        // Кнопка "История сообщений"
-        this.addDrawableChild(ButtonWidget.builder(Text.translatable("takeyourminestream.config.message_history"), btn -> {
+        historyButton = ButtonWidget.builder(Text.translatable("takeyourminestream.config.message_history"), btn -> {
             var messageSpawner = TakeYourMineStreamClient.getStaticMessageSpawner();
             if (messageSpawner != null) {
-                var lifecycleManager = messageSpawner.getLifecycleManager();
-                this.client.setScreen(new MessageHistoryScreen(this, lifecycleManager));
+                this.client.setScreen(new MessageHistoryScreen(this, messageSpawner.getLifecycleManager()));
             }
-        }).dimensions(centerX - buttonWidth * 3 / 2 - buttonSpacing, buttonY, buttonWidth, 20).build());
+        }).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
 
-        // Кнопка переключения Twitch
-        this.addDrawableChild(ButtonWidget.builder(getTwitchToggleButtonText(), btn -> {
+        twitchButton = ButtonWidget.builder(getTwitchToggleButtonText(), btn -> {
             handleTwitchToggle();
             btn.setMessage(getTwitchToggleButtonText());
-        }).dimensions(centerX - buttonWidth / 2, buttonY, buttonWidth, 20).build());
+            layoutFooterButtons();
+        }).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
 
-        // Кнопка "Готово"
-        this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.done"), btn -> {
+        doneButton = ButtonWidget.builder(Text.translatable("gui.done"), btn -> {
             if (!ModConfig.getTWITCH_CHANNEL_NAME().equals(initialChannelName)) {
                 TwitchManager.getInstance(ConfigManager.getInstance()).onChannelNameChanged(ModConfig.getTWITCH_CHANNEL_NAME());
             }
             ConfigManager.getInstance().saveConfig();
             this.close();
-        }).dimensions(centerX + buttonWidth / 2 + buttonSpacing, buttonY, buttonWidth, 20).build());
+        }).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
+
+        this.addDrawableChild(historyButton);
+        this.addDrawableChild(twitchButton);
+        this.addDrawableChild(doneButton);
+        layoutFooterButtons();
+    }
+
+    private void layoutFooterButtons() {
+        if (historyButton == null || twitchButton == null || doneButton == null || this.textRenderer == null) {
+            return;
+        }
+
+        Text historyLabel = Text.translatable("takeyourminestream.config.message_history");
+        Text twitchLabel = getTwitchToggleButtonText();
+        Text doneLabel = Text.translatable("gui.done");
+
+        int historyW = this.textRenderer.getWidth(historyLabel) + FOOTER_BUTTON_PADDING * 2;
+        int twitchW = this.textRenderer.getWidth(twitchLabel) + FOOTER_BUTTON_PADDING * 2;
+        int doneW = this.textRenderer.getWidth(doneLabel) + FOOTER_BUTTON_PADDING * 2;
+        int buttonY = getFooterZoneTop();
+
+        int totalWidth = historyW + twitchW + doneW + FOOTER_BUTTON_GAP * 2;
+        int x = Math.max(8, (this.width - totalWidth) / 2);
+
+        historyButton.setPosition(x, buttonY);
+        historyButton.setDimensions(historyW, FOOTER_BUTTON_HEIGHT);
+        x += historyW + FOOTER_BUTTON_GAP;
+
+        twitchButton.setPosition(x, buttonY);
+        twitchButton.setDimensions(twitchW, FOOTER_BUTTON_HEIGHT);
+        x += twitchW + FOOTER_BUTTON_GAP;
+
+        doneButton.setPosition(x, buttonY);
+        doneButton.setDimensions(doneW, FOOTER_BUTTON_HEIGHT);
     }
 
 
@@ -462,95 +519,157 @@ public class ModConfigScreen extends Screen {
         updateEntryPositions();
         hoveredDescriptionKey = null;
 
+        java.util.Set<ButtonWidget> hiddenButtons = ScreenUiHelper.hideButtons(this);
         List<Object> temporarilyHidden = new ArrayList<>();
         for (ConfigEntry entry : configEntries) {
-            if (entry.category != currentCategory) continue;
-            if (entry.widget instanceof ButtonWidget) {
-                ButtonWidget w = (ButtonWidget) entry.widget;
-                if (w.visible) {
-                    w.visible = false;
-                    temporarilyHidden.add(w);
-                }
-            } else if (entry.widget instanceof TextFieldWidget) {
-                TextFieldWidget w = (TextFieldWidget) entry.widget;
-                if (w.visible) {
-                    w.visible = false;
-                    temporarilyHidden.add(w);
-                }
-            } else if (entry.widget instanceof MessageScaleSliderWidget) {
-                MessageScaleSliderWidget w = (MessageScaleSliderWidget) entry.widget;
-                if (w.visible) {
-                    w.visible = false;
-                    temporarilyHidden.add(w);
-                }
-            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget) {
-                MessageSoundVolumeSliderWidget w = (MessageSoundVolumeSliderWidget) entry.widget;
-                if (w.visible) {
-                    w.visible = false;
-                    temporarilyHidden.add(w);
-                }
+            if (entry.category != currentCategory) {
+                continue;
+            }
+            if (entry.widget instanceof TextFieldWidget w && w.visible) {
+                w.visible = false;
+                temporarilyHidden.add(w);
+            } else if (entry.widget instanceof ChanceForSpawnSliderWidget w && w.visible) {
+                w.visible = false;
+                temporarilyHidden.add(w);
+            } else if (entry.widget instanceof MessageScaleSliderWidget w && w.visible) {
+                w.visible = false;
+                temporarilyHidden.add(w);
+            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget w && w.visible) {
+                w.visible = false;
+                temporarilyHidden.add(w);
             }
         }
-        
+
         super.render(context, mouseX, mouseY, delta);
 
+        ScreenUiHelper.restoreButtons(hiddenButtons);
         for (Object widget : temporarilyHidden) {
             setWidgetVisible(widget, true);
         }
         
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 10, 0xFFFFFF);
-        
-        int contentTop = getContentTop();
-        int contentBottom = getContentBottom();
-        
-        context.fill(CONTENT_PADDING, contentTop, this.width - CONTENT_PADDING, contentBottom, 0x4A000000);
-        
-        context.enableScissor(CONTENT_PADDING, contentTop, this.width - CONTENT_PADDING, contentBottom);
-        renderLabels(context, mouseX, mouseY, contentTop, contentBottom);
-        renderConfigWidgets(context, mouseX, mouseY, delta, contentTop, contentBottom);
-        context.disableScissor();
-        renderScrollbar(context, contentTop, contentBottom);
+        layoutFooterButtons();
+        ModUiTheme.drawTitle(context, this.textRenderer, this.title, this.width, TITLE_Y);
 
-        int descTop = contentBottom + 4;
-        int descBottom = Math.min(this.height - FOOTER_HEIGHT + 2, descTop + DESCRIPTION_HEIGHT);
-        context.fill(CONTENT_PADDING, descTop, this.width - CONTENT_PADDING, descBottom, 0x35000000);
+        int panelTop = getMainPanelTop();
+        int panelBottom = getMainPanelBottom();
+        int scrollTop = panelTop;
+        int scrollBottom = getScrollBottom();
+
+        ModUiTheme.drawBorderedPanel(
+            context,
+            CONTENT_PADDING,
+            panelTop,
+            this.width - CONTENT_PADDING * 2,
+            panelBottom - panelTop
+        );
+
+        context.enableScissor(CONTENT_PADDING, scrollTop, this.width - CONTENT_PADDING, scrollBottom);
+        renderLabels(context, mouseX, mouseY, scrollTop, scrollBottom);
+        renderConfigWidgets(context, mouseX, mouseY, delta, scrollTop, scrollBottom);
+        context.disableScissor();
+        renderScrollbar(context, scrollTop, scrollBottom);
+
+        drawFixedPanelFooter(context);
 
         Text description = hoveredDescriptionKey == null
-            ? Text.translatable("takeyourminestream.config.title")
+            ? Text.translatable("takeyourminestream.config.hint_default")
             : Text.translatable(hoveredDescriptionKey);
 
+        int descTop = getDescriptionTop();
         context.drawText(
             this.textRenderer,
             description,
-            CONTENT_PADDING + 8,
-            descTop + DESCRIPTION_HEIGHT - this.textRenderer.fontHeight - 2,
-            0xFFDDDDDD,
+            CONTENT_PADDING + 10,
+            descTop + (DESCRIPTION_HEIGHT - this.textRenderer.fontHeight) / 2,
+            ModUiTheme.TEXT_SECONDARY,
             false
         );
+
+        ButtonWidget selectedTab = null;
+        for (int i = 0; i < categoryButtons.size(); i++) {
+            if (ConfigCategory.values()[i] == currentCategory) {
+                selectedTab = categoryButtons.get(i);
+                break;
+            }
+        }
+        ScreenUiHelper.renderButtons(context, mouseX, mouseY, categoryButtons, selectedTab);
+        if (historyButton != null) {
+            ScreenUiHelper.renderButtons(
+                context,
+                mouseX,
+                mouseY,
+                java.util.List.of(historyButton, twitchButton, doneButton),
+                null
+            );
+        }
+    }
+
+    /** Непрокручиваемый низ панели: заливка фона панели, чтобы список настроек не просвечивал. */
+    private void drawFixedPanelFooter(DrawContext context) {
+        int innerLeft = CONTENT_PADDING + 1;
+        int innerRight = this.width - CONTENT_PADDING - 1;
+        int fixedTop = getDescriptionTop();
+        int fixedBottom = getMainPanelBottom() - 1;
+
+        context.fill(innerLeft, fixedTop, innerRight, fixedBottom, ModUiTheme.PANEL_BG);
+        context.fill(innerLeft, fixedTop, innerRight, fixedTop + 1, ModUiTheme.PANEL_BORDER);
     }
 
     private void renderConfigWidgets(DrawContext context, int mouseX, int mouseY, float delta, int contentTop, int contentBottom) {
         for (ConfigEntry entry : configEntries) {
-            if (entry.category != currentCategory) continue;
+            if (entry.category != currentCategory) {
+                continue;
+            }
 
-            if (entry.widget instanceof ButtonWidget) {
-                ButtonWidget widget = (ButtonWidget) entry.widget;
+            if (entry.widget instanceof ButtonWidget widget) {
                 if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    boolean hovered = ModUiTheme.isHovered(
+                        mouseX,
+                        mouseY,
+                        widget.getX(),
+                        widget.getY(),
+                        widget.getWidth(),
+                        widget.getHeight()
+                    );
+                    ModUiTheme.drawButton(
+                        context,
+                        this.textRenderer,
+                        widget.getX(),
+                        widget.getY(),
+                        widget.getWidth(),
+                        widget.getHeight(),
+                        widget.getMessage(),
+                        hovered,
+                        widget.active,
+                        false,
+                        true
+                    );
+                }
+            } else if (entry.widget instanceof TextFieldWidget widget) {
+                if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    ModUiTheme.drawInputFrame(
+                        context,
+                        widget.getX(),
+                        widget.getY(),
+                        widget.getWidth(),
+                        widget.getHeight(),
+                        widget.isFocused()
+                    );
                     widget.render(context, mouseX, mouseY, delta);
                 }
-            } else if (entry.widget instanceof TextFieldWidget) {
-                TextFieldWidget widget = (TextFieldWidget) entry.widget;
+            } else if (entry.widget instanceof ChanceForSpawnSliderWidget widget) {
                 if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    ModUiTheme.drawInputFrame(context, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), false);
                     widget.render(context, mouseX, mouseY, delta);
                 }
-            } else if (entry.widget instanceof MessageScaleSliderWidget) {
-                MessageScaleSliderWidget widget = (MessageScaleSliderWidget) entry.widget;
+            } else if (entry.widget instanceof MessageScaleSliderWidget widget) {
                 if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    ModUiTheme.drawInputFrame(context, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), false);
                     widget.render(context, mouseX, mouseY, delta);
                 }
-            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget) {
-                MessageSoundVolumeSliderWidget widget = (MessageSoundVolumeSliderWidget) entry.widget;
+            } else if (entry.widget instanceof MessageSoundVolumeSliderWidget widget) {
                 if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
+                    ModUiTheme.drawInputFrame(context, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), false);
                     widget.render(context, mouseX, mouseY, delta);
                 }
             }
@@ -558,7 +677,7 @@ public class ModConfigScreen extends Screen {
     }
     
     private void renderLabels(DrawContext context, int mouseX, int mouseY, int contentTop, int contentBottom) {
-        int labelColor = 0xFFFFFFFF;
+        int labelColor = ModUiTheme.TEXT_PRIMARY;
         int fontHeight = this.textRenderer.fontHeight;
         
         int labelX = CONTENT_PADDING + 10;
@@ -572,12 +691,12 @@ public class ModConfigScreen extends Screen {
             if (entry.category != currentCategory) continue;
             
             if (isElementVisible(currentY, contentTop, contentBottom)) {
-                boolean hovered = mouseX >= rowLeft && mouseX <= rowRight && mouseY >= currentY && mouseY <= currentY + ENTRY_HEIGHT;
-                context.fill(rowLeft, currentY, rowRight, currentY + ENTRY_HEIGHT, hovered ? 0x30FFFFFF : 0x20000000);
+                boolean rowHovered = mouseX >= rowLeft && mouseX <= rowRight && mouseY >= currentY && mouseY <= currentY + ENTRY_HEIGHT;
+                ModUiTheme.drawListRow(context, rowLeft, currentY, rowRight, currentY + ENTRY_HEIGHT, rowHovered);
                 context.drawText(this.textRenderer, Text.translatable(entry.labelKey), 
                     labelX, currentY + (20 - fontHeight) / 2, labelColor, true);
 
-                if (hovered) {
+                if (rowHovered) {
                     hoveredDescriptionKey = entry.descriptionKey;
                 }
             }
@@ -603,7 +722,7 @@ public class ModConfigScreen extends Screen {
     private boolean isElementVisible(int elementY, int contentTop, int contentBottom) {
         return elementY + ENTRY_HEIGHT > contentTop && elementY < contentBottom;
     }
-    
+
     private List<String> wrapText(String text, int maxWidth) {
         List<String> lines = new ArrayList<>();
         if (this.textRenderer.getWidth(text) <= maxWidth) {
@@ -651,29 +770,16 @@ public class ModConfigScreen extends Screen {
     private void renderScrollbar(DrawContext context, int contentTop, int contentBottom) {
         int totalContentHeight = getTotalContentHeight();
         int visibleContentHeight = contentBottom - contentTop;
-        
-        if (totalContentHeight <= visibleContentHeight) return;
-        
-        int padding = 10;
-        int scrollbarX = this.width - padding - 6;
-        int scrollbarWidth = 4;
-        int scrollbarHeight = contentBottom - contentTop;
-        
-        // Фон скроллбара
-        context.fill(scrollbarX, contentTop, scrollbarX + scrollbarWidth, contentBottom, 0x40FFFFFF);
-        
-        // Ползунок скроллбара
-        int thumbHeight = Math.max(10, (visibleContentHeight * scrollbarHeight) / totalContentHeight);
-        int maxScroll = totalContentHeight - visibleContentHeight;
-        int thumbY = contentTop + (scrollOffset * (scrollbarHeight - thumbHeight)) / maxScroll;
-        
-        context.fill(scrollbarX, thumbY, scrollbarX + scrollbarWidth, thumbY + thumbHeight, 0x80FFFFFF);
+        if (totalContentHeight <= visibleContentHeight) {
+            return;
+        }
+        GuiScrollbar.draw(context, this.width - 16, contentTop, contentBottom, scrollOffset, totalContentHeight);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        int contentTop = getContentTop();
-        int contentBottom = getContentBottom();
+        int contentTop = getMainPanelTop();
+        int contentBottom = getScrollBottom();
         if (mouseY < contentTop || mouseY > contentBottom) {
             return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
@@ -687,19 +793,31 @@ public class ModConfigScreen extends Screen {
     }
 
     private int getCategoryButtonsBottom() {
-        return CATEGORY_TOP_MARGIN + CATEGORY_BUTTON_HEIGHT;
+        return CATEGORY_Y + CATEGORY_BUTTON_HEIGHT;
     }
 
-    private int getContentTop() {
+    private int getMainPanelTop() {
         return getCategoryButtonsBottom() + CATEGORY_TO_CONTENT_GAP;
     }
 
-    private int getContentBottom() {
-        return this.height - FOOTER_HEIGHT - CONTENT_TO_FOOTER_GAP - DESCRIPTION_HEIGHT - 2;
+    private int getMainPanelBottom() {
+        return this.height - MAIN_PANEL_BOTTOM_MARGIN;
+    }
+
+    private int getFooterZoneTop() {
+        return getMainPanelBottom() - FOOTER_ZONE_HEIGHT;
+    }
+
+    private int getDescriptionTop() {
+        return getFooterZoneTop() - DESCRIPTION_HEIGHT - DESCRIPTION_TO_BUTTON_GAP;
+    }
+
+    private int getScrollBottom() {
+        return getDescriptionTop() - SCROLL_TO_DESCRIPTION_GAP;
     }
 
     private int getVisibleContentHeight() {
-        return getContentBottom() - getContentTop();
+        return getScrollBottom() - getMainPanelTop();
     }
 
     private void clampScrollOffset() {
@@ -712,6 +830,8 @@ public class ModConfigScreen extends Screen {
             ((ButtonWidget) widget).visible = visible;
         } else if (widget instanceof TextFieldWidget) {
             ((TextFieldWidget) widget).visible = visible;
+        } else if (widget instanceof ChanceForSpawnSliderWidget) {
+            ((ChanceForSpawnSliderWidget) widget).visible = visible;
         } else if (widget instanceof MessageScaleSliderWidget) {
             ((MessageScaleSliderWidget) widget).visible = visible;
         } else if (widget instanceof MessageSoundVolumeSliderWidget) {
@@ -725,6 +845,8 @@ public class ModConfigScreen extends Screen {
             ((ButtonWidget) widget).setPosition(x, centeredY);
         } else if (widget instanceof TextFieldWidget) {
             ((TextFieldWidget) widget).setPosition(x, centeredY);
+        } else if (widget instanceof ChanceForSpawnSliderWidget) {
+            ((ChanceForSpawnSliderWidget) widget).setPosition(x, centeredY);
         } else if (widget instanceof MessageScaleSliderWidget) {
             ((MessageScaleSliderWidget) widget).setPosition(x, centeredY);
         } else if (widget instanceof MessageSoundVolumeSliderWidget) {

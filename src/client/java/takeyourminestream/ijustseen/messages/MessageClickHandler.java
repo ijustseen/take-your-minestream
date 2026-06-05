@@ -135,7 +135,10 @@ public class MessageClickHandler {
             totalTextHeight = textRenderer.fontHeight;
             maxTextWidth = getEmoteAwareLineWidth(textRenderer, message.getText(), message.getEmotes());
         } else {
-            List<OrderedText> wrappedText = textRenderer.wrapLines(Text.of(message.getText()), 120);
+            List<OrderedText> wrappedText = textRenderer.wrapLines(
+                Text.of(message.getText()),
+                MessagePanelConstants.MESSAGE_WRAP_WIDTH
+            );
             totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
             maxTextWidth = 0;
             for (OrderedText line : wrappedText) {

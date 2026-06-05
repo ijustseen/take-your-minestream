@@ -2,7 +2,9 @@ package takeyourminestream.ijustseen.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.config.ModConfigData;
+import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.core.storage.StoragePaths;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
@@ -101,6 +103,10 @@ public class ConfigManager implements IConfigManager {
             case "chanceForSpawn":
                 configData.setChanceForSpawn((Integer) value);
                 break;
+            case "messageHistoryMaxSize":
+                configData.setMessageHistoryMaxSize((Integer) value);
+                trimMessageHistory();
+                break;
             case "twitchChannelName":
                 configData.setTwitchChannelName((String) value);
                 break;
@@ -169,6 +175,7 @@ public class ConfigManager implements IConfigManager {
     private void updateConfigCache() {
         configCache.clear();
         configCache.put("chanceForSpawn", configData.getChanceForSpawn());
+        configCache.put("messageHistoryMaxSize", configData.getMessageHistoryMaxSize());
         configCache.put("twitchChannelName", configData.getTwitchChannelName());
         configCache.put("messageLifetimeTicks", configData.getMessageLifetimeTicks());
         configCache.put("messageFallTicks", configData.getMessageFallTicks());
@@ -196,6 +203,13 @@ public class ConfigManager implements IConfigManager {
 
     public ModConfigData getConfigData() {
         return configData;
+    }
+
+    private void trimMessageHistory() {
+        MessageSpawner spawner = TakeYourMineStreamClient.getStaticMessageSpawner();
+        if (spawner != null) {
+            spawner.getLifecycleManager().enforceHistoryLimit();
+        }
     }
 
     private void sendPlayerMessage(String message) {

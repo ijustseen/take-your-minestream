@@ -8,6 +8,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import takeyourminestream.ijustseen.core.MessagePanelConstants;
 import takeyourminestream.ijustseen.core.text.ChatMessageParser;
+import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.messages.Message;
 
@@ -79,6 +80,66 @@ public final class MessageCardRenderer {
         }
 
         return new DrawResult(usernameHitbox);
+    }
+
+    /** Карточка для HUD-оверлея (без hover-эффектов истории). */
+    public static void drawHudCard(
+        DrawContext context,
+        TextRenderer textRenderer,
+        BlockedUsernameManager blockedUsernameManager,
+        Message message,
+        ChatMessageParser.ParsedMessage parsed,
+        MessageCardLayout.Layout layout,
+        int x,
+        int y,
+        float alpha
+    ) {
+        if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
+            MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), alpha);
+        }
+
+        int innerX = x + MessagePanelConstants.PADDING_X;
+        int innerY = y + MessagePanelConstants.PADDING_Y;
+
+        if (parsed.username() != null) {
+            boolean blocked = blockedUsernameManager.isBlocked(parsed.username(), parsed.username());
+            MutableText usernameLabel = Text.empty().append(parsed.usernameText());
+            if (blocked) {
+                usernameLabel.formatted(Formatting.DARK_RED, Formatting.STRIKETHROUGH);
+            }
+            context.drawText(textRenderer, usernameLabel, innerX, innerY, applyAlpha(0xFFFFFFFF, alpha), false);
+            if (blocked) {
+                Text blockedBadge = Text.translatable("takeyourminestream.history.blocked_badge").formatted(Formatting.RED);
+                context.drawText(
+                    textRenderer,
+                    blockedBadge,
+                    innerX + textRenderer.getWidth(usernameLabel) + 4,
+                    innerY,
+                    applyAlpha(0xFFFF5555, alpha),
+                    false
+                );
+            }
+            innerY += MessageCardLayout.USERNAME_ROW_HEIGHT + 2;
+        }
+
+        int bodyColor = applyAlpha(0xFFFFFFFF, alpha);
+        if (layout.emoteBodyLine() != null) {
+            MessageCardLayout.EmoteBodyLine emoteLine = layout.emoteBodyLine();
+            MessageEmoteGuiRenderer.drawLine(
+                context,
+                textRenderer,
+                emoteLine.text(),
+                emoteLine.emotes(),
+                innerX,
+                innerY,
+                bodyColor
+            );
+        } else {
+            for (OrderedText line : layout.bodyLines()) {
+                context.drawText(textRenderer, line, innerX, innerY, bodyColor, false);
+                innerY += textRenderer.fontHeight;
+            }
+        }
     }
 
     private static int applyAlpha(int color, float alpha) {

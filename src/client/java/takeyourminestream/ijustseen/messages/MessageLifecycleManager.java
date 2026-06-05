@@ -2,6 +2,8 @@ package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.MathHelper;
+import takeyourminestream.ijustseen.config.ConfigManager;
+import takeyourminestream.ijustseen.config.MessageSpawnMode;
 import takeyourminestream.ijustseen.config.ModConfig;
 
 import java.util.ArrayList;
@@ -16,7 +18,6 @@ import java.util.Set;
 public class MessageLifecycleManager {
     private final List<Message> activeMessages = new ArrayList<>();
     private final List<Message> messageHistory = new ArrayList<>();
-    private static final int MAX_HISTORY_SIZE = 100; // Максимальное количество сообщений в истории
     private int tickCounter = 0;
     private final MessageParticleManager particleManager;
     private final Set<Message> spawnedParticlesForMessages = new HashSet<>();
@@ -78,8 +79,10 @@ public class MessageLifecycleManager {
             }
         }
         
-        // Обновляем замороженное время для всех сообщений
-        if (ModConfig.isENABLE_FREEZING_ON_VIEW()) {
+        boolean hudMode = ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET;
+
+        // Обновляем замороженное время для всех сообщений (только в 3D-режимах)
+        if (!hudMode && ModConfig.isENABLE_FREEZING_ON_VIEW()) {
             for (Message message : activeMessages) {
                 if (message.isPinned()) {
                     continue;
@@ -101,7 +104,7 @@ public class MessageLifecycleManager {
                 }
                 int effectiveAge = message.getEffectiveAge(tickCounter);
                 // Спавним партиклы за тик до удаления
-                if (effectiveAge == removeAfter - 1 && !spawnedParticlesForMessages.contains(message)) {
+                if (!hudMode && effectiveAge == removeAfter - 1 && !spawnedParticlesForMessages.contains(message)) {
                     if (particleManager != null) {
                         Vec3d finalPos = MessageViewDetector.calculateFallingPosition(
                             message.getPosition(),
@@ -125,8 +128,7 @@ public class MessageLifecycleManager {
                     return false;
                 }
                 int effectiveAge = tickCounter - (int)message.getSpawnTick();
-                // Спавним партиклы за тик до удаления
-                if (effectiveAge == removeAfter - 1 && !spawnedParticlesForMessages.contains(message)) {
+                if (!hudMode && effectiveAge == removeAfter - 1 && !spawnedParticlesForMessages.contains(message)) {
                     if (particleManager != null) {
                         Vec3d finalPos = MessageViewDetector.calculateFallingPosition(
                             message.getPosition(),
@@ -158,9 +160,22 @@ public class MessageLifecycleManager {
         messageHistory.add(message);
         
         // Ограничиваем размер истории
-        while (messageHistory.size() > MAX_HISTORY_SIZE) {
+        enforceHistoryLimit();
+    }
+
+    public void enforceHistoryLimit() {
+        int maxSize = getMaxHistorySize();
+        while (messageHistory.size() > maxSize) {
             messageHistory.remove(0);
         }
+    }
+
+    private int getMaxHistorySize() {
+        Object value = ConfigManager.getInstance().getConfigValue("messageHistoryMaxSize");
+        if (value instanceof Integer size && size > 0) {
+            return size;
+        }
+        return 100;
     }
     
     public void addReplayMessage(Message message) {
@@ -205,6 +220,17 @@ public class MessageLifecycleManager {
             return true;
         }
         return findPinnedForHistory(historyMessage) != null;
+    }
+
+    /** Все сообщения, закреплённые в мире (включая те, что уже вышли из истории). */
+    public List<Message> getAllPinnedMessages() {
+        List<Message> pinned = new ArrayList<>();
+        for (Message message : activeMessages) {
+            if (message.isPinned()) {
+                pinned.add(message);
+            }
+        }
+        return pinned;
     }
 
     /**

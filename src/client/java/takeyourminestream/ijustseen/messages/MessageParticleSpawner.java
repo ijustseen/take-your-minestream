@@ -6,6 +6,7 @@ import net.minecraft.text.Text;
 import net.minecraft.text.OrderedText;
 import net.minecraft.util.math.Vec3d;
 import takeyourminestream.ijustseen.config.ModConfig;
+import takeyourminestream.ijustseen.core.MessagePanelConstants;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -27,7 +28,10 @@ public class MessageParticleSpawner {
 
         // Получаем размеры панели сообщения
         TextRenderer textRenderer = client.textRenderer;
-        List<OrderedText> wrappedText = textRenderer.wrapLines(Text.of(message.getText()), 120);
+        List<OrderedText> wrappedText = textRenderer.wrapLines(
+            Text.of(message.getText()),
+            MessagePanelConstants.MESSAGE_WRAP_WIDTH
+        );
         if (wrappedText.isEmpty()) {
             return;
         }

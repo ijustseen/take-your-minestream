@@ -119,7 +119,9 @@ public class MessageRenderer {
         matrices.scale(finalScale, -finalScale, finalScale);
 
         boolean hasEmotes = !message.getEmotes().isEmpty();
-        List<OrderedText> wrappedText = hasEmotes ? java.util.Collections.emptyList() : textRenderer.wrapLines(Text.of(message.getText()), 120);
+        List<OrderedText> wrappedText = hasEmotes
+            ? java.util.Collections.emptyList()
+            : textRenderer.wrapLines(Text.of(message.getText()), MessagePanelConstants.MESSAGE_WRAP_WIDTH);
         float totalTextHeight = hasEmotes ? textRenderer.fontHeight : wrappedText.size() * textRenderer.fontHeight;
         int maxTextWidth = hasEmotes ? getEmoteAwareLineWidth(textRenderer, message.getText(), message.getEmotes()) : 0;
         if (!hasEmotes) {

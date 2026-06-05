@@ -4,7 +4,8 @@ import net.minecraft.text.Text;
 
 /** Парсинг формата Twitch-сообщений: {@code §aUsername:§r текст}. */
 public final class ChatMessageParser {
-    private static final String SEPARATOR = ":§r ";
+    public static final String MESSAGE_SEPARATOR = ":§r ";
+    private static final String SEPARATOR = MESSAGE_SEPARATOR;
 
     private ChatMessageParser() {}
 
@@ -27,6 +28,17 @@ public final class ChatMessageParser {
         }
 
         return new ParsedMessage(null, Text.empty(), Text.literal(rawText), rawText);
+    }
+
+    public static int getBodyStartIndex(String rawText) {
+        if (rawText == null) {
+            return 0;
+        }
+        int separatorIndex = rawText.indexOf(SEPARATOR);
+        if (separatorIndex >= 0) {
+            return separatorIndex + SEPARATOR.length();
+        }
+        return 0;
     }
 
     public static String stripFormatting(String text) {

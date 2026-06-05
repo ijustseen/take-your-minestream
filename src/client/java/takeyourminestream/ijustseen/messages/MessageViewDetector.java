@@ -6,6 +6,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.text.Text;
 import net.minecraft.text.OrderedText;
 import takeyourminestream.ijustseen.config.ModConfig;
+import takeyourminestream.ijustseen.core.MessagePanelConstants;
 
 import java.util.List;
 
@@ -57,7 +58,10 @@ public class MessageViewDetector {
         
         // Вычисляем размеры сообщения в блоках (как при рендере)
         TextRenderer textRenderer = client.textRenderer;
-        List<OrderedText> wrappedText = textRenderer.wrapLines(Text.of(messageText), 120);
+        List<OrderedText> wrappedText = textRenderer.wrapLines(
+            Text.of(messageText),
+            MessagePanelConstants.MESSAGE_WRAP_WIDTH
+        );
         float totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
         int maxTextWidth = 0;
         for (OrderedText line : wrappedText) {
