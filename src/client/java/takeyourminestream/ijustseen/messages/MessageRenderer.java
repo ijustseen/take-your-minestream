@@ -20,6 +20,7 @@ import java.util.Comparator;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.util.Identifier;
 import org.joml.Matrix4f;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.util.math.Vec3d;
 import takeyourminestream.ijustseen.utils.CameraPositionCompat;
@@ -238,7 +239,7 @@ public class MessageRenderer {
 
     private void drawQuadIcon(VertexConsumer consumer, Matrix4f mat, int x0, int y0, int x1, int y1, float z, float u0, float v0, float u1, float v1) {
         int light = 0xF000F0;
-        int overlay = net.minecraft.client.render.OverlayTexture.DEFAULT_UV;
+        int overlay = OverlayTexture.DEFAULT_UV;
         consumer.vertex(mat, x0, y0, z).color(1f, 1f, 1f, 1.0f).texture(u0, v0).overlay(overlay).light(light).normal(0, 0, -1);
         consumer.vertex(mat, x0, y1, z).color(1f, 1f, 1f, 1.0f).texture(u0, v1).overlay(overlay).light(light).normal(0, 0, -1);
         consumer.vertex(mat, x1, y1, z).color(1f, 1f, 1f, 1.0f).texture(u1, v1).overlay(overlay).light(light).normal(0, 0, -1);

@@ -107,7 +107,7 @@ public final class ModUiTheme {
         int labelWidth = textRenderer.getWidth(label);
         int textX = x + Math.max(6, (width - labelWidth) / 2);
         int textY = centeredTextY(y, height, textRenderer.fontHeight);
-        context.drawText(textRenderer, label, textX, textY, textColor, false);
+        context.drawTextWithShadow(textRenderer, label, textX, textY, textColor);
     }
 
     public static void drawCompactButton(
@@ -134,7 +134,7 @@ public final class ModUiTheme {
         int labelWidth = textRenderer.getWidth(label);
         int textX = x + (width - labelWidth) / 2;
         int textY = centeredTextY(y, height, textRenderer.fontHeight);
-        context.drawText(textRenderer, label, textX, textY, hovered ? TEXT_PRIMARY : TEXT_SECONDARY, false);
+        context.drawTextWithShadow(textRenderer, label, textX, textY, hovered ? TEXT_PRIMARY : TEXT_SECONDARY);
     }
 
     public static void drawListRow(DrawContext context, int left, int top, int right, int bottom, boolean hovered) {

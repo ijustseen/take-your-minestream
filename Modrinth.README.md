@@ -7,9 +7,10 @@ Turn viewer messages into in-game moments with clean visuals, smart moderation, 
 ## ✨ Highlights
 
 - 💬 **Live chat in Minecraft** — show messages in 3D space or HUD mode
-- 🧠 **Smart moderation** — banwords + regex filtering for safer streams
-- 🎭 **Emote support** — Twitch/7TV emotes integrated into message rendering
-- 📌 **Pinned messages** — keep important chat messages visible in-world
+- 🧠 **Smart moderation** — banwords, regex filters, and Twitch badge role filter
+- 🎭 **Emote support** — Twitch and 7TV emotes in message rendering
+- 📌 **Pinned messages** — keep important chat visible in-world (saved per world/server)
+- 📜 **Message history** — browse chat, pin/unpin, replay, or block users from a two-column screen
 - ⚙️ **In-game setup** — configure channel and behavior without leaving Minecraft
 - 🚀 **Lightweight** — built for smooth gameplay while streaming
 
@@ -19,15 +20,19 @@ Turn viewer messages into in-game moments with clean visuals, smart moderation, 
 - Pause message lifetime while looking at messages (easy reading during action)
 - Toggle Twitch connection in-game
 - Tune timing, scale, visuals, and spawn behavior
-- Click/remove and manage pinned messages
-- Interaction safety: message click/pin actions work only with an empty main hand
+- Click to remove messages; pin, drag, and unpin in-world
+- Open message history: pin again, replay, or block a username
+- Interaction safety: click/pin actions work only with an empty main hand
 
 ## 🚀 Quick start
 
-1. Install Fabric Loader (and Fabric API)
-2. Put the mod `.jar` into your `mods` folder
-3. Launch the game and press `]` to open settings
-4. Enter your Twitch channel name and connect
+1. Install **Fabric Loader** and **Fabric API** for your Minecraft version
+2. Download the matching release jar (see **Compatibility** below)
+3. Put the `.jar` into your `mods` folder
+4. Launch the game and press `]` to open settings
+5. Enter your Twitch channel name and connect
+
+> **Mod Menu** is optional — if installed, the mod also appears in the mod list. Settings always work via `]`.
 
 ## ⌨️ Commands
 
@@ -35,12 +40,23 @@ Turn viewer messages into in-game moments with clean visuals, smart moderation, 
 - `/minestream twitch start` — connect to Twitch
 - `/minestream twitch stop` — disconnect from Twitch
 - `/minestream banword add|remove|list` — manage filter words
+- `/minestream blockuser add|remove|list` — manage blocked usernames
+- `/minestream help` — list all commands
 
 ## 🔧 Compatibility
 
-- Minecraft **1.21.7 / 1.21.8**
-- Fabric Loader + Fabric API
-- Java 21
+Pick the jar that matches your game version:
+
+| Minecraft | Release file | Java |
+|-----------|--------------|------|
+| **1.21.8** | `tyms-1.4.1+1.21.8.jar` | 21 |
+| **1.21.10** | `tyms-1.4.1+1.21.10.jar` | 21 |
+| **1.21.11** | `tyms-1.4.1+1.21.11.jar` | 21 |
+| **26.1** / **26.1.1** / **26.1.2** | `tyms-1.4.1+26.1.jar` | 25 |
+
+**Required:** Fabric Loader + Fabric API (no other mods required).
+
+**Optional:** Mod Menu.
 
 ## 🎮 Keybinds
 
@@ -51,8 +67,9 @@ Turn viewer messages into in-game moments with clean visuals, smart moderation, 
 
 - Message mode: world / HUD
 - Message timing and fall behavior
-- Scaling and particle settings
-- Moderation behavior and filters
+- Scaling, sound, and particle settings
+- Moderation: banwords, regex rules, blocked users, Twitch role filter
+- Message history size and pinned-message persistence
 
 ---
 

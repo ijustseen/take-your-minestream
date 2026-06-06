@@ -92,7 +92,7 @@ public class RegexpConfigScreen extends Screen {
             if (y + LINE_HEIGHT > top + PADDING && y < bottom - PADDING) {
                 boolean rowHovered = ModUiTheme.isHovered(mouseX, mouseY, rowLeft, y, rowRight - rowLeft, LINE_HEIGHT);
                 ModUiTheme.drawListRow(context, rowLeft, y, rowRight, y + LINE_HEIGHT, rowHovered);
-                context.drawText(this.textRenderer, Text.literal(pattern), textX, y, ModUiTheme.TEXT_PRIMARY, true);
+                context.drawTextWithShadow(this.textRenderer, Text.literal(pattern), textX, y, ModUiTheme.TEXT_PRIMARY);
 
                 int btnX = this.width - PADDING - 4 - REMOVE_BTN_SIZE;
                 boolean removeHovered = ModUiTheme.isHovered(mouseX, mouseY, btnX, y, REMOVE_BTN_SIZE, REMOVE_BTN_SIZE);

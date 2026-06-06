@@ -43,7 +43,7 @@ public final class HistoryMessageActionPopup {
         hoveredEntry = null;
     }
 
-    public void close() {
+    public void dismiss() {
         open = false;
         entries = new Entry[0];
         hoveredEntry = null;

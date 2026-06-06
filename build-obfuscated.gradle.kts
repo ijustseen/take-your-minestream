@@ -56,6 +56,7 @@ tasks {
             "version" to modProp("mod.version"),
             "minecraft" to modProp("mod.mc_compat"),
             "fabric_loader_min" to modProp("deps.fabric_loader_min"),
+            "java_min" to modProp("deps.java_min"),
         )
         inputs.properties(props)
         filesMatching("fabric.mod.json") { expand(props) }

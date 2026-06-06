@@ -9,7 +9,7 @@ import takeyourminestream.ijustseen.core.storage.StoragePaths;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import takeyourminestream.ijustseen.utils.PlayerMessageCompat;
 
 import java.io.File;
 import java.io.FileReader;
@@ -213,8 +213,6 @@ public class ConfigManager implements IConfigManager {
     }
 
     private void sendPlayerMessage(String message) {
-        if (MinecraftClient.getInstance().player != null) {
-            MinecraftClient.getInstance().player.sendMessage(Text.of(message), false);
-        }
+        PlayerMessageCompat.send(MinecraftClient.getInstance(), message);
     }
 } 

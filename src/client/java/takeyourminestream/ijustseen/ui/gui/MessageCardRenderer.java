@@ -50,19 +50,18 @@ public final class MessageCardRenderer {
                 usernameLabel.formatted(Formatting.YELLOW, Formatting.UNDERLINE);
             }
 
-            context.drawText(textRenderer, usernameLabel, innerX, innerY, visibleInWorld ? 0xFFFFFFFF : 0xFF888888, false);
+            context.drawTextWithShadow(textRenderer, usernameLabel, innerX, innerY, visibleInWorld ? 0xFFFFFFFF : 0xFF888888);
             int usernameWidth = textRenderer.getWidth(usernameLabel);
             usernameHitbox = new UsernameHitbox(innerX, innerY, usernameWidth, MessageCardLayout.USERNAME_ROW_HEIGHT);
 
             if (blocked) {
                 Text blockedBadge = Text.translatable("takeyourminestream.history.blocked_badge").formatted(Formatting.RED);
-                context.drawText(
+                context.drawTextWithShadow(
                     textRenderer,
                     blockedBadge,
                     innerX + usernameWidth + 4,
                     innerY,
-                    0xFFFF5555,
-                    false
+                    0xFFFF5555
                 );
             }
 
@@ -71,7 +70,7 @@ public final class MessageCardRenderer {
 
         int bodyColor = applyAlpha(visibleInWorld ? (hovered ? 0xFFFFFFAA : 0xFFFFFFFF) : 0xFF888888, alpha);
         for (OrderedText line : layout.bodyLines()) {
-            context.drawText(textRenderer, line, innerX, innerY, bodyColor, false);
+            context.drawTextWithShadow(textRenderer, line, innerX, innerY, bodyColor);
             innerY += textRenderer.fontHeight;
         }
 
@@ -107,16 +106,15 @@ public final class MessageCardRenderer {
             if (blocked) {
                 usernameLabel.formatted(Formatting.DARK_RED, Formatting.STRIKETHROUGH);
             }
-            context.drawText(textRenderer, usernameLabel, innerX, innerY, applyAlpha(0xFFFFFFFF, alpha), false);
+            context.drawTextWithShadow(textRenderer, usernameLabel, innerX, innerY, applyAlpha(0xFFFFFFFF, alpha));
             if (blocked) {
                 Text blockedBadge = Text.translatable("takeyourminestream.history.blocked_badge").formatted(Formatting.RED);
-                context.drawText(
+                context.drawTextWithShadow(
                     textRenderer,
                     blockedBadge,
                     innerX + textRenderer.getWidth(usernameLabel) + 4,
                     innerY,
-                    applyAlpha(0xFFFF5555, alpha),
-                    false
+                    applyAlpha(0xFFFF5555, alpha)
                 );
             }
             innerY += MessageCardLayout.USERNAME_ROW_HEIGHT + 2;
@@ -136,7 +134,7 @@ public final class MessageCardRenderer {
             );
         } else {
             for (OrderedText line : layout.bodyLines()) {
-                context.drawText(textRenderer, line, innerX, innerY, bodyColor, false);
+                context.drawTextWithShadow(textRenderer, line, innerX, innerY, bodyColor);
                 innerY += textRenderer.fontHeight;
             }
         }

@@ -84,7 +84,7 @@ public class MessageHistoryScreen extends Screen {
             Text.translatable("takeyourminestream.history.clear"),
             btn -> {
                 lifecycleManager.clearMessageHistory();
-                actionPopup.close();
+                actionPopup.dismiss();
                 updateLayout();
             }
         ).dimensions(centerX - buttonWidth * 3 / 2 - buttonSpacing, buttonY, buttonWidth, 20).build());
@@ -434,13 +434,13 @@ public class MessageHistoryScreen extends Screen {
             HistoryMessageActionPopup.Entry entry = actionPopup.hitTest(mx, my);
             if (entry != null && selectedCard != null) {
                 handleAction(entry, selectedCard);
-                actionPopup.close();
+                actionPopup.dismiss();
                 selectedCard = null;
                 updateLayout();
                 return true;
             }
             if (!actionPopup.contains(mx, my)) {
-                actionPopup.close();
+                actionPopup.dismiss();
                 selectedCard = null;
             }
             return true;
@@ -513,7 +513,7 @@ public class MessageHistoryScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (actionPopup.isOpen() && keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            actionPopup.close();
+            actionPopup.dismiss();
             selectedCard = null;
             return true;
         }
@@ -566,7 +566,7 @@ public class MessageHistoryScreen extends Screen {
 
     @Override
     public void close() {
-        actionPopup.close();
+        actionPopup.dismiss();
         if (this.parent != null) {
             this.client.setScreen(this.parent);
         } else {

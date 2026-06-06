@@ -110,7 +110,7 @@ public class BanwordConfigScreen extends Screen {
 
                 boolean isRevealed = revealedWords.contains(word);
                 String toDisplay = isRevealed ? word : maskWord(word);
-                context.drawText(this.textRenderer, Text.literal(toDisplay), textX, y, ModUiTheme.TEXT_PRIMARY, true);
+                context.drawTextWithShadow(this.textRenderer, Text.literal(toDisplay), textX, y, ModUiTheme.TEXT_PRIMARY);
 
                 int btnX = this.width - PADDING - 4 - REMOVE_BTN_SIZE;
                 boolean removeHovered = ModUiTheme.isHovered(mouseX, mouseY, btnX, y, REMOVE_BTN_SIZE, REMOVE_BTN_SIZE);

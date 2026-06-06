@@ -49,7 +49,7 @@ public class BlockedUsernameConfigScreen extends AbstractStringListScreen {
         takeyourminestream.ijustseen.ui.gui.ScreenUiHelper.restoreButtons(hiddenButtons);
         ModUiTheme.drawTitle(context, this.textRenderer, this.title, this.width);
         renderDefaultList(context, mouseX, mouseY, (ctx, entry, textX, y, mx, my) -> {
-            ctx.drawText(this.textRenderer, Text.literal(entry), textX, y, ModUiTheme.TEXT_PRIMARY, true);
+            ctx.drawTextWithShadow(this.textRenderer, Text.literal(entry), textX, y, ModUiTheme.TEXT_PRIMARY);
             drawRemoveButton(ctx, y, mx, my);
         });
         renderInputChrome(context);

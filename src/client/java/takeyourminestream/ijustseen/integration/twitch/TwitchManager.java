@@ -5,6 +5,7 @@ import net.minecraft.text.Text;
 import takeyourminestream.ijustseen.interfaces.ITwitchManager;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
+import takeyourminestream.ijustseen.utils.PlayerMessageCompat;
 import java.util.logging.Logger;
 
 public class TwitchManager implements ITwitchManager {
@@ -95,8 +96,6 @@ public class TwitchManager implements ITwitchManager {
     }
 
     private void sendPlayerMessage(String message) {
-        if (MinecraftClient.getInstance().player != null) {
-            MinecraftClient.getInstance().player.sendMessage(Text.of(message), false);
-        }
+        PlayerMessageCompat.send(MinecraftClient.getInstance(), message);
     }
 } 

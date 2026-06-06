@@ -14,7 +14,7 @@
 - **HUD emote rendering** (`MessageEmoteGuiRenderer`); pinned messages hidden from HUD overlay
 - Configurable **message history size** (10–500)
 - **Chance-to-spawn** slider and numeric fields for lifetime, fall duration, max freeze distance
-- Multi-version build with [Stonecutter](https://stonecutter.kikugie.dev/): **1.21.8**, **1.21.10**, **1.21.11**
+- Multi-version build with [Stonecutter](https://stonecutter.kikugie.dev/): **1.21.8**, **1.21.10**, **1.21.11**, **26.1** (covers **26.1.1** and **26.1.2** via one JAR)
 - Gradle tasks `buildAndCollect`, `buildActive`, `runActive`; [BUILD.md](BUILD.md) reference
 - Package refactor: `config/`, `core/`, `integration/twitch/`, `ui/screen/`, `ui/gui/`, `filtering/`
 
@@ -43,6 +43,8 @@
 ### Technical
 
 - Version-specific client overrides in `versions/1.21.8/src/client/java/` (legacy `mouseClicked` / `keyPressed` APIs)
+- **Minecraft 26.1** port: Mojang mappings, `build-unobfuscated.gradle.kts`, Stonecutter replacements, overrides in `versions/26.1/src/` (`MouseHandlerMixin`, HUD, key bindings, sliders, `MessagePosition`, and related UI)
+- `PlayerMessageCompat` for chat feedback across 1.21.x and 26.1
 - Per-version dependencies in `versions/<mc>/gradle.properties`
 - `MessageLifecycleManager.getAllPinnedMessages()` — all active pinned messages, not only those still in history
 

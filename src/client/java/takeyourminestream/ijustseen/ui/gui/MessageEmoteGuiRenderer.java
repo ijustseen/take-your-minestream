@@ -128,7 +128,7 @@ public final class MessageEmoteGuiRenderer {
             return x;
         }
         Text label = Text.literal(ChatMessageParser.stripFormatting(segment));
-        context.drawText(textRenderer, label, x, y, color, false);
+        context.drawTextWithShadow(textRenderer, label, x, y, color);
         return x + textRenderer.getWidth(label);
     }
 

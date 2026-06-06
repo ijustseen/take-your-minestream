@@ -576,13 +576,12 @@ public class ModConfigScreen extends Screen {
             : Text.translatable(hoveredDescriptionKey);
 
         int descTop = getDescriptionTop();
-        context.drawText(
+        context.drawTextWithShadow(
             this.textRenderer,
             description,
             CONTENT_PADDING + 10,
             descTop + (DESCRIPTION_HEIGHT - this.textRenderer.fontHeight) / 2,
-            ModUiTheme.TEXT_SECONDARY,
-            false
+            ModUiTheme.TEXT_SECONDARY
         );
 
         ButtonWidget selectedTab = null;
@@ -693,8 +692,8 @@ public class ModConfigScreen extends Screen {
             if (isElementVisible(currentY, contentTop, contentBottom)) {
                 boolean rowHovered = mouseX >= rowLeft && mouseX <= rowRight && mouseY >= currentY && mouseY <= currentY + ENTRY_HEIGHT;
                 ModUiTheme.drawListRow(context, rowLeft, currentY, rowRight, currentY + ENTRY_HEIGHT, rowHovered);
-                context.drawText(this.textRenderer, Text.translatable(entry.labelKey), 
-                    labelX, currentY + (20 - fontHeight) / 2, labelColor, true);
+                context.drawTextWithShadow(this.textRenderer, Text.translatable(entry.labelKey),
+                    labelX, currentY + (20 - fontHeight) / 2, labelColor);
 
                 if (rowHovered) {
                     hoveredDescriptionKey = entry.descriptionKey;

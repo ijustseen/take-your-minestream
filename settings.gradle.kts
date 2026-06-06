@@ -9,16 +9,26 @@ pluginManagement {
 }
 
 plugins {
-    id("dev.kikugie.stonecutter") version "0.7.11"
+    id("dev.kikugie.stonecutter") version "0.9"
 }
 
 stonecutter {
-    centralScript = "build.gradle.kts"
     kotlinController = true
-    create(rootProject) {
-        versions("1.21.8", "1.21.10", "1.21.11")
+    shared {
+        fun mc(vararg versions: String) {
+            for (version in versions) {
+                val buildscript = if (sc.eval(version, ">= 26.1")) {
+                    "build-unobfuscated.gradle.kts"
+                } else {
+                    "build-obfuscated.gradle.kts"
+                }
+                version(version, version).buildscript(buildscript)
+            }
+        }
+        mc("1.21.8", "1.21.10", "1.21.11", "26.1")
         vcsVersion = "1.21.8"
     }
+    create(rootProject)
 }
 
 rootProject.name = "take-your-minestream"

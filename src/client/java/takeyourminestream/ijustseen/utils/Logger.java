@@ -48,9 +48,7 @@ public class Logger {
      * @param message сообщение для отправки
      */
     public static void sendToPlayer(String message) {
-        if (MinecraftClient.getInstance().player != null) {
-            MinecraftClient.getInstance().player.sendMessage(Text.of(message), false);
-        }
+        PlayerMessageCompat.send(MinecraftClient.getInstance(), message);
     }
     
     /**

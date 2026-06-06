@@ -86,7 +86,7 @@ public class MessageHistoryScreen extends Screen {
             Text.translatable("takeyourminestream.history.clear"),
             btn -> {
                 lifecycleManager.clearMessageHistory();
-                actionPopup.close();
+                actionPopup.dismiss();
                 updateLayout();
             }
         ).dimensions(centerX - buttonWidth * 3 / 2 - buttonSpacing, buttonY, buttonWidth, 20).build());
@@ -220,13 +220,12 @@ public class MessageHistoryScreen extends Screen {
 
         Text historyCountText = Text.translatable("takeyourminestream.history.count", lifecycleManager.getMessageHistorySize());
         int historyCountWidth = this.textRenderer.getWidth(historyCountText);
-        context.drawText(
+        context.drawTextWithShadow(
             this.textRenderer,
             historyCountText,
             historyPanelLeft + (panelWidth - historyCountWidth) / 2,
             22,
-            ModUiTheme.TEXT_MUTED,
-            false
+            ModUiTheme.TEXT_MUTED
         );
 
         Text pinnedTitleText = Text.translatable(
@@ -234,13 +233,12 @@ public class MessageHistoryScreen extends Screen {
             lifecycleManager.getAllPinnedMessages().size()
         );
         int pinnedTitleWidth = this.textRenderer.getWidth(pinnedTitleText);
-        context.drawText(
+        context.drawTextWithShadow(
             this.textRenderer,
             pinnedTitleText,
             pinnedPanelLeft + (panelWidth - pinnedTitleWidth) / 2,
             22,
-            ModUiTheme.TEXT_MUTED,
-            false
+            ModUiTheme.TEXT_MUTED
         );
 
         renderColumn(context, mouseX, mouseY, historyPanelLeft, historyCards, historyScrollOffset);
@@ -418,13 +416,12 @@ public class MessageHistoryScreen extends Screen {
     private void renderFooterHint(DrawContext context) {
         Text helpText = Text.translatable("takeyourminestream.history.scroll_hint").formatted(Formatting.DARK_GRAY);
         int textWidth = this.textRenderer.getWidth(helpText);
-        context.drawText(
+        context.drawTextWithShadow(
             this.textRenderer,
             helpText,
             groupLeft + (groupWidth - textWidth) / 2,
             this.height - FOOTER_HEIGHT - 12,
-            ModUiTheme.TEXT_DIM,
-            false
+            ModUiTheme.TEXT_DIM
         );
     }
 
@@ -436,13 +433,13 @@ public class MessageHistoryScreen extends Screen {
             HistoryMessageActionPopup.Entry entry = actionPopup.hitTest(mx, my);
             if (entry != null && selectedCard != null) {
                 handleAction(entry, selectedCard);
-                actionPopup.close();
+                actionPopup.dismiss();
                 selectedCard = null;
                 updateLayout();
                 return true;
             }
             if (!actionPopup.contains(mx, my)) {
-                actionPopup.close();
+                actionPopup.dismiss();
                 selectedCard = null;
             }
             return true;
@@ -515,7 +512,7 @@ public class MessageHistoryScreen extends Screen {
     @Override
     public boolean keyPressed(KeyInput input) {
         if (actionPopup.isOpen() && input.key() == GLFW.GLFW_KEY_ESCAPE) {
-            actionPopup.close();
+            actionPopup.dismiss();
             selectedCard = null;
             return true;
         }
@@ -568,7 +565,7 @@ public class MessageHistoryScreen extends Screen {
 
     @Override
     public void close() {
-        actionPopup.close();
+        actionPopup.dismiss();
         if (this.parent != null) {
             this.client.setScreen(this.parent);
         } else {

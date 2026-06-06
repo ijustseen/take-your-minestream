@@ -12,7 +12,7 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 
 ## Compatibility
 
-- Minecraft **1.21.8**, **1.21.10**, **1.21.11** (Fabric) — separate `.jar` per version
+- Minecraft **1.21.8**, **1.21.10**, **1.21.11**, **26.1** (26.1.1 / 26.1.2 — тот же JAR) (Fabric) — separate `.jar` per major version
 - Requires Fabric Loader ≥0.16.14 and Fabric API
 - Optional: Mod Menu
 
