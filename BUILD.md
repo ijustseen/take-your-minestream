@@ -1,6 +1,6 @@
 # Сборка и запуск
 
-Проект использует [Stonecutter](https://stonecutter.kikugie.dev/): один исходный код, версии Minecraft — **1.21.8**, **1.21.10**, **1.21.11**, **26.1**.
+Проект использует [Stonecutter](https://stonecutter.kikugie.dev/): один исходный код, версии Minecraft — **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**.
 
 Требования:
 - **1.21.x** — JDK 21
@@ -41,11 +41,14 @@
 # Конкретная версия
 ./gradlew :1.21.11:build :1.21.11:buildAndCollect
 ./gradlew :1.21.10:build :1.21.10:buildAndCollect
+./gradlew :1.21:build :1.21:buildAndCollect
+./gradlew :1.21.1:build :1.21.1:buildAndCollect
+./gradlew :1.21.4:build :1.21.4:buildAndCollect
 ./gradlew :1.21.8:build :1.21.8:buildAndCollect
 ./gradlew :26.1:build :26.1:buildAndCollect
 ```
 
-Имена артефактов: `tyms-<mod.version>+<minecraft>.jar` (например `tyms-1.4.1+1.21.11.jar`, `tyms-1.4.1+26.1.jar`).
+Имена артефактов: `tyms-<mod.version>+<minecraft>.jar` (например `tyms-1.4.2+1.21.11.jar`, `tyms-1.4.2+26.1.jar`).
 
 ### Minecraft 26.1 / 26.1.1 / 26.1.2
 
@@ -87,6 +90,9 @@
 
 | Версия MC | Зависимости | Особенности |
 |-----------|-------------|-------------|
+| 1.21      | `versions/1.21/gradle.properties` | legacy GUI/HUD render + overrides из 1.21.8 |
+| 1.21.1    | `versions/1.21.1/gradle.properties` | то же |
+| 1.21.4    | `versions/1.21.4/gradle.properties` | RenderLayer GUI + overrides из 1.21.8 |
 | 1.21.8    | `versions/1.21.8/gradle.properties` | `build-obfuscated.gradle.kts`, override в `versions/1.21.8/src/` |
 | 1.21.10   | `versions/1.21.10/gradle.properties` | `build-obfuscated.gradle.kts`, общий `src/` |
 | 1.21.11   | `versions/1.21.11/gradle.properties` | `build-obfuscated.gradle.kts`, активная по умолчанию |

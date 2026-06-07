@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.MutableText;
@@ -225,7 +224,7 @@ public class MessageRenderer {
     }
     
     private void renderPinIcon(MatrixStack matrices, int panelWidth, VertexConsumerProvider consumers) {
-        VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(MessagePanelConstants.PIN_TEXTURE));
+        VertexConsumer consumer = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PIN_TEXTURE);
         Matrix4f mat = matrices.peek().getPositionMatrix();
 
         int markerX = panelWidth - MessagePanelConstants.PADDING_X - (MessagePanelConstants.PIN_ICON_SIZE / 2) + MessagePanelConstants.PIN_ICON_MARGIN;
@@ -294,7 +293,7 @@ public class MessageRenderer {
                 if (EMOTE_RENDER_LOGGED.add("draw:" + emote.getEmoteId())) {
                     System.out.println("[TYMS-Emote-Render] Drawing emote quad id=" + emote.getEmoteId() + " tex=" + emoteTexture + " x=" + x);
                 }
-                VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getTextLayer(emoteTexture));
+                VertexConsumer consumer = RenderLayerCompat.getTextBuffer(consumers, emoteTexture);
                 Matrix4f mat = matrices.peek().getPositionMatrix();
                 int iconX = Math.round(x);
                 int iconY = -1;

@@ -197,7 +197,7 @@ public class MessageHistoryScreen extends Screen {
         int y = contentTop + LIST_PADDING;
         for (Message message : messages) {
             ChatMessageParser.ParsedMessage parsed = ChatMessageParser.parse(message.getText());
-            MessageCardLayout.Layout layout = MessageCardLayout.compute(textRenderer, message.getText(), contentMaxWidth);
+            MessageCardLayout.Layout layout = MessageCardLayout.compute(textRenderer, message, contentMaxWidth);
             if (lifecycleManager.isPinnedInWorld(message)) {
                 y += MessagePanelConstants.PIN_ICON_OVERFLOW;
             }

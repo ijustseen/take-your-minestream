@@ -37,11 +37,15 @@ public final class MessageCardLayout {
         }
     }
 
-    public static Layout computeHud(TextRenderer textRenderer, Message message, int maxAvailableWidth) {
+    public static Layout compute(TextRenderer textRenderer, Message message, int maxAvailableWidth) {
         if (message.getEmotes() != null && !message.getEmotes().isEmpty()) {
             return computeWithEmotes(textRenderer, message, maxAvailableWidth);
         }
         return compute(textRenderer, message.getText(), maxAvailableWidth);
+    }
+
+    public static Layout computeHud(TextRenderer textRenderer, Message message, int maxAvailableWidth) {
+        return compute(textRenderer, message, maxAvailableWidth);
     }
 
     private static Layout computeWithEmotes(TextRenderer textRenderer, Message message, int maxAvailableWidth) {

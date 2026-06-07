@@ -30,7 +30,7 @@ public final class MessagePanelWorldRenderer {
     }
 
     public static VertexConsumer panelConsumer(net.minecraft.client.render.VertexConsumerProvider consumers) {
-        return consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(MessagePanelConstants.PANEL_TEXTURE));
+        return RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_TEXTURE);
     }
 
     private static void drawQuad(

@@ -69,9 +69,22 @@ public final class MessageCardRenderer {
         }
 
         int bodyColor = applyAlpha(visibleInWorld ? (hovered ? 0xFFFFFFAA : 0xFFFFFFFF) : 0xFF888888, alpha);
-        for (OrderedText line : layout.bodyLines()) {
-            context.drawTextWithShadow(textRenderer, line, innerX, innerY, bodyColor);
-            innerY += textRenderer.fontHeight;
+        if (layout.emoteBodyLine() != null) {
+            MessageCardLayout.EmoteBodyLine emoteLine = layout.emoteBodyLine();
+            MessageEmoteGuiRenderer.drawLine(
+                context,
+                textRenderer,
+                emoteLine.text(),
+                emoteLine.emotes(),
+                innerX,
+                innerY,
+                bodyColor
+            );
+        } else {
+            for (OrderedText line : layout.bodyLines()) {
+                context.drawTextWithShadow(textRenderer, line, innerX, innerY, bodyColor);
+                innerY += textRenderer.fontHeight;
+            }
         }
 
         if (pinnedInWorld) {

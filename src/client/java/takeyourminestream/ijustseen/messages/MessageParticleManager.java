@@ -63,7 +63,7 @@ public class MessageParticleManager {
             float sz = p.size * 0.025f;
             // Получаем матрицу
             Matrix4f mat = matrices.peek().getPositionMatrix();
-            VertexConsumer consumer = consumers.getBuffer(RenderLayerCompat.getEntityTextureLayer(PARTICLE_TEXTURE));
+            VertexConsumer consumer = RenderLayerCompat.getEntityBuffer(consumers, PARTICLE_TEXTURE);
             int light = 0xF000F0;
             int overlay = 0;
             consumer.vertex(mat, -sz/2, -sz/2, 0).color(fr, fg, fb, alpha).texture(0, 0).overlay(overlay).light(light).normal(0, 0, -1);

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.2] - 2026-06-02
+
+### Fixed
+
+- Crash when rendering 3D message panels on Minecraft 1.21.11 (NPE in `VertexConsumerProvider.getBuffer` when `RenderLayerCompat` returned null)
+- Restored fallback chain for `RenderLayerCompat` (removed in 1.4.1) with exhaustive method scan across `RenderLayers` / `RenderLayer`
+- Added safe `getEntityBuffer` / `getTextBuffer` helpers; all world render paths now use them
+- `CameraPositionCompat` no longer caches a failed reflection lookup permanently
+- Broken 9-slice panels in history/pinned columns on Minecraft 1.21 / 1.21.1 (legacy `drawTexture` ignored texture region size)
+- Emotes not rendered in message history and pinned columns (only plain text was drawn)
+
 ## [1.4.1] - 2026-06-02
 
 ### Added
@@ -14,7 +25,7 @@
 - **HUD emote rendering** (`MessageEmoteGuiRenderer`); pinned messages hidden from HUD overlay
 - Configurable **message history size** (10–500)
 - **Chance-to-spawn** slider and numeric fields for lifetime, fall duration, max freeze distance
-- Multi-version build with [Stonecutter](https://stonecutter.kikugie.dev/): **1.21.8**, **1.21.10**, **1.21.11**, **26.1** (covers **26.1.1** and **26.1.2** via one JAR)
+- Multi-version build with [Stonecutter](https://stonecutter.kikugie.dev/): **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1** (covers **26.1.1** and **26.1.2** via one JAR)
 - Gradle tasks `buildAndCollect`, `buildActive`, `runActive`; [BUILD.md](BUILD.md) reference
 - Package refactor: `config/`, `core/`, `integration/twitch/`, `ui/screen/`, `ui/gui/`, `filtering/`
 
@@ -42,7 +53,7 @@
 
 ### Technical
 
-- Version-specific client overrides in `versions/1.21.8/src/client/java/` (legacy `mouseClicked` / `keyPressed` APIs)
+- Version-specific client overrides in `versions/1.21.8/src/client/java/` (legacy `mouseClicked` / `keyPressed` APIs), reused for **1.21–1.21.4** with extra legacy GUI/HUD render paths
 - **Minecraft 26.1** port: Mojang mappings, `build-unobfuscated.gradle.kts`, Stonecutter replacements, overrides in `versions/26.1/src/` (`MouseHandlerMixin`, HUD, key bindings, sliders, `MessagePosition`, and related UI)
 - `PlayerMessageCompat` for chat feedback across 1.21.x and 26.1
 - Per-version dependencies in `versions/<mc>/gradle.properties`

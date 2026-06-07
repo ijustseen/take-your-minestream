@@ -39,7 +39,14 @@ public final class CameraPositionCompat {
 
     private static Vec3d invokeCameraPos(Object camera) {
         Class<?> cameraClass = camera.getClass();
-        Method method = CAMERA_POS_METHOD_CACHE.computeIfAbsent(cameraClass, CameraPositionCompat::resolveCameraPosMethod);
+        Method method = CAMERA_POS_METHOD_CACHE.get(cameraClass);
+        if (method == null) {
+            Method resolved = resolveCameraPosMethod(cameraClass);
+            if (resolved != null) {
+                CAMERA_POS_METHOD_CACHE.putIfAbsent(cameraClass, resolved);
+                method = resolved;
+            }
+        }
 
         if (method == null) {
             return null;

@@ -73,6 +73,7 @@ stonecutter parameters {
             replace("RenderLayer textLayer", "RenderType textLayer")
             replace("instanceof RenderLayer", "instanceof RenderType")
             replace("== RenderLayer.class", "== RenderType.class")
+            replace("RenderLayer.class.isAssignableFrom", "RenderType.class.isAssignableFrom")
             replace("VertexConsumerProvider", "MultiBufferSource")
             replace("ClientPlayerEntity", "LocalPlayer")
 
