@@ -167,4 +167,13 @@ public class ModConfig {
     public static void setENABLE_USERNAME_BLOCKLIST(boolean value) {
         ConfigManager.getInstance().setConfigValue("enableUsernameBlocklist", value);
     }
+
+    public static takeyourminestream.ijustseen.config.UnpinMode getUNPIN_MODE() {
+        Object value = ConfigManager.getInstance().getConfigValue("unpinMode");
+        return value instanceof takeyourminestream.ijustseen.config.UnpinMode mode ? mode : takeyourminestream.ijustseen.config.UnpinMode.PIN_ICON;
+    }
+
+    public static void setUNPIN_MODE(takeyourminestream.ijustseen.config.UnpinMode value) {
+        ConfigManager.getInstance().setConfigValue("unpinMode", value);
+    }
 } 

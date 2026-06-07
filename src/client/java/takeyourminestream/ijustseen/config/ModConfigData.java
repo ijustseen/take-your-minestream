@@ -30,6 +30,7 @@ public class ModConfigData {
     private int messageHistoryMaxSize = 100;
     private ChatRoleFilter chatRoleFilter = ChatRoleFilter.ALL;
     private boolean enableUsernameBlocklist = true;
+    private UnpinMode unpinMode = UnpinMode.PIN_ICON;
 
     // Геттеры
     public int getChanceForSpawn() { return chanceForSpawn; }
@@ -56,6 +57,7 @@ public class ModConfigData {
     public boolean isAutoConnectIrcOnJoin() { return autoConnectIrcOnJoin; }
     public ChatRoleFilter getChatRoleFilter() { return chatRoleFilter; }
     public boolean isEnableUsernameBlocklist() { return enableUsernameBlocklist; }
+    public UnpinMode getUnpinMode() { return unpinMode; }
 
     // Сеттеры
     public void setChanceForSpawn(int chanceForSpawn) { this.chanceForSpawn = chanceForSpawn; }
@@ -82,6 +84,7 @@ public class ModConfigData {
     public void setAutoConnectIrcOnJoin(boolean autoConnectIrcOnJoin) { this.autoConnectIrcOnJoin = autoConnectIrcOnJoin; }
     public void setChatRoleFilter(ChatRoleFilter chatRoleFilter) { this.chatRoleFilter = chatRoleFilter != null ? chatRoleFilter : ChatRoleFilter.ALL; }
     public void setEnableUsernameBlocklist(boolean enableUsernameBlocklist) { this.enableUsernameBlocklist = enableUsernameBlocklist; }
+    public void setUnpinMode(UnpinMode unpinMode) { this.unpinMode = unpinMode != null ? unpinMode : UnpinMode.PIN_ICON; }
     
     // Методы для обратной совместимости
     public boolean isMessagesInFrontOfPlayerOnly() { 

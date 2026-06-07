@@ -2,6 +2,12 @@
 
 ## [1.4.2] - 2026-06-02
 
+### Added
+
+- **Unpin mode** setting (Settings → Behavior): choose how to unpin 3D messages with right-click
+  - **Pin icon only** — unpin only when clicking the pin icon; click elsewhere on the message to drag
+  - **Whole message** — quick right-click anywhere on the message unpins it; holding right-click drags
+
 ### Fixed
 
 - Crash when rendering 3D message panels on Minecraft 1.21.11 (NPE in `VertexConsumerProvider.getBuffer` when `RenderLayerCompat` returned null)
@@ -10,6 +16,7 @@
 - `CameraPositionCompat` no longer caches a failed reflection lookup permanently
 - Broken 9-slice panels in history/pinned columns on Minecraft 1.21 / 1.21.1 (legacy `drawTexture` ignored texture region size)
 - Emotes not rendered in message history and pinned columns (only plain text was drawn)
+- Unpin mode «Whole message»: a quick right-click on an unpinned message no longer pins and immediately unpins it
 
 ## [1.4.1] - 2026-06-02
 

@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.config.MessageScale;
 import takeyourminestream.ijustseen.config.MessageSpawnMode;
 import takeyourminestream.ijustseen.config.ChatRoleFilter;
+import takeyourminestream.ijustseen.config.UnpinMode;
 import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.integration.twitch.TwitchManager;
@@ -366,6 +367,17 @@ public class ModConfigScreen extends Screen {
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(clickToRemoveButton);
         configEntries.add(new ConfigEntry("takeyourminestream.config.click_to_remove", "takeyourminestream.config.click_to_remove.desc", ConfigEntryType.TOGGLE, clickToRemoveButton, ConfigCategory.BEHAVIOR));
+
+        ButtonWidget unpinModeButton = ButtonWidget.builder(
+            getUnpinModeButtonText(),
+            btn -> {
+                UnpinMode nextMode = ModConfig.getUNPIN_MODE().next();
+                ModConfig.setUNPIN_MODE(nextMode);
+                btn.setMessage(getUnpinModeButtonText());
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(unpinModeButton);
+        configEntries.add(new ConfigEntry("takeyourminestream.config.unpin_mode", "takeyourminestream.config.unpin_mode.desc", ConfigEntryType.BUTTON, unpinModeButton, ConfigCategory.BEHAVIOR));
     }
     
     private void updateCategoryVisibility() {
@@ -479,6 +491,12 @@ public class ModConfigScreen extends Screen {
             default:
                 return Text.translatable("takeyourminestream.config.around_player");
         }
+    }
+
+    private Text getUnpinModeButtonText() {
+        return ModConfig.getUNPIN_MODE() == UnpinMode.WHOLE_MESSAGE
+            ? Text.translatable("takeyourminestream.config.unpin_mode.whole_message")
+            : Text.translatable("takeyourminestream.config.unpin_mode.pin_icon");
     }
     
 

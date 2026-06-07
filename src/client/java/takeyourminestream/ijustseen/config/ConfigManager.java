@@ -164,6 +164,9 @@ public class ConfigManager implements IConfigManager {
             case "enableUsernameBlocklist":
                 configData.setEnableUsernameBlocklist((Boolean) value);
                 break;
+            case "unpinMode":
+                configData.setUnpinMode((UnpinMode) value);
+                break;
             default:
                 LOGGER.warning("Неизвестный ключ конфигурации: " + key);
                 return;
@@ -199,6 +202,7 @@ public class ConfigManager implements IConfigManager {
         configCache.put("autoConnectIrcOnJoin", configData.isAutoConnectIrcOnJoin());
         configCache.put("chatRoleFilter", configData.getChatRoleFilter());
         configCache.put("enableUsernameBlocklist", configData.isEnableUsernameBlocklist());
+        configCache.put("unpinMode", configData.getUnpinMode());
     }
 
     public ModConfigData getConfigData() {
