@@ -50,11 +50,10 @@ public class FilteringManager {
                     for (String w : userWords) {
                         if (w != null) regexps.add(w);
                     }
-                    TakeYourMineStreamClient.LOGGER.info("Загружено пользовательских regexp: {}", userWords.size());
                 }
             }
         } catch (Exception e) {
-            TakeYourMineStreamClient.LOGGER.error("Ошибка при загрузке пользовательских regexp: ", e);
+            TakeYourMineStreamClient.LOGGER.error("Failed to load user regex filters", e);
         }
     }
 
@@ -70,7 +69,7 @@ public class FilteringManager {
                         return true;
                     }
                 } catch (Exception e) {
-                    TakeYourMineStreamClient.LOGGER.warn("Ошибка при проверке regexp '{}': {}", pattern, e.getMessage());
+                    TakeYourMineStreamClient.LOGGER.warn("Invalid regexp filter '{}': {}", pattern, e.getMessage());
                 }
             }
         }
@@ -80,7 +79,6 @@ public class FilteringManager {
     public void addRegexp(String regexp) {
         if (regexp != null) {
             regexps.add(regexp);
-            TakeYourMineStreamClient.LOGGER.info("Добавлен банворд: {}", regexp);
             saveUserRegexps();
         }
     }
@@ -89,7 +87,6 @@ public class FilteringManager {
         if (regexp != null) {
             boolean removed = regexps.remove(regexp);
             if (removed) {
-                TakeYourMineStreamClient.LOGGER.info("Удален банворд: {}", regexp);
                 saveUserRegexps();
             }
         }
@@ -107,7 +104,7 @@ public class FilteringManager {
                 new Gson().toJson(list, writer);
             }
         } catch (Exception e) {
-            TakeYourMineStreamClient.LOGGER.error("Ошибка при сохранении пользовательских банвордов: " + e.getMessage());
+            TakeYourMineStreamClient.LOGGER.error("Failed to save user regex filters: {}", e.getMessage());
         }
     }
 }

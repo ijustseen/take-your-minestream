@@ -26,6 +26,8 @@ public final class ModUiTheme {
     public static final int TEXT_DIM = 0xFF666666;
     public static final int TEXT_HINT = 0xFF888888;
     public static final int OVERLAY_DIM = 0x60000000;
+    /** Fully opaque panel for modal popups (avoids batched text bleeding through on 1.21). */
+    public static final int POPUP_PANEL_BG = 0xFF101010;
     public static final int SCROLL_TRACK = 0x40555555;
     public static final int SCROLL_THUMB = 0xC0686868;
 
@@ -94,14 +96,55 @@ public final class ModUiTheme {
         boolean selected,
         boolean hoverBorders
     ) {
+        drawButtonInternal(context, textRenderer, x, y, width, height, label, hovered, enabled, selected, hoverBorders, false);
+    }
+
+    /** Popup menu button — uses overlay render layer on Minecraft 1.21. */
+    public static void drawPopupButton(
+        DrawContext context,
+        TextRenderer textRenderer,
+        int x,
+        int y,
+        int width,
+        int height,
+        Text label,
+        boolean hovered,
+        boolean enabled,
+        boolean selected
+    ) {
+        drawButtonInternal(context, textRenderer, x, y, width, height, label, hovered, enabled, selected, true, true);
+    }
+
+    private static void drawButtonInternal(
+        DrawContext context,
+        TextRenderer textRenderer,
+        int x,
+        int y,
+        int width,
+        int height,
+        Text label,
+        boolean hovered,
+        boolean enabled,
+        boolean selected,
+        boolean hoverBorders,
+        boolean overlayLayer
+    ) {
         int bg = selected ? BUTTON_BG_SELECTED : (hovered && enabled ? BUTTON_BG_HOVER : BUTTON_BG);
         if (!enabled) {
             bg = 0x60404040;
         }
-        context.fill(x, y, x + width, y + height, bg);
-        if (hovered && enabled && hoverBorders) {
-            context.fill(x, y, x + width, y + 1, BUTTON_BORDER_HOVER);
-            context.fill(x, y + height - 1, x + width, y + height, BUTTON_BORDER_HOVER);
+        if (overlayLayer) {
+            PopupGuiRenderer.fill(context, x, y, x + width, y + height, bg);
+            if (hovered && enabled && hoverBorders) {
+                PopupGuiRenderer.fill(context, x, y, x + width, y + 1, BUTTON_BORDER_HOVER);
+                PopupGuiRenderer.fill(context, x, y + height - 1, x + width, y + height, BUTTON_BORDER_HOVER);
+            }
+        } else {
+            context.fill(x, y, x + width, y + height, bg);
+            if (hovered && enabled && hoverBorders) {
+                context.fill(x, y, x + width, y + 1, BUTTON_BORDER_HOVER);
+                context.fill(x, y + height - 1, x + width, y + height, BUTTON_BORDER_HOVER);
+            }
         }
         int textColor = enabled ? (hovered || selected ? TEXT_PRIMARY : TEXT_SECONDARY) : TEXT_HINT;
         int labelWidth = textRenderer.getWidth(label);

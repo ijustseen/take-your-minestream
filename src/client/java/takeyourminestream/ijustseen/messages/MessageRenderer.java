@@ -33,8 +33,6 @@ public class MessageRenderer {
     private final MessageLifecycleManager lifecycleManager;
     private final MessageParticleManager particleManager;
     private final java.util.WeakHashMap<Message, SmoothingState> smoothing = new java.util.WeakHashMap<>();
-    // Для диагностики: логируем рендер эмоута только один раз на ID
-    private static final java.util.Set<String> EMOTE_RENDER_LOGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private static final float PIN_ICON_Z_OFFSET = -0.02f;
     private static final int EMOTE_ICON_SIZE = 12;
@@ -290,9 +288,6 @@ public class MessageRenderer {
 
             Identifier emoteTexture = TwitchEmoteTextureCache.getTextureIdentifier(emote.getProvider(), emote.getEmoteId());
             if (emoteTexture != null) {
-                if (EMOTE_RENDER_LOGGED.add("draw:" + emote.getEmoteId())) {
-                    System.out.println("[TYMS-Emote-Render] Drawing emote quad id=" + emote.getEmoteId() + " tex=" + emoteTexture + " x=" + x);
-                }
                 VertexConsumer consumer = RenderLayerCompat.getTextBuffer(consumers, emoteTexture);
                 Matrix4f mat = matrices.peek().getPositionMatrix();
                 int iconX = Math.round(x);
@@ -311,9 +306,6 @@ public class MessageRenderer {
                 );
                 x += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
             } else {
-                if (EMOTE_RENDER_LOGGED.add("fallback:" + emote.getEmoteId())) {
-                    System.out.println("[TYMS-Emote-Render] Emote " + emote.getEmoteId() + " not loaded yet, showing fallback text");
-                }
                 // Fallback: show emote code as text while texture is loading/failed
                 String code = emote.getEmoteCode();
                 textRenderer.draw(code,

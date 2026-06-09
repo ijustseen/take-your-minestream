@@ -38,9 +38,9 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         instance = this;
         try {
             initializeMod();
-            Logger.info("Take Your MineStream успешно инициализирован");
+            Logger.info("Take Your MineStream initialized");
         } catch (Exception e) {
-            Logger.error("Ошибка при инициализации мода", e);
+            Logger.error("Failed to initialize mod", e);
         }
     }
 
@@ -66,7 +66,7 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         // Регистрация обработчиков событий мира
         WorldEventHandler.register(messageSpawner);
 
-        LOGGER.info("Все компоненты мода инициализированы");
+        LOGGER.info("All mod components initialized");
     }
 
     public static TakeYourMineStreamClient getInstance() {

@@ -1,6 +1,7 @@
 package takeyourminestream.ijustseen.integration.twitch;
 
 import net.minecraft.client.MinecraftClient;
+import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.filtering.BanwordManager;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.filtering.FilteringManager;
@@ -61,13 +62,12 @@ public class TwitchChatClient {
             listenThread = new Thread(this::listenLoop, "TwitchIRC-Listen");
             listenThread.setDaemon(true);
             listenThread.start();
-            System.out.println("[IRC] Connected (TLS) to Twitch IRC as " + nick + ", joined #" + channelName);
+            TakeYourMineStreamClient.LOGGER.info("Connected to Twitch IRC as {} in #{}", nick, channelName);
 
             // Загружаем глобальные 7TV эмоуты; канальные подгрузим при первом PRIVMSG, когда узнаем room-id
             SevenTVEmoteProvider.init(null);
         } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println("[IRC] Failed to connect to Twitch IRC");
+            TakeYourMineStreamClient.LOGGER.error("Failed to connect to Twitch IRC", e);
         }
     }
 
@@ -89,21 +89,15 @@ public class TwitchChatClient {
                     }
                 } else if (line.contains(" PRVMSG ") || line.contains(" PRIVMSG ")) {
                     handlePrivMsg(line);
-                } else if (line.contains(" CLEARCHAT ")) {
-                    // Сообщение о чистке чата/таймауте/бане
-                    System.out.println("[IRC] CLEARCHAT: " + line);
-                } else if (line.contains(" NOTICE ")) {
-                    System.out.println("[IRC] NOTICE: " + line);
                 }
             }
         } catch (IOException e) {
             if (running) {
-                e.printStackTrace();
+                TakeYourMineStreamClient.LOGGER.warn("Twitch IRC connection lost", e);
             }
         }
-        System.out.println("[IRC] Disconnected from Twitch IRC");
-        // Реконнект с задержкой, если запущено
         if (running) {
+            TakeYourMineStreamClient.LOGGER.info("Reconnecting to Twitch IRC in 3 seconds");
             try {
                 Thread.sleep(3000);
             } catch (InterruptedException ignored) {}
@@ -202,7 +196,6 @@ public class TwitchChatClient {
                 SevenTVEmoteProvider.init(channelName, roomId);
             }
 
-            System.out.println("[" + channel + "] " + displayName + ": " + message);
             String filteredMessage = message;
             if (ModConfig.isENABLE_AUTOMODERATION() && BanwordManager.getInstance().containsBanwords(message)) {
                 filteredMessage = BanwordManager.getInstance().filterBanwords(message);
@@ -316,6 +309,6 @@ public class TwitchChatClient {
         if (listenThread != null) {
             try { listenThread.join(1000); } catch (InterruptedException ignored) {}
         }
-        System.out.println("[IRC] Disconnected from Twitch chat.");
+        TakeYourMineStreamClient.LOGGER.info("Disconnected from Twitch IRC");
     }
-} 
+}

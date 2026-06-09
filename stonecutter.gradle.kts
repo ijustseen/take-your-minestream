@@ -8,6 +8,12 @@ stonecutter active "1.21.11" /* [SC] DO NOT EDIT */
 
 stonecutter parameters {
     replacements {
+        string(eval(current.version, "< 1.21.11")) {
+            replace("import net.minecraft.client.render.RenderLayers;", "// RenderLayers added in 1.21.11")
+            replace("return RenderLayers.entityTranslucent(texture);", "return RenderLayer.getEntityTranslucent(texture, false);")
+            replace("return RenderLayers.text(texture);", "return RenderLayer.getText(texture);")
+            replace("camera.getCameraPos()", "camera.getPos()")
+        }
         string(eval(current.version, ">= 26.1")) {
             // Packages (imports)
             replace("net.minecraft.client.MinecraftClient", "net.minecraft.client.Minecraft")
@@ -158,7 +164,9 @@ stonecutter parameters {
             replace(".normal(", ".setNormal(")
 
             // RenderLayerCompat host
-            replace("net.minecraft.client.render.RenderLayers", "net.minecraft.client.renderer.rendertype.RenderTypes")
+            replace("import net.minecraft.client.render.RenderLayers;", "import net.minecraft.client.renderer.rendertype.RenderTypes;")
+            replace("return RenderLayers.entityTranslucent(texture);", "return RenderTypes.entityTranslucent(texture);")
+            replace("return RenderLayers.text(texture);", "return RenderTypes.text(texture);")
             replace("RenderLayer.class", "RenderType.class")
             replace("RenderLayer renderLayer", "RenderType renderLayer")
             replace("== RenderType.class", "== RenderType.class")
@@ -202,6 +210,8 @@ stonecutter parameters {
             replace("net.minecraft.client.texture.AbstractTexture", "net.minecraft.client.renderer.texture.AbstractTexture")
             replace("getTextureManager().registerTexture(", "getTextureManager().register(")
             replace("getCamera()", "getMainCamera()")
+            replace("camera.getCameraPos()", "camera.position()")
+            replace("context.createNewRootLayer()", "context.nextStratum()")
             replace("client.player.sendMessage(Text.of(message), false)", "client.player.sendSystemMessage(Component.literal(message))")
             replace("MessageCardLayout.compute(textRenderer,", "MessageCardLayout.compute(this.font,")
             replace("instanceof ButtonWidget", "instanceof Button")

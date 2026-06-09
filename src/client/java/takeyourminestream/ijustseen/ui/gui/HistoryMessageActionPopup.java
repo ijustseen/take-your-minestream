@@ -55,14 +55,14 @@ public final class HistoryMessageActionPopup {
         }
 
         hoveredEntry = hitTest(mouseX, mouseY);
-        ModUiTheme.drawBorderedPanel(context, x, y, WIDTH, height);
+        drawPopupPanel(context, x, y, WIDTH, height);
 
         int buttonY = y + PADDING;
         for (Entry entry : entries) {
             int left = x + PADDING;
             int right = x + WIDTH - PADDING;
             boolean hovered = entry == hoveredEntry;
-            ModUiTheme.drawButton(
+            ModUiTheme.drawPopupButton(
                 context,
                 textRenderer,
                 left,
@@ -105,5 +105,13 @@ public final class HistoryMessageActionPopup {
             case BLOCK -> Text.translatable("takeyourminestream.history.action.block");
             case REPLAY -> Text.translatable("takeyourminestream.history.action.replay");
         };
+    }
+
+    private static void drawPopupPanel(DrawContext context, int x, int y, int width, int height) {
+        PopupGuiRenderer.fill(context, x, y, x + width, y + height, ModUiTheme.POPUP_PANEL_BG);
+        PopupGuiRenderer.fill(context, x, y, x + width, y + 1, ModUiTheme.PANEL_BORDER);
+        PopupGuiRenderer.fill(context, x, y + height - 1, x + width, y + height, ModUiTheme.PANEL_BORDER);
+        PopupGuiRenderer.fill(context, x, y, x + 1, y + height, ModUiTheme.PANEL_BORDER);
+        PopupGuiRenderer.fill(context, x + width - 1, y, x + width, y + height, ModUiTheme.PANEL_BORDER);
     }
 }

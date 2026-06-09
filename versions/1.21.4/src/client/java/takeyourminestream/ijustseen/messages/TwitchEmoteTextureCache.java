@@ -4,6 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.util.Identifier;
+import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.core.storage.StoragePaths;
 
 import java.io.ByteArrayInputStream;
@@ -148,7 +149,7 @@ public final class TwitchEmoteTextureCache {
                 }
             }
         } catch (Exception e) {
-            System.out.println("[TYMS-Emote] Failed fallback decode for " + provider + " emote " + emoteId + ": " + e.getMessage());
+            TakeYourMineStreamClient.LOGGER.warn("Failed fallback decode for {} emote {}: {}", provider, emoteId, e.getMessage());
             return null;
         }
     }
@@ -166,7 +167,7 @@ public final class TwitchEmoteTextureCache {
 
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
-                System.out.println("[TYMS-Emote] HTTP " + responseCode + " for " + provider + " emote " + emoteId + " url=" + url);
+                TakeYourMineStreamClient.LOGGER.warn("HTTP {} for {} emote {} url={}", responseCode, provider, emoteId, url);
                 return null;
             }
 
@@ -178,7 +179,7 @@ public final class TwitchEmoteTextureCache {
                 return bytes;
             }
         } catch (Exception e) {
-            System.out.println("[TYMS-Emote] Error downloading " + provider + " emote " + emoteId + " from " + url + ": " + e.getMessage());
+            TakeYourMineStreamClient.LOGGER.warn("Error downloading {} emote {} from {}: {}", provider, emoteId, url, e.getMessage());
             return null;
         } finally {
             if (connection != null) {
@@ -283,7 +284,7 @@ public final class TwitchEmoteTextureCache {
             try {
                 return Files.readAllBytes(path);
             } catch (Exception e) {
-                System.out.println("[TYMS-Emote] Error reading disk cache for " + provider + ":" + emoteId + ": " + e.getMessage());
+                TakeYourMineStreamClient.LOGGER.warn("Error reading emote disk cache for {}:{}: {}", provider, emoteId, e.getMessage());
             }
         }
         return null;
@@ -295,7 +296,7 @@ public final class TwitchEmoteTextureCache {
             Files.createDirectories(path.getParent());
             Files.write(path, imageBytes);
         } catch (Exception e) {
-            System.out.println("[TYMS-Emote] Error saving to disk cache for " + provider + ":" + emoteId + ": " + e.getMessage());
+            TakeYourMineStreamClient.LOGGER.warn("Error saving emote disk cache for {}:{}: {}", provider, emoteId, e.getMessage());
         }
     }
 
@@ -307,7 +308,6 @@ public final class TwitchEmoteTextureCache {
         // 1. Попробовать дисковый кеш
         byte[] imageBytes = loadFromDiskCache(provider, emoteId);
         if (imageBytes != null && imageBytes.length > 0) {
-            System.out.println("[TYMS-Emote] Loaded " + provider + " emote " + emoteId + " from disk cache (" + imageBytes.length + " bytes)");
             IMAGE_BYTES_CACHE.put(key, imageBytes);
             registerOnRenderThread(key, provider, emoteId, imageBytes);
             return;
@@ -321,11 +321,8 @@ public final class TwitchEmoteTextureCache {
             }
 
             if (imageBytes.length == 0) {
-                System.out.println("[TYMS-Emote] Empty response for " + provider + " emote " + emoteId);
                 return;
             }
-
-            System.out.println("[TYMS-Emote] Downloaded " + provider + " emote " + emoteId + " (" + imageBytes.length + " bytes)");
 
             // Сохранить на диск
             saveToDiskCache(provider, emoteId, imageBytes);
@@ -333,7 +330,7 @@ public final class TwitchEmoteTextureCache {
             registerOnRenderThread(key, provider, emoteId, imageBytes);
 
         } catch (Exception e) {
-            System.out.println("[TYMS-Emote] Error downloading " + provider + " emote " + emoteId + ": " + e.getMessage());
+            TakeYourMineStreamClient.LOGGER.warn("Error downloading {} emote {}: {}", provider, emoteId, e.getMessage());
         }
     }
 
@@ -345,17 +342,13 @@ public final class TwitchEmoteTextureCache {
                     if (registerAnimatedGifFrames(key, provider, emoteId, imageBytes, client)) {
                         return;
                     }
-                    System.out.println("[TYMS-Emote] GIF animation fallback to static for " + provider + " emote " + emoteId);
                 }
 
                 NativeImage image = decodeNativeImage(imageBytes, provider, emoteId);
                 if (image == null) {
-                    System.out.println("[TYMS-Emote] Failed to decode image for " + provider + " emote " + emoteId);
+                    TakeYourMineStreamClient.LOGGER.warn("Failed to decode image for {} emote {}", provider, emoteId);
                     return;
                 }
-
-                int w = image.getWidth();
-                int h = image.getHeight();
 
                 NativeImageBackedTexture texture = new NativeImageBackedTexture(image);
 
@@ -364,11 +357,8 @@ public final class TwitchEmoteTextureCache {
                 TEXTURE_REFS.put(key, texture);
                 LOADED_TEXTURES.put(key, textureId);
                 ANIMATED_TEXTURES.remove(key);
-
-                System.out.println("[TYMS-Emote] Registered " + provider + " emote " + emoteId + " (" + w + "x" + h + ")");
             } catch (Exception e) {
-                System.out.println("[TYMS-Emote] Error creating texture for " + provider + " emote " + emoteId + ": " + e.getMessage());
-                e.printStackTrace();
+                TakeYourMineStreamClient.LOGGER.error("Error creating texture for {} emote {}", provider, emoteId, e);
             }
         });
     }
@@ -458,13 +448,12 @@ public final class TwitchEmoteTextureCache {
 
                 ANIMATED_TEXTURES.put(key, new AnimatedTextureSet(List.copyOf(frameIds), List.copyOf(frameDurations)));
                 LOADED_TEXTURES.remove(key);
-                System.out.println("[TYMS-Emote] Registered animated " + provider + " emote " + emoteId + " (frames=" + frameIds.size() + ")");
                 return true;
             } finally {
                 gifReader.dispose();
             }
         } catch (Exception e) {
-            System.out.println("[TYMS-Emote] Error parsing GIF for " + provider + " emote " + emoteId + ": " + e.getMessage());
+            TakeYourMineStreamClient.LOGGER.warn("Error parsing GIF for {} emote {}: {}", provider, emoteId, e.getMessage());
             return false;
         }
     }

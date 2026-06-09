@@ -60,10 +60,9 @@ public class BanwordManager implements IBanwordManager {
             banwords.clear();
             if (words != null) {
                 banwords.addAll(words);
-                LOGGER.info("Загружено " + words.size() + " банвордов");
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при загрузке банвордов: " + e.getMessage());
+            LOGGER.severe("Failed to load banwords: " + e.getMessage());
         }
 
         // Загрузка пользовательского файла и слияние
@@ -77,12 +76,11 @@ public class BanwordManager implements IBanwordManager {
                         for (String w : userWords) {
                             if (w != null && !w.trim().isEmpty()) banwords.add(w.trim().toLowerCase());
                         }
-                        LOGGER.info("Загружено пользовательских банвордов: " + userWords.size());
                     }
                 }
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при загрузке пользовательских банвордов: " + e.getMessage());
+            LOGGER.severe("Failed to load user banwords: " + e.getMessage());
         }
     }
 
@@ -126,7 +124,6 @@ public class BanwordManager implements IBanwordManager {
     public void addBanword(String banword) {
         if (banword != null && !banword.trim().isEmpty()) {
             banwords.add(banword.trim().toLowerCase());
-            LOGGER.info("Добавлен банворд: " + banword);
             saveUserBanwords();
         }
     }
@@ -136,7 +133,6 @@ public class BanwordManager implements IBanwordManager {
         if (banword != null && !banword.trim().isEmpty()) {
             boolean removed = banwords.remove(banword.trim().toLowerCase());
             if (removed) {
-                LOGGER.info("Удален банворд: " + banword);
                 saveUserBanwords();
             }
         }
@@ -155,7 +151,7 @@ public class BanwordManager implements IBanwordManager {
                 new Gson().toJson(list, writer);
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при сохранении пользовательских банвордов: " + e.getMessage());
+            LOGGER.severe("Failed to save user banwords: " + e.getMessage());
         }
     }
 } 

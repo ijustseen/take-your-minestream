@@ -42,9 +42,9 @@ public class TwitchManager implements ITwitchManager {
                 twitchConnected = true;
                 lastTwitchChannelName = channelName;
                 sendPlayerMessage("§a" + Text.translatable("takeyourminestream.twitch.connected").getString());
-                LOGGER.info("Подключено к Twitch-каналу: " + channelName);
+                LOGGER.info("Connected to Twitch channel: " + channelName);
             } catch (Exception e) {
-                LOGGER.severe("Ошибка при подключении к Twitch: " + e.getMessage());
+                LOGGER.severe("Failed to connect to Twitch: " + e.getMessage());
                 sendPlayerMessage("§c" + Text.translatable("takeyourminestream.twitch.error.connect", e.getMessage()).getString());
             }
         } else {
@@ -60,9 +60,9 @@ public class TwitchManager implements ITwitchManager {
                 twitchChatClient = null;
                 twitchConnected = false;
                 sendPlayerMessage("§a" + Text.translatable("takeyourminestream.twitch.disconnected").getString());
-                LOGGER.info("Отключено от Twitch-канала");
+                LOGGER.info("Disconnected from Twitch channel");
             } catch (Exception e) {
-                LOGGER.severe("Ошибка при отключении от Twitch: " + e.getMessage());
+                LOGGER.severe("Failed to disconnect from Twitch: " + e.getMessage());
                 sendPlayerMessage("§c" + Text.translatable("takeyourminestream.twitch.error.disconnect", e.getMessage()).getString());
             }
         } else {
@@ -81,9 +81,9 @@ public class TwitchManager implements ITwitchManager {
                 twitchChatClient = new TwitchChatClient(newChannelName, messageSpawner);
                 lastTwitchChannelName = newChannelName;
                 sendPlayerMessage("§a" + Text.translatable("takeyourminestream.twitch.reconnected", newChannelName).getString());
-                LOGGER.info("Переподключено к Twitch-каналу: " + newChannelName);
+                LOGGER.info("Reconnected to Twitch channel: " + newChannelName);
             } catch (Exception e) {
-                LOGGER.severe("Ошибка при переподключении к Twitch: " + e.getMessage());
+                LOGGER.severe("Failed to reconnect to Twitch: " + e.getMessage());
                 sendPlayerMessage("§c" + Text.translatable("takeyourminestream.twitch.error.reconnect", e.getMessage()).getString());
             }
         }

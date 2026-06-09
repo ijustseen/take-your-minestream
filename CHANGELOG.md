@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.3] - 2026-06-02
+
+### Changed
+
+- All console log messages are now in English
+- Removed verbose debug logging (IRC chat echo, emote load/register traces, 7TV success counters, settings-screen info)
+
+### Fixed
+
+- Crash when rendering 3D message panels on Minecraft 1.21.11 with Iris/Sodium (and related modded renderers): `RenderLayerCompat` now calls `RenderLayers` / `RenderTypes` directly instead of reflection (also fixes the incomplete 1.4.2 fix that could still throw `Unable to resolve entity RenderLayer`)
+- `CameraPositionCompat` uses direct camera position API per Minecraft version instead of reflection
+- History action popup: card text no longer draws on top of the menu — on Minecraft 1.21–1.21.4 popup fills use `RenderLayer.getGuiOverlay()`; on 1.21.8+ a new GUI root layer is created before the popup
+
 ## [1.4.2] - 2026-06-02
 
 ### Added
@@ -11,9 +24,6 @@
 ### Fixed
 
 - Crash when rendering 3D message panels on Minecraft 1.21.11 (NPE in `VertexConsumerProvider.getBuffer` when `RenderLayerCompat` returned null)
-- Restored fallback chain for `RenderLayerCompat` (removed in 1.4.1) with exhaustive method scan across `RenderLayers` / `RenderLayer`
-- Added safe `getEntityBuffer` / `getTextBuffer` helpers; all world render paths now use them
-- `CameraPositionCompat` no longer caches a failed reflection lookup permanently
 - Broken 9-slice panels in history/pinned columns on Minecraft 1.21 / 1.21.1 (legacy `drawTexture` ignored texture region size)
 - Emotes not rendered in message history and pinned columns (only plain text was drawn)
 - Unpin mode «Whole message»: a quick right-click on an unpinned message no longer pins and immediately unpins it

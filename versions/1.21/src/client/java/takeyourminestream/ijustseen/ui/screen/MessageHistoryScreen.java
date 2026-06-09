@@ -17,6 +17,7 @@ import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageHistoryActions;
 import takeyourminestream.ijustseen.messages.MessageLifecycleManager;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
+import takeyourminestream.ijustseen.ui.gui.GuiLayerFlush;
 import takeyourminestream.ijustseen.ui.gui.HistoryMessageActionPopup;
 import takeyourminestream.ijustseen.ui.gui.MessageCardLayout;
 import takeyourminestream.ijustseen.ui.gui.MessageCardRenderer;
@@ -248,13 +249,18 @@ public class MessageHistoryScreen extends Screen {
         updateHoverState(mouseX, mouseY);
         renderTooltip(context, mouseX, mouseY);
 
-        if (actionPopup.isOpen()) {
-            ModUiTheme.drawScreenDim(context, this.width, this.height);
-            actionPopup.render(context, this.textRenderer, mouseX, mouseY);
-        }
-
         renderFeedback(context);
         ScreenUiHelper.renderAllButtons(context, mouseX, mouseY, this);
+
+        if (actionPopup.isOpen()) {
+            GuiLayerFlush.renderOverlay(
+                context,
+                () -> actionPopup.render(context, this.textRenderer, mouseX, mouseY),
+                mouseX,
+                mouseY,
+                delta
+            );
+        }
     }
 
     private void renderColumn(

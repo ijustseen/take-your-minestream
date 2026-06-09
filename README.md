@@ -19,7 +19,7 @@ Advanced Twitch chat integration for Minecraft. Show chat messages in 3D or as a
 ## Installation
 
 1. Install Fabric Loader for your Minecraft version
-2. Download the matching mod jar (e.g. `tyms-1.4.2+1.21.10.jar`)
+2. Download the matching mod jar (e.g. `tyms-1.4.3+1.21.10.jar`)
 3. Put the `.jar` into your `mods` folder
 4. Launch the game
 

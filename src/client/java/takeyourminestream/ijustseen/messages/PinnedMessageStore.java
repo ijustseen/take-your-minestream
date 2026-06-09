@@ -90,9 +90,8 @@ public final class PinnedMessageStore {
                 }
                 lifecycleManager.addPinnedMessage(message);
             }
-            Logger.info("Загружено закреплённых сообщений: " + data.messages.size());
         } catch (Exception e) {
-            Logger.error("Не удалось загрузить закреплённые сообщения", e);
+            Logger.error("Failed to load pinned messages", e);
         }
     }
 
@@ -143,7 +142,7 @@ public final class PinnedMessageStore {
                 GSON.toJson(data, FILE_TYPE, writer);
             }
         } catch (IOException e) {
-            Logger.error("Не удалось сохранить закреплённые сообщения", e);
+            Logger.error("Failed to save pinned messages", e);
         }
     }
 
@@ -169,7 +168,7 @@ public final class PinnedMessageStore {
                 }
             }
         } catch (IOException e) {
-            Logger.error("Не удалось подготовить файл закреплённых сообщений", e);
+            Logger.error("Failed to prepare pinned messages file", e);
         }
     }
 

@@ -1,5 +1,6 @@
 package takeyourminestream.ijustseen.messages;
 
+import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -93,9 +94,8 @@ public final class SevenTVEmoteProvider {
                 }
                 GLOBALS_LOADED.set(true);
                 loadedSuccessfully = true;
-                System.out.println("[TYMS-7TV] Загружено глобальных эмоутов: " + count);
             } catch (Exception e) {
-                System.out.println("[TYMS-7TV] Ошибка загрузки глобальных эмоутов: " + e.getMessage());
+                TakeYourMineStreamClient.LOGGER.warn("Failed to load global 7TV emotes: {}", e.getMessage());
             } finally {
                 if (!loadedSuccessfully) {
                     GLOBALS_LOADING.set(false); // Разрешить повторную загрузку после неуспеха
@@ -120,13 +120,11 @@ public final class SevenTVEmoteProvider {
                 // 7TV API: получить пользователя по Twitch-логину
                 JsonObject userJson = httpGetJson("https://7tv.io/v3/users/twitch/" + lower);
                 if (userJson == null) {
-                    System.out.println("[TYMS-7TV] Канал " + lower + " не найден на 7TV");
                     return;
                 }
 
                 JsonObject emoteSet = userJson.has("emote_set") ? userJson.getAsJsonObject("emote_set") : null;
                 if (emoteSet == null) {
-                    System.out.println("[TYMS-7TV] У канала " + lower + " нет набора эмоутов на 7TV");
                     return;
                 }
 
@@ -152,9 +150,8 @@ public final class SevenTVEmoteProvider {
                 }
                 currentChannelName = lower;
                 currentTwitchRoomId = null;
-                System.out.println("[TYMS-7TV] Загружено канальных эмоутов для " + lower + ": " + count);
             } catch (Exception e) {
-                System.out.println("[TYMS-7TV] Ошибка загрузки канальных эмоутов для " + lower + ": " + e.getMessage());
+                TakeYourMineStreamClient.LOGGER.warn("Failed to load channel 7TV emotes for {}: {}", lower, e.getMessage());
             }
         });
     }
@@ -181,7 +178,6 @@ public final class SevenTVEmoteProvider {
 
                 JsonObject userJson = httpGetJson("https://7tv.io/v3/users/twitch/" + twitchRoomId);
                 if (userJson == null) {
-                    System.out.println("[TYMS-7TV] Пользователь Twitch room-id=" + twitchRoomId + " не найден на 7TV");
                     if (!lower.isBlank()) {
                         loadChannelEmotes(lower);
                     }
@@ -190,7 +186,6 @@ public final class SevenTVEmoteProvider {
 
                 JsonObject emoteSet = userJson.has("emote_set") ? userJson.getAsJsonObject("emote_set") : null;
                 if (emoteSet == null) {
-                    System.out.println("[TYMS-7TV] У room-id=" + twitchRoomId + " нет набора эмоутов на 7TV");
                     if (!lower.isBlank()) {
                         loadChannelEmotes(lower);
                     }
@@ -219,9 +214,8 @@ public final class SevenTVEmoteProvider {
                 }
                 currentChannelName = lower.isBlank() ? null : lower;
                 currentTwitchRoomId = twitchRoomId;
-                System.out.println("[TYMS-7TV] Загружено канальных эмоутов для room-id=" + twitchRoomId + ": " + count);
             } catch (Exception e) {
-                System.out.println("[TYMS-7TV] Ошибка загрузки канальных эмоутов для room-id=" + twitchRoomId + ": " + e.getMessage());
+                TakeYourMineStreamClient.LOGGER.warn("Failed to load channel 7TV emotes for room-id {}: {}", twitchRoomId, e.getMessage());
                 if (!lower.isBlank()) {
                     loadChannelEmotes(lower);
                 }
@@ -339,7 +333,7 @@ public final class SevenTVEmoteProvider {
 
             int code = connection.getResponseCode();
             if (code != 200) {
-                System.out.println("[TYMS-7TV] HTTP " + code + " для " + url);
+                TakeYourMineStreamClient.LOGGER.warn("7TV HTTP {} for {}", code, url);
                 return null;
             }
 
@@ -348,7 +342,7 @@ public final class SevenTVEmoteProvider {
                 return GSON.fromJson(reader, JsonObject.class);
             }
         } catch (Exception e) {
-            System.out.println("[TYMS-7TV] Ошибка HTTP-запроса " + url + ": " + e.getMessage());
+            TakeYourMineStreamClient.LOGGER.warn("7TV HTTP request failed for {}: {}", url, e.getMessage());
             return null;
         } finally {
             if (connection != null) connection.disconnect();

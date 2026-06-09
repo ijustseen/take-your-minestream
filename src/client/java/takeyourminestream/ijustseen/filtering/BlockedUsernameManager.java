@@ -63,10 +63,9 @@ public class BlockedUsernameManager {
                         }
                     }
                 }
-                LOGGER.info("Загружено заблокированных ников: " + blockedUsernames.size());
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при загрузке заблокированных ников: " + e.getMessage());
+            LOGGER.severe("Failed to load blocked usernames: " + e.getMessage());
         }
     }
 
@@ -109,7 +108,7 @@ public class BlockedUsernameManager {
                 new Gson().toJson(list, writer);
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при сохранении заблокированных ников: " + e.getMessage());
+            LOGGER.severe("Failed to save blocked usernames: " + e.getMessage());
         }
     }
 }

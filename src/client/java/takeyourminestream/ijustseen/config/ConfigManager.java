@@ -64,14 +64,14 @@ public class ConfigManager implements IConfigManager {
                 if (loadedData != null) {
                     this.configData = loadedData;
                     updateConfigCache();
-                    LOGGER.info("Конфигурация успешно загружена");
+                    LOGGER.info("Configuration loaded");
                 }
             } catch (IOException e) {
-                LOGGER.severe("Ошибка при загрузке конфигурации: " + e.getMessage());
-                sendPlayerMessage("§cОшибка при загрузке конфигурации");
+                LOGGER.severe("Failed to load configuration: " + e.getMessage());
+                sendPlayerMessage("§cFailed to load configuration");
             }
         } else {
-            LOGGER.info("Файл конфигурации не найден, используются значения по умолчанию");
+            LOGGER.info("Configuration file not found, using defaults");
             saveConfig(); // Создаем файл с значениями по умолчанию
         }
     }
@@ -85,10 +85,10 @@ public class ConfigManager implements IConfigManager {
         try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
             GSON.toJson(configData, writer);
             updateConfigCache();
-            LOGGER.info("Конфигурация успешно сохранена");
+            LOGGER.info("Configuration saved");
         } catch (IOException e) {
-            LOGGER.severe("Ошибка при сохранении конфигурации: " + e.getMessage());
-            sendPlayerMessage("§cОшибка при сохранении конфигурации");
+            LOGGER.severe("Failed to save configuration: " + e.getMessage());
+            sendPlayerMessage("§cFailed to save configuration");
         }
     }
 
@@ -168,7 +168,7 @@ public class ConfigManager implements IConfigManager {
                 configData.setUnpinMode((UnpinMode) value);
                 break;
             default:
-                LOGGER.warning("Неизвестный ключ конфигурации: " + key);
+                LOGGER.warning("Unknown configuration key: " + key);
                 return;
         }
         updateConfigCache();

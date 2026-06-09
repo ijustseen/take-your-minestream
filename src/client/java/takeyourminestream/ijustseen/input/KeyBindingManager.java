@@ -60,10 +60,9 @@ public class KeyBindingManager {
     private void handleOpenConfigScreen() {
         try {
             net.minecraft.client.MinecraftClient.getInstance().setScreen(new ModConfigScreen());
-            Logger.info("Открыт экран настроек");
         } catch (Exception e) {
-            Logger.error("Ошибка при открытии экрана настроек", e);
-            Logger.sendErrorToPlayer("Ошибка при открытии экрана настроек");
+            Logger.error("Failed to open settings screen", e);
+            Logger.sendErrorToPlayer("Failed to open settings screen");
         }
     }
 
