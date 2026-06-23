@@ -26,10 +26,13 @@ public class ConfigManager implements IConfigManager {
     private static final File CONFIG_FILE;
 
     static {
+        StoragePaths.migrateLegacyModRootIfNeeded();
         Path modRoot = StoragePaths.getModRootDir();
-        Path newConfigPath = modRoot.resolve("take-your-minestream.json");
+        Path newConfigPath = modRoot.resolve("take-your-stream-chat.json");
+        Path legacyConfigInNewFolder = modRoot.resolve("take-your-minestream.json");
         Path legacyConfigPath = FabricLoader.getInstance().getConfigDir().resolve("take-your-minestream.json");
         Path legacyConfigInFolder = StoragePaths.getLegacyModRootDir().resolve("take-your-minestream.json");
+        Path legacyGameFolderConfig = StoragePaths.getLegacyGameModRootDir().resolve("take-your-minestream.json");
 
         try {
             StoragePaths.ensureModRootDir();
@@ -37,6 +40,8 @@ public class ConfigManager implements IConfigManager {
         }
         StoragePaths.migrateFileIfNeeded(legacyConfigPath, newConfigPath);
         StoragePaths.migrateFileIfNeeded(legacyConfigInFolder, newConfigPath);
+        StoragePaths.migrateFileIfNeeded(legacyGameFolderConfig, newConfigPath);
+        StoragePaths.migrateFileIfNeeded(legacyConfigInNewFolder, newConfigPath);
         CONFIG_FILE = newConfigPath.toFile();
     }
     
@@ -110,6 +115,27 @@ public class ConfigManager implements IConfigManager {
             case "twitchChannelName":
                 configData.setTwitchChannelName((String) value);
                 break;
+            case "twitchEnabled":
+                configData.setTwitchEnabled((Boolean) value);
+                break;
+            case "youtubeEnabled":
+                configData.setYoutubeEnabled((Boolean) value);
+                break;
+            case "youtubeChannel":
+                configData.setYoutubeChannel((String) value);
+                break;
+            case "kickEnabled":
+                configData.setKickEnabled((Boolean) value);
+                break;
+            case "kickChannel":
+                configData.setKickChannel((String) value);
+                break;
+            case "tiktokEnabled":
+                configData.setTiktokEnabled((Boolean) value);
+                break;
+            case "tiktokUsername":
+                configData.setTiktokUsername((String) value);
+                break;
             case "messageLifetimeTicks":
                 configData.setMessageLifetimeTicks((Integer) value);
                 break;
@@ -127,6 +153,12 @@ public class ConfigManager implements IConfigManager {
                 break;
             case "maxFreezeDistance":
                 configData.setMaxFreezeDistance((Double) value);
+                break;
+            case "messageSpawnMinDistance":
+                configData.setMessageSpawnMinDistance((Integer) value);
+                break;
+            case "messageSpawnMaxDistance":
+                configData.setMessageSpawnMaxDistance((Integer) value);
                 break;
             case "messagesInFrontOfPlayerOnly":
                 configData.setMessagesInFrontOfPlayerOnly((Boolean) value);
@@ -167,6 +199,9 @@ public class ConfigManager implements IConfigManager {
             case "unpinMode":
                 configData.setUnpinMode((UnpinMode) value);
                 break;
+            case "enableColorEmojis":
+                configData.setEnableColorEmojis((Boolean) value);
+                break;
             default:
                 LOGGER.warning("Unknown configuration key: " + key);
                 return;
@@ -180,12 +215,21 @@ public class ConfigManager implements IConfigManager {
         configCache.put("chanceForSpawn", configData.getChanceForSpawn());
         configCache.put("messageHistoryMaxSize", configData.getMessageHistoryMaxSize());
         configCache.put("twitchChannelName", configData.getTwitchChannelName());
+        configCache.put("twitchEnabled", configData.isTwitchEnabled());
+        configCache.put("youtubeEnabled", configData.isYoutubeEnabled());
+        configCache.put("youtubeChannel", configData.getYoutubeChannel());
+        configCache.put("kickEnabled", configData.isKickEnabled());
+        configCache.put("kickChannel", configData.getKickChannel());
+        configCache.put("tiktokEnabled", configData.isTiktokEnabled());
+        configCache.put("tiktokUsername", configData.getTiktokUsername());
         configCache.put("messageLifetimeTicks", configData.getMessageLifetimeTicks());
         configCache.put("messageFallTicks", configData.getMessageFallTicks());
         configCache.put("messageLifetimeSeconds", configData.getMessageLifetimeSeconds());
         configCache.put("messageFallSeconds", configData.getMessageFallSeconds());
         configCache.put("enableFreezingOnView", configData.isEnableFreezingOnView());
         configCache.put("maxFreezeDistance", configData.getMaxFreezeDistance());
+        configCache.put("messageSpawnMinDistance", configData.getMessageSpawnMinDistance());
+        configCache.put("messageSpawnMaxDistance", configData.getMessageSpawnMaxDistance());
         configCache.put("messagesInFrontOfPlayerOnly", configData.isMessagesInFrontOfPlayerOnly());
         configCache.put("messageSpawnMode", configData.getMessageSpawnMode());
         configCache.put("enableAutomoderation", configData.isEnableAutomoderation());
@@ -203,6 +247,7 @@ public class ConfigManager implements IConfigManager {
         configCache.put("chatRoleFilter", configData.getChatRoleFilter());
         configCache.put("enableUsernameBlocklist", configData.isEnableUsernameBlocklist());
         configCache.put("unpinMode", configData.getUnpinMode());
+        configCache.put("enableColorEmojis", configData.isEnableColorEmojis());
     }
 
     public ModConfigData getConfigData() {

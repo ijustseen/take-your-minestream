@@ -31,7 +31,7 @@ public class BanwordConfigScreen extends Screen {
     private final java.util.Set<String> revealedWords = new java.util.HashSet<>();
 
     public BanwordConfigScreen(@Nullable Screen parent) {
-        super(Text.translatable("takeyourminestream.banwords.title"));
+        super(Text.translatable("takeyourstreamchat.banwords.title"));
         this.parent = parent;
     }
 
@@ -46,10 +46,10 @@ public class BanwordConfigScreen extends Screen {
         int buttonH = 20;
         int spacing = 10;
 
-        inputField = new TextFieldWidget(this.textRenderer, PADDING, bottomY - buttonH - spacing, this.width - PADDING * 2 - buttonW - spacing, buttonH, Text.translatable("takeyourminestream.banwords.input"));
+        inputField = new TextFieldWidget(this.textRenderer, PADDING, bottomY - buttonH - spacing, this.width - PADDING * 2 - buttonW - spacing, buttonH, Text.translatable("takeyourstreamchat.banwords.input"));
         this.addDrawableChild(inputField);
 
-        this.addDrawableChild(ButtonWidget.builder(Text.translatable("takeyourminestream.banwords.add"), btn -> {
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("takeyourstreamchat.banwords.add"), btn -> {
             String word = inputField.getText();
             if (word != null && !word.trim().isEmpty()) {
                 String normalized = word.trim().toLowerCase();
@@ -126,8 +126,8 @@ public class BanwordConfigScreen extends Screen {
                 );
 
                 String toggleLabel = isRevealed
-                    ? Text.translatable("takeyourminestream.banwords.hide").getString()
-                    : Text.translatable("takeyourminestream.banwords.show").getString();
+                    ? Text.translatable("takeyourstreamchat.banwords.hide").getString()
+                    : Text.translatable("takeyourstreamchat.banwords.show").getString();
                 int labelWidth = this.textRenderer.getWidth(toggleLabel);
                 int toggleW = Math.max(labelWidth + TOGGLE_BTN_PADDING * 2, 28);
                 int toggleX = btnX - BETWEEN_BUTTONS_SPACING - toggleW;
@@ -181,8 +181,8 @@ public class BanwordConfigScreen extends Screen {
                 }
 
                 String toggleLabel = revealedWords.contains(word)
-                    ? Text.translatable("takeyourminestream.banwords.hide").getString()
-                    : Text.translatable("takeyourminestream.banwords.show").getString();
+                    ? Text.translatable("takeyourstreamchat.banwords.hide").getString()
+                    : Text.translatable("takeyourstreamchat.banwords.show").getString();
                 int labelWidth = this.textRenderer.getWidth(toggleLabel);
                 int toggleW = Math.max(labelWidth + TOGGLE_BTN_PADDING * 2, 28);
                 int toggleX = btnX - BETWEEN_BUTTONS_SPACING - toggleW;

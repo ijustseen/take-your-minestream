@@ -3,7 +3,7 @@ package takeyourminestream.ijustseen.commands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import takeyourminestream.ijustseen.interfaces.ITwitchManager;
+import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
@@ -15,13 +15,13 @@ import java.util.Set;
  * Менеджер команд мода
  */
 public class CommandManager {
-    private final ITwitchManager twitchManager;
+    private final IChatConnectionManager chatConnectionManager;
     private final IBanwordManager banwordManager;
     private final BlockedUsernameManager blockedUsernameManager;
     private final MessageSpawner messageSpawner;
 
-    public CommandManager(ITwitchManager twitchManager, IBanwordManager banwordManager, BlockedUsernameManager blockedUsernameManager, MessageSpawner messageSpawner) {
-        this.twitchManager = twitchManager;
+    public CommandManager(IChatConnectionManager chatConnectionManager, IBanwordManager banwordManager, BlockedUsernameManager blockedUsernameManager, MessageSpawner messageSpawner) {
+        this.chatConnectionManager = chatConnectionManager;
         this.banwordManager = banwordManager;
         this.blockedUsernameManager = blockedUsernameManager;
         this.messageSpawner = messageSpawner;
@@ -29,8 +29,13 @@ public class CommandManager {
 
     public void registerCommands() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            // Основная команда minestream
-            dispatcher.register(ClientCommandManager.literal("minestream")
+            dispatcher.register(buildRootCommand("streamchat"));
+            dispatcher.register(buildRootCommand("minestream"));
+        });
+    }
+
+    private com.mojang.brigadier.builder.LiteralArgumentBuilder<net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource> buildRootCommand(String name) {
+        return ClientCommandManager.literal(name)
                 .then(ClientCommandManager.literal("test")
                     .then(ClientCommandManager.argument("message", StringArgumentType.greedyString())
                         .executes(context -> {
@@ -39,11 +44,16 @@ public class CommandManager {
                         })))
                 .then(ClientCommandManager.literal("stop")
                     .executes(context -> executeStopCommand()))
+                .then(ClientCommandManager.literal("chat")
+                    .then(ClientCommandManager.literal("start")
+                        .executes(context -> executeChatStartCommand()))
+                    .then(ClientCommandManager.literal("stop")
+                        .executes(context -> executeChatStopCommand())))
                 .then(ClientCommandManager.literal("twitch")
                     .then(ClientCommandManager.literal("start")
-                        .executes(context -> executeTwitchStartCommand()))
+                        .executes(context -> executeChatStartCommand()))
                     .then(ClientCommandManager.literal("stop")
-                        .executes(context -> executeTwitchStopCommand())))
+                        .executes(context -> executeChatStopCommand())))
                 .then(ClientCommandManager.literal("banword")
                     .then(ClientCommandManager.literal("add")
                         .then(ClientCommandManager.argument("word", StringArgumentType.word())
@@ -75,9 +85,7 @@ public class CommandManager {
                     .then(ClientCommandManager.literal("list")
                         .executes(context -> executeBlockuserListCommand())))
                 .then(ClientCommandManager.literal("help")
-                    .executes(context -> executeHelpCommand()))
-            );
-        });
+                    .executes(context -> executeHelpCommand()));
     }
 
     private int executeTestCommand(String message) {
@@ -88,18 +96,18 @@ public class CommandManager {
 
     private int executeStopCommand() {
         messageSpawner.setCurrentMessage("");
-        twitchManager.disconnect();
+        chatConnectionManager.disconnect();
         Logger.sendInfoToPlayer("Мод остановлен");
         return 1;
     }
 
-    private int executeTwitchStartCommand() {
-        twitchManager.connect(messageSpawner);
+    private int executeChatStartCommand() {
+        chatConnectionManager.connect(messageSpawner);
         return 1;
     }
 
-    private int executeTwitchStopCommand() {
-        twitchManager.disconnect();
+    private int executeChatStopCommand() {
+        chatConnectionManager.disconnect();
         return 1;
     }
 
@@ -154,18 +162,15 @@ public class CommandManager {
     }
 
     private int executeHelpCommand() {
-        Logger.sendInfoToPlayer("=== Take Your MineStream - Помощь ===");
-        Logger.sendInfoToPlayer("/minestream test <сообщение> - Тестовое сообщение");
-        Logger.sendInfoToPlayer("/minestream stop - Остановить мод");
-        Logger.sendInfoToPlayer("/minestream twitch start - Подключиться к Twitch");
-        Logger.sendInfoToPlayer("/minestream twitch stop - Отключиться от Twitch");
-        Logger.sendInfoToPlayer("/minestream banword add <слово> - Добавить банворд");
-        Logger.sendInfoToPlayer("/minestream banword remove <слово> - Удалить банворд");
-        Logger.sendInfoToPlayer("/minestream banword list - Список банвордов");
-        Logger.sendInfoToPlayer("/minestream blockuser add <ник> - Заблокировать ник");
-        Logger.sendInfoToPlayer("/minestream blockuser remove <ник> - Разблокировать ник");
-        Logger.sendInfoToPlayer("/minestream blockuser list - Список заблокированных ников");
-        Logger.sendInfoToPlayer("/minestream help - Показать эту справку");
+        Logger.sendInfoToPlayer("=== Take Your Stream Chat — команды ===");
+        Logger.sendInfoToPlayer("/streamchat test <сообщение> — тестовое сообщение");
+        Logger.sendInfoToPlayer("/streamchat stop — очистить сообщения и отключить чаты");
+        Logger.sendInfoToPlayer("/streamchat chat start — подключиться ко всем включённым платформам");
+        Logger.sendInfoToPlayer("/streamchat chat stop — отключиться от чатов");
+        Logger.sendInfoToPlayer("/streamchat banword add|remove|list — банворды");
+        Logger.sendInfoToPlayer("/streamchat blockuser add|remove|list — чёрный список ников");
+        Logger.sendInfoToPlayer("/streamchat help — эта справка");
+        Logger.sendInfoToPlayer("Алиас: /minestream … (то же самое)");
         return 1;
     }
-} 
+}

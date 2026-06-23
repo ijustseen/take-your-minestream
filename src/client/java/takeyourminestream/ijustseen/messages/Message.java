@@ -1,6 +1,11 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.font.TextRenderer;
+import takeyourminestream.ijustseen.core.MessagePanelConstants;
+import takeyourminestream.ijustseen.ui.gui.MessageCardLayout;
+
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -29,6 +34,11 @@ public class Message {
     private float followBasisYaw;
     private boolean pinned;
     private Long historySourceId;
+
+    private volatile MessagePanelLayout.Dimensions cachedWorldLayout;
+    private volatile List<EmoteTextLayout.LineContent> cachedEmoteLines;
+    private volatile MessageCardLayout.Layout cachedHudLayout;
+    private volatile int cachedHudMaxWidth = -1;
     
     public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch) {
         this(text, position, spawnTick, yaw, pitch, null, Vec3d.ZERO, java.util.Collections.emptyList());
@@ -65,6 +75,26 @@ public class Message {
 
     public java.util.List<MessageEmote> getEmotes() {
         return emotes;
+    }
+
+    /** Ключ пиксельной иконки платформы (provider "platform") или null. */
+    public String getPlatformIconKey() {
+        for (MessageEmote emote : emotes) {
+            if ("platform".equals(emote.getProvider())) {
+                return emote.getEmoteId();
+            }
+        }
+        return null;
+    }
+
+    /** Есть ли инлайн-эмоуты, встроенные в текст (исключая иконку платформы). */
+    public boolean hasInlineEmotes() {
+        for (MessageEmote emote : emotes) {
+            if (emote.getStartIndex() >= 0) {
+                return true;
+            }
+        }
+        return false;
     }
     
     public Vec3d getPosition() { 
@@ -115,4 +145,42 @@ public class Message {
         int baseAge = currentTick - (int)spawnTick;
         return Math.max(0, baseAge - frozenTicks);
     }
-} 
+
+    public MessagePanelLayout.Dimensions getWorldLayout(TextRenderer textRenderer) {
+        MessagePanelLayout.Dimensions cached = cachedWorldLayout;
+        if (cached == null) {
+            cached = MessagePanelLayout.compute(textRenderer, this);
+            cachedWorldLayout = cached;
+        }
+        return cached;
+    }
+
+    public List<EmoteTextLayout.LineContent> getEmoteLines(TextRenderer textRenderer) {
+        if (!hasInlineEmotes()) {
+            return List.of();
+        }
+        List<EmoteTextLayout.LineContent> cached = cachedEmoteLines;
+        if (cached == null) {
+            cached = EmoteTextLayout.wrap(
+                s -> textRenderer.getWidth(s),
+                getText(),
+                getEmotes(),
+                MessagePanelLayout.EMOTE_ICON_SIZE + MessagePanelLayout.EMOTE_ICON_SPACING,
+                MessagePanelConstants.MESSAGE_WRAP_WIDTH,
+                getWorldLayout(textRenderer).firstLineIconOffset()
+            );
+            cachedEmoteLines = cached;
+        }
+        return cached;
+    }
+
+    public MessageCardLayout.Layout getHudLayout(TextRenderer textRenderer, int maxAvailableWidth) {
+        if (cachedHudLayout != null && cachedHudMaxWidth == maxAvailableWidth) {
+            return cachedHudLayout;
+        }
+        MessageCardLayout.Layout layout = MessageCardLayout.computeHud(textRenderer, this, maxAvailableWidth);
+        cachedHudLayout = layout;
+        cachedHudMaxWidth = maxAvailableWidth;
+        return layout;
+    }
+}

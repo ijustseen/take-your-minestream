@@ -5,6 +5,13 @@ package takeyourminestream.ijustseen.config;
  */
 public class ModConfigData {
     private String twitchChannelName = "ijustseen";
+    private boolean twitchEnabled = true;
+    private boolean youtubeEnabled = false;
+    private String youtubeChannel = "";
+    private boolean kickEnabled = false;
+    private String kickChannel = "";
+    private boolean tiktokEnabled = false;
+    private String tiktokUsername = "";
     // Старые поля для обратной совместимости (тики)
     private int messageLifetimeTicks = 80;
     private int messageFallTicks = 20;
@@ -13,6 +20,8 @@ public class ModConfigData {
     private double messageFallSeconds = 1.0;     // 20 тиков @20 TPS
     private boolean enableFreezingOnView = true;
     private double maxFreezeDistance = 15.0;
+    private int messageSpawnMinDistance = 2;
+    private int messageSpawnMaxDistance = 5;
     private MessageSpawnMode messageSpawnMode = MessageSpawnMode.FRONT_OF_PLAYER;
     private boolean enableAutomoderation = false;
     private int particleMinCount = 10;
@@ -21,6 +30,7 @@ public class ModConfigData {
     private String[] nickColors = {"§c", "§9", "§a", "§5"};
     private MessageScale messageScale = MessageScale.NORMAL;
     private boolean showMessageBackground = true;
+    private boolean enableColorEmojis = true;
     private boolean followPlayer = false;
     private boolean enableClickToRemove = true;
     private boolean enableMessageSound = true;
@@ -36,12 +46,21 @@ public class ModConfigData {
     public int getChanceForSpawn() { return chanceForSpawn; }
     public int getMessageHistoryMaxSize() { return messageHistoryMaxSize; }
     public String getTwitchChannelName() { return twitchChannelName; }
+    public boolean isTwitchEnabled() { return twitchEnabled; }
+    public boolean isYoutubeEnabled() { return youtubeEnabled; }
+    public String getYoutubeChannel() { return youtubeChannel; }
+    public boolean isKickEnabled() { return kickEnabled; }
+    public String getKickChannel() { return kickChannel; }
+    public boolean isTiktokEnabled() { return tiktokEnabled; }
+    public String getTiktokUsername() { return tiktokUsername; }
     public int getMessageLifetimeTicks() { return messageLifetimeTicks; }
     public int getMessageFallTicks() { return messageFallTicks; }
     public double getMessageLifetimeSeconds() { return messageLifetimeSeconds; }
     public double getMessageFallSeconds() { return messageFallSeconds; }
     public boolean isEnableFreezingOnView() { return enableFreezingOnView; }
     public double getMaxFreezeDistance() { return maxFreezeDistance; }
+    public int getMessageSpawnMinDistance() { return messageSpawnMinDistance; }
+    public int getMessageSpawnMaxDistance() { return messageSpawnMaxDistance; }
     public MessageSpawnMode getMessageSpawnMode() { return messageSpawnMode; }
     public boolean isEnableAutomoderation() { return enableAutomoderation; }
     public int getParticleMinCount() { return particleMinCount; }
@@ -50,6 +69,7 @@ public class ModConfigData {
     public String[] getNickColors() { return nickColors; }
     public MessageScale getMessageScale() { return messageScale; }
     public boolean isShowMessageBackground() { return showMessageBackground; }
+    public boolean isEnableColorEmojis() { return enableColorEmojis; }
     public boolean isFollowPlayer() { return followPlayer; }
     public boolean isEnableClickToRemove() { return enableClickToRemove; }
     public boolean isEnableMessageSound() { return enableMessageSound; }
@@ -63,12 +83,21 @@ public class ModConfigData {
     public void setChanceForSpawn(int chanceForSpawn) { this.chanceForSpawn = chanceForSpawn; }
     public void setMessageHistoryMaxSize(int messageHistoryMaxSize) { this.messageHistoryMaxSize = Math.max(10, messageHistoryMaxSize); }
     public void setTwitchChannelName(String twitchChannelName) { this.twitchChannelName = twitchChannelName; }
+    public void setTwitchEnabled(boolean twitchEnabled) { this.twitchEnabled = twitchEnabled; }
+    public void setYoutubeEnabled(boolean youtubeEnabled) { this.youtubeEnabled = youtubeEnabled; }
+    public void setYoutubeChannel(String youtubeChannel) { this.youtubeChannel = youtubeChannel != null ? youtubeChannel : ""; }
+    public void setKickEnabled(boolean kickEnabled) { this.kickEnabled = kickEnabled; }
+    public void setKickChannel(String kickChannel) { this.kickChannel = kickChannel != null ? kickChannel : ""; }
+    public void setTiktokEnabled(boolean tiktokEnabled) { this.tiktokEnabled = tiktokEnabled; }
+    public void setTiktokUsername(String tiktokUsername) { this.tiktokUsername = tiktokUsername != null ? tiktokUsername : ""; }
     public void setMessageLifetimeTicks(int messageLifetimeTicks) { this.messageLifetimeTicks = messageLifetimeTicks; }
     public void setMessageFallTicks(int messageFallTicks) { this.messageFallTicks = messageFallTicks; }
     public void setMessageLifetimeSeconds(double messageLifetimeSeconds) { this.messageLifetimeSeconds = messageLifetimeSeconds; }
     public void setMessageFallSeconds(double messageFallSeconds) { this.messageFallSeconds = messageFallSeconds; }
     public void setEnableFreezingOnView(boolean enableFreezingOnView) { this.enableFreezingOnView = enableFreezingOnView; }
     public void setMaxFreezeDistance(double maxFreezeDistance) { this.maxFreezeDistance = maxFreezeDistance; }
+    public void setMessageSpawnMinDistance(int messageSpawnMinDistance) { this.messageSpawnMinDistance = Math.max(1, messageSpawnMinDistance); }
+    public void setMessageSpawnMaxDistance(int messageSpawnMaxDistance) { this.messageSpawnMaxDistance = Math.max(1, messageSpawnMaxDistance); }
     public void setMessageSpawnMode(MessageSpawnMode messageSpawnMode) { this.messageSpawnMode = messageSpawnMode; }
     public void setEnableAutomoderation(boolean enableAutomoderation) { this.enableAutomoderation = enableAutomoderation; }
     public void setParticleMinCount(int particleMinCount) { this.particleMinCount = particleMinCount; }
@@ -77,6 +106,7 @@ public class ModConfigData {
     public void setNickColors(String[] nickColors) { this.nickColors = nickColors; }
     public void setMessageScale(MessageScale messageScale) { this.messageScale = messageScale; }
     public void setShowMessageBackground(boolean showMessageBackground) { this.showMessageBackground = showMessageBackground; }
+    public void setEnableColorEmojis(boolean enableColorEmojis) { this.enableColorEmojis = enableColorEmojis; }
     public void setFollowPlayer(boolean followPlayer) { this.followPlayer = followPlayer; }
     public void setEnableClickToRemove(boolean enableClickToRemove) { this.enableClickToRemove = enableClickToRemove; }
     public void setEnableMessageSound(boolean enableMessageSound) { this.enableMessageSound = enableMessageSound; }

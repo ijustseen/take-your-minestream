@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 
 public class FilteringManager {
-    private static final String USER_FILE_NAME = "take-your-minestream-regexps.json";
+    private static final String USER_FILE_NAME = "take-your-stream-chat-regexps.json";
 
     private static FilteringManager instance;
 

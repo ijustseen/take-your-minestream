@@ -16,8 +16,24 @@ import java.util.List;
 public final class MessageEmoteGuiRenderer {
     public static final int ICON_SIZE = 12;
     public static final int ICON_SPACING = 1;
+    public static final int PLATFORM_ICON_SIZE = 10;
 
     private MessageEmoteGuiRenderer() {}
+
+    /** Рисует пиксельную иконку платформы и возвращает X после неё. */
+    public static int drawPlatformIcon(DrawContext context, String iconKey, int x, int y) {
+        Identifier texture = TwitchEmoteTextureCache.getTextureIdentifier("platform", iconKey);
+        if (texture == null) {
+            return x;
+        }
+        return drawGuiIcon(context, texture, x, y, PLATFORM_ICON_SIZE);
+    }
+
+    /** Рисует квадратную GUI-иконку из ресурсов и возвращает X после неё. */
+    public static int drawGuiIcon(DrawContext context, Identifier texture, int x, int y, int size) {
+        context.drawTexture(texture, x, y, size, size, 0f, 0f, size, size, size, size);
+        return x + size + 2;
+    }
 
     public static List<MessageEmote> remapEmotesToBody(String rawText, List<MessageEmote> emotes) {
         if (emotes == null || emotes.isEmpty()) {
@@ -90,8 +106,10 @@ public final class MessageEmoteGuiRenderer {
             if (texture != null) {
                 context.drawTexture(texture, drawX, y - 1, ICON_SIZE, ICON_SIZE, 0f, 0f, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
                 drawX += ICON_SIZE + ICON_SPACING;
-            } else {
+            } else if (!"emoji".equals(emote.getProvider())) {
                 drawX = drawSegment(context, textRenderer, emote.getEmoteCode(), drawX, y, color);
+            } else {
+                drawX += ICON_SIZE + ICON_SPACING;
             }
             cursor = emote.getEndIndex() + 1;
         }

@@ -21,19 +21,23 @@ import java.util.logging.Logger;
 
 public class BanwordManager implements IBanwordManager {
     private static final Logger LOGGER = Logger.getLogger(BanwordManager.class.getName());
-    private static final String RESOURCE_PATH = "/assets/take-your-minestream/banned_words.json";
-    private static final String USER_FILE_NAME = "take-your-minestream-banwords.json";
+    private static final String RESOURCE_PATH = "/assets/take-your-stream-chat/banned_words.json";
+    private static final String USER_FILE_NAME = "take-your-stream-chat-banwords.json";
     private static final Path USER_FILE_PATH;
     private static BanwordManager instance;
 
     static {
         Path newPath = StoragePaths.getModRootDir().resolve(USER_FILE_NAME);
         Path legacyPath = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);
+        Path legacyModFile = StoragePaths.getLegacyModRootDir().resolve("take-your-minestream-banwords.json");
+        Path legacyGameModFile = StoragePaths.getLegacyGameModRootDir().resolve("take-your-minestream-banwords.json");
         try {
             StoragePaths.ensureModRootDir();
         } catch (Exception ignored) {
         }
         StoragePaths.migrateFileIfNeeded(legacyPath, newPath);
+        StoragePaths.migrateFileIfNeeded(legacyModFile, newPath);
+        StoragePaths.migrateFileIfNeeded(legacyGameModFile, newPath);
         USER_FILE_PATH = newPath;
     }
     
@@ -53,7 +57,7 @@ public class BanwordManager implements IBanwordManager {
     @Override
     public void loadBanwords() {
         try (InputStreamReader reader = new InputStreamReader(
-                BanwordManager.class.getClassLoader().getResourceAsStream("assets/take-your-minestream/banned_words.json"),
+                BanwordManager.class.getClassLoader().getResourceAsStream("assets/take-your-stream-chat/banned_words.json"),
                 StandardCharsets.UTF_8)) {
             Type listType = new TypeToken<List<String>>(){}.getType();
             List<String> words = new Gson().fromJson(reader, listType);

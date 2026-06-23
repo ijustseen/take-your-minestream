@@ -41,7 +41,7 @@ public class MessageParticle {
 
     public void tick() {
         position = position.add(velocity);
-        velocity = new Vec3d(velocity.x * 0.96, velocity.y * 0.93 - 0.006, velocity.z * 0.96);
+        velocity = new Vec3d(velocity.x * 0.92, velocity.y * 0.90 - 0.004, velocity.z * 0.92);
         rotation += rotationSpeed;
         ageTicks++;
     }

@@ -10,6 +10,7 @@ import takeyourminestream.ijustseen.core.MessagePanelConstants;
 import takeyourminestream.ijustseen.core.text.ChatMessageParser;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
+import takeyourminestream.ijustseen.messages.EmoteTextLayout;
 import takeyourminestream.ijustseen.messages.Message;
 
 /** Отрисовка одной карточки сообщения в GUI-истории. */
@@ -35,7 +36,7 @@ public final class MessageCardRenderer {
         boolean pinnedInWorld
     ) {
         float panelAlpha = visibleInWorld ? alpha : alpha * 0.55f;
-        MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), panelAlpha);
+        MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), panelAlpha, borderColorFor(message));
 
         int innerX = x + MessagePanelConstants.PADDING_X;
         int innerY = y + MessagePanelConstants.PADDING_Y;
@@ -50,16 +51,22 @@ public final class MessageCardRenderer {
                 usernameLabel.formatted(Formatting.YELLOW, Formatting.UNDERLINE);
             }
 
-            context.drawTextWithShadow(textRenderer, usernameLabel, innerX, innerY, visibleInWorld ? 0xFFFFFFFF : 0xFF888888);
+            int usernameX = innerX;
+            String platformIconKey = message.getPlatformIconKey();
+            if (platformIconKey != null) {
+                usernameX = MessageEmoteGuiRenderer.drawPlatformIcon(context, platformIconKey, innerX, innerY);
+            }
+
+            context.drawTextWithShadow(textRenderer, usernameLabel, usernameX, innerY, visibleInWorld ? 0xFFFFFFFF : 0xFF888888);
             int usernameWidth = textRenderer.getWidth(usernameLabel);
-            usernameHitbox = new UsernameHitbox(innerX, innerY, usernameWidth, MessageCardLayout.USERNAME_ROW_HEIGHT);
+            usernameHitbox = new UsernameHitbox(usernameX, innerY, usernameWidth, MessageCardLayout.USERNAME_ROW_HEIGHT);
 
             if (blocked) {
-                Text blockedBadge = Text.translatable("takeyourminestream.history.blocked_badge").formatted(Formatting.RED);
+                Text blockedBadge = Text.translatable("takeyourstreamchat.history.blocked_badge").formatted(Formatting.RED);
                 context.drawTextWithShadow(
                     textRenderer,
                     blockedBadge,
-                    innerX + usernameWidth + 4,
+                    usernameX + usernameWidth + 4,
                     innerY,
                     0xFFFF5555
                 );
@@ -70,16 +77,19 @@ public final class MessageCardRenderer {
 
         int bodyColor = applyAlpha(visibleInWorld ? (hovered ? 0xFFFFFFAA : 0xFFFFFFFF) : 0xFF888888, alpha);
         if (layout.emoteBodyLine() != null) {
-            MessageCardLayout.EmoteBodyLine emoteLine = layout.emoteBodyLine();
-            MessageEmoteGuiRenderer.drawLine(
-                context,
-                textRenderer,
-                emoteLine.text(),
-                emoteLine.emotes(),
-                innerX,
-                innerY,
-                bodyColor
-            );
+            int lineY = innerY;
+            for (EmoteTextLayout.LineContent line : layout.emoteBodyLine().lines()) {
+                MessageEmoteGuiRenderer.drawLine(
+                    context,
+                    textRenderer,
+                    line.text(),
+                    line.emotes(),
+                    innerX,
+                    lineY,
+                    bodyColor
+                );
+                lineY += MessageCardLayout.emoteLineAdvance(textRenderer, line);
+            }
         } else {
             for (OrderedText line : layout.bodyLines()) {
                 context.drawTextWithShadow(textRenderer, line, innerX, innerY, bodyColor);
@@ -107,7 +117,7 @@ public final class MessageCardRenderer {
         float alpha
     ) {
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
-            MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), alpha);
+            MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), alpha, borderColorFor(message));
         }
 
         int innerX = x + MessagePanelConstants.PADDING_X;
@@ -119,13 +129,19 @@ public final class MessageCardRenderer {
             if (blocked) {
                 usernameLabel.formatted(Formatting.DARK_RED, Formatting.STRIKETHROUGH);
             }
-            context.drawTextWithShadow(textRenderer, usernameLabel, innerX, innerY, applyAlpha(0xFFFFFFFF, alpha));
+            int usernameX = innerX;
+            String platformIconKey = message.getPlatformIconKey();
+            if (platformIconKey != null) {
+                usernameX = MessageEmoteGuiRenderer.drawPlatformIcon(context, platformIconKey, innerX, innerY);
+            }
+            int usernameColor = usernameColor(message, alpha);
+            context.drawTextWithShadow(textRenderer, usernameLabel, usernameX, innerY, usernameColor);
             if (blocked) {
-                Text blockedBadge = Text.translatable("takeyourminestream.history.blocked_badge").formatted(Formatting.RED);
+                Text blockedBadge = Text.translatable("takeyourstreamchat.history.blocked_badge").formatted(Formatting.RED);
                 context.drawTextWithShadow(
                     textRenderer,
                     blockedBadge,
-                    innerX + textRenderer.getWidth(usernameLabel) + 4,
+                    usernameX + textRenderer.getWidth(usernameLabel) + 4,
                     innerY,
                     applyAlpha(0xFFFF5555, alpha)
                 );
@@ -135,22 +151,38 @@ public final class MessageCardRenderer {
 
         int bodyColor = applyAlpha(0xFFFFFFFF, alpha);
         if (layout.emoteBodyLine() != null) {
-            MessageCardLayout.EmoteBodyLine emoteLine = layout.emoteBodyLine();
-            MessageEmoteGuiRenderer.drawLine(
-                context,
-                textRenderer,
-                emoteLine.text(),
-                emoteLine.emotes(),
-                innerX,
-                innerY,
-                bodyColor
-            );
+            int lineY = innerY;
+            for (EmoteTextLayout.LineContent line : layout.emoteBodyLine().lines()) {
+                MessageEmoteGuiRenderer.drawLine(
+                    context,
+                    textRenderer,
+                    line.text(),
+                    line.emotes(),
+                    innerX,
+                    lineY,
+                    bodyColor
+                );
+                lineY += MessageCardLayout.emoteLineAdvance(textRenderer, line);
+            }
         } else {
             for (OrderedText line : layout.bodyLines()) {
                 context.drawTextWithShadow(textRenderer, line, innerX, innerY, bodyColor);
                 innerY += textRenderer.fontHeight;
             }
         }
+    }
+
+    private static int usernameColor(Message message, float alpha) {
+        Integer rgb = message.getAuthorColorRgb();
+        if (rgb != null) {
+            return applyAlpha(0xFF000000 | (rgb & 0xFFFFFF), alpha);
+        }
+        return applyAlpha(0xFFFFFFFF, alpha);
+    }
+
+    private static int borderColorFor(Message message) {
+        return takeyourminestream.ijustseen.integration.chat.ChatPlatform
+            .accentColorForIconKey(message.getPlatformIconKey());
     }
 
     private static int applyAlpha(int color, float alpha) {

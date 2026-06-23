@@ -1,81 +1,77 @@
-# Take Your MineStream
+# Take Your Stream Chat
 
-Bring your Twitch chat directly into Minecraft.
+**Live chat from Twitch, YouTube, Kick & TikTok — right inside Minecraft.**
 
-Turn viewer messages into in-game moments with clean visuals, smart moderation, and streamer-friendly controls.
-
-## ✨ Highlights
-
-- 💬 **Live chat in Minecraft** — show messages in 3D space or HUD mode
-- 🧠 **Smart moderation** — banwords, regex filters, and Twitch badge role filter
-- 🎭 **Emote support** — Twitch and 7TV emotes in message rendering
-- 📌 **Pinned messages** — keep important chat visible in-world (saved per world/server)
-- 📜 **Message history** — browse chat, pin/unpin, replay, or block users from a two-column screen
-- ⚙️ **In-game setup** — configure channel and behavior without leaving Minecraft
-- 🚀 **Lightweight** — built for smooth gameplay while streaming
-
-## 🕹️ What you can do
-
-- Display chat as floating world messages or as a HUD overlay
-- Pause message lifetime while looking at messages (easy reading during action)
-- Toggle Twitch connection in-game
-- Tune timing, scale, visuals, and spawn behavior
-- Click to remove messages; pin, drag, and unpin in-world
-- Open message history: pin again, replay, or block a username
-- Interaction safety: click/pin actions work only with an empty main hand
-
-## 🚀 Quick start
-
-1. Install **Fabric Loader** and **Fabric API** for your Minecraft version
-2. Download the matching release jar (see **Compatibility** below)
-3. Put the `.jar` into your `mods` folder
-4. Launch the game and press `]` to open settings
-5. Enter your Twitch channel name and connect
-
-> **Mod Menu** is optional — if installed, the mod also appears in the mod list. Settings always work via `]`.
-
-## ⌨️ Commands
-
-- `/minestream test <message>` — show a test message
-- `/minestream twitch start` — connect to Twitch
-- `/minestream twitch stop` — disconnect from Twitch
-- `/minestream banword add|remove|list` — manage filter words
-- `/minestream blockuser add|remove|list` — manage blocked usernames
-- `/minestream help` — list all commands
-
-## 🔧 Compatibility
-
-Pick the jar that matches your game version:
-
-| Minecraft | Release file | Java |
-|-----------|--------------|------|
-| **1.21** | `tyms-1.4.3+1.21.jar` | 21 |
-| **1.21.1** | `tyms-1.4.3+1.21.1.jar` | 21 |
-| **1.21.4** | `tyms-1.4.3+1.21.4.jar` | 21 |
-| **1.21.8** | `tyms-1.4.3+1.21.8.jar` | 21 |
-| **1.21.10** | `tyms-1.4.3+1.21.10.jar` | 21 |
-| **1.21.11** | `tyms-1.4.3+1.21.11.jar` | 21 |
-| **26.1** / **26.1.1** / **26.1.2** | `tyms-1.4.3+26.1.jar` | 25 |
-
-**Required:** Fabric Loader + Fabric API (no other mods required).
-
-**Optional:** Mod Menu.
-
-## 🎮 Keybinds
-
-- `]` — open mod settings
-- `[` — quick IRC start/stop toggle
-
-## 🛠️ Customize your stream look
-
-- Message mode: world / HUD
-- Message timing and fall behavior
-- Scaling, sound, and particle settings
-- Moderation: banwords, regex rules, blocked users, Twitch role filter
-- Message history size and pinned-message persistence
+Show viewer messages as floating cards in the world or as a clean overlay in the corner. Built for streamers who want chat to feel part of the game, not stuck in a browser tab.
 
 ---
 
-**Make chat part of the gameplay.**
+## What it does
 
-For support, issues, and contributions: [GitHub](https://github.com/ijustseen/take-your-minestream)
+- **Connect your platforms** — turn on Twitch, YouTube, Kick and/or TikTok in settings, enter channel names, play
+- **Two looks** — messages in 3D space in front of you, or a **HUD** stack in the top-right (still visible when you open inventory)
+- **Emotes** — Twitch and 7TV emotes show inline where supported; **color Unicode emojis** (optional) use your system emoji font
+- **Pin the good stuff** — keep a message in the world; pins save per world/server
+- **Chat history** — scroll back, replay a message, pin again, or block someone
+- **Filters** — hide words you don't want, filter by chatter role (subs, VIPs, mods), block usernames
+
+---
+
+## Quick start (2 minutes)
+
+1. Install **Fabric** and **Fabric API** for your Minecraft version (pick the matching release on this page)
+2. Download the jar and put it in your `mods` folder, then start the game
+
+3. Press **`]`** to open settings
+4. Enable the platforms you use, type your channel/username for each, **Save**
+5. Play — messages appear as chat comes in
+
+> You don't need Mod Menu. If you have it, the mod shows up there too. **Fabric API** is required; **Mod Menu** is optional.
+
+---
+
+## Controls
+
+| Key | Action |
+|-----|--------|
+| **`]`** | Open settings |
+| **`[`** | Quick connect / disconnect all enabled chats |
+
+**In 3D mode** (empty hand):
+
+- **Left click** — dismiss a message (if enabled in settings)
+- **Right click** — pin a message; click the pin icon or hold to drag pinned messages
+
+---
+
+## Commands
+
+Main command: **`/streamchat`** (old **`/minestream`** still works)
+
+| Command | What it does |
+|---------|----------------|
+| `/streamchat test Hello!` | Show a test message |
+| `/streamchat chat start` | Connect all enabled platforms |
+| `/streamchat chat stop` | Disconnect |
+| `/streamchat banword add badword` | Add a filtered word |
+| `/streamchat blockuser add SomeUser` | Block a username |
+| `/streamchat help` | Full list |
+
+---
+
+## Tips for streamers
+
+- **HUD mode** — best if you don't want chat blocking the view; messages stay in the corner
+- **In world mode** — great for "reading chat out loud" moments; look at a message to pause its timer
+- **Spawn chance** — lower it if chat is too fast; the mod won't pile up hundreds of messages
+- **Role filter** — show only subs/VIPs/mods when chat gets noisy
+
+---
+
+## Upgrading from Take Your MineStream (1.x)
+
+This mod was renamed to **Take Your Stream Chat**. Your settings and pinned messages are migrated automatically on first launch. Old jar: `tyms-…` → new jar: `tysc-…`.
+
+---
+
+**Questions or bugs?** [GitHub](https://github.com/ijustseen/take-your-minestream)

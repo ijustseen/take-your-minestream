@@ -3,6 +3,7 @@ package takeyourminestream.ijustseen.messages;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import takeyourminestream.ijustseen.config.MessageSpawnMode;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.config.UnpinMode;
 import takeyourminestream.ijustseen.utils.CameraPositionCompat;
@@ -30,6 +31,10 @@ public class PinnedMessageInteractionManager {
 
     public boolean onRightMousePressed(MinecraftClient client) {
         if (client == null || client.player == null || client.world == null) {
+            return false;
+        }
+
+        if (ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET) {
             return false;
         }
 

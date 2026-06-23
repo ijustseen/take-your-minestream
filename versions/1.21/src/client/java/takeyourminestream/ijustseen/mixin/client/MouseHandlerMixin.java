@@ -10,24 +10,26 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.config.MessageSpawnMode;
+import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageClickHandler;
-import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 
 import java.util.ArrayList;
 
-/** Mixin для обработки кликов по сообщениям (Minecraft 1.21.8). */
+/** Mixin для обработки кликов по 3D-сообщениям. */
 @Mixin(Mouse.class)
 public class MouseHandlerMixin {
     @Shadow @Final private MinecraftClient client;
 
     @Inject(method = "onMouseButton", at = @At("HEAD"), cancellable = true)
     private void onMouseButton(long window, int button, int action, int mods, CallbackInfo ci) {
-        if (client.player == null || client.world == null) {
+        if (client.player == null || client.world == null || client.currentScreen != null) {
             return;
         }
 
-        if (client.currentScreen != null) {
+        if (ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET) {
             return;
         }
 
@@ -63,11 +65,7 @@ public class MouseHandlerMixin {
             return;
         }
 
-        if (!takeyourminestream.ijustseen.config.ModConfig.isENABLE_CLICK_TO_REMOVE()) {
-            return;
-        }
-
-        if (button != 0 || action != 1) {
+        if (!ModConfig.isENABLE_CLICK_TO_REMOVE() || button != 0 || action != 1) {
             return;
         }
 

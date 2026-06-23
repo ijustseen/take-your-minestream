@@ -37,11 +37,28 @@ public final class MessagePanelGuiRenderer {
     }
 
     public static void drawPanel(DrawContext context, int x, int y, int width, int height, float alpha) {
-        int color = alpha >= 1.0f ? -1 : ((int) (alpha * 255.0f) << 24) | 0xFFFFFF;
+        drawPanel(context, x, y, width, height, alpha, MessagePanelConstants.DEFAULT_BORDER_RGB);
+    }
+
+    public static void drawPanel(DrawContext context, int x, int y, int width, int height, float alpha, int borderRgb) {
+        int alphaBits = ((int) (Math.min(1.0f, alpha) * 255.0f)) << 24;
+        drawSlices(context, MessagePanelConstants.PANEL_BASE_TEXTURE, x, y, width, height, alphaBits | 0xFFFFFF);
+        drawSlices(context, MessagePanelConstants.PANEL_BORDER_TEXTURE, x, y, width, height, alphaBits | (borderRgb & 0xFFFFFF));
+    }
+
+    private static void drawSlices(
+        DrawContext context,
+        net.minecraft.util.Identifier texture,
+        int x,
+        int y,
+        int width,
+        int height,
+        int color
+    ) {
         for (MessagePanel9Slice.GuiSlice slice : MessagePanel9Slice.guiSlices(x, y, width, height)) {
             context.drawTexture(
                 RenderLayer::getGuiTextured,
-                MessagePanelConstants.PANEL_TEXTURE,
+                texture,
                 slice.x(),
                 slice.y(),
                 slice.texU(),

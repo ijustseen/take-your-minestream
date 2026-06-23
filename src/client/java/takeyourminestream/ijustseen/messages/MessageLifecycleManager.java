@@ -87,8 +87,7 @@ public class MessageLifecycleManager {
                 if (message.isPinned()) {
                     continue;
                 }
-                if (MessageViewDetector.isPlayerLookingAtMessage(client, message.getPosition(), message.getYaw(), message.getPitch(), message.getText(), 
-                                                               tickCounter, message.getSpawnTick(), message.getFrozenTicks())) {
+                if (MessageViewDetector.isPlayerLookingAtMessage(client, message, tickCounter)) {
                     message.incrementFrozenTicks();
                 }
             }
@@ -103,19 +102,7 @@ public class MessageLifecycleManager {
                     return false;
                 }
                 int effectiveAge = message.getEffectiveAge(tickCounter);
-                // Спавним партиклы за тик до удаления
-                if (!hudMode && effectiveAge == removeAfter - 1 && !spawnedParticlesForMessages.contains(message)) {
-                    if (particleManager != null) {
-                        Vec3d finalPos = MessageViewDetector.calculateFallingPosition(
-                            message.getPosition(),
-                            effectiveAge,
-                            message.getYaw(),
-                            message.getPitch()
-                        );
-                        MessageParticleSpawner.spawnParticlesForMessage(message, particleManager, client, finalPos);
-                        spawnedParticlesForMessages.add(message);
-                    }
-                }
+                trySpawnBreakParticles(message, client, effectiveAge, removeAfter, hudMode);
                 if (effectiveAge > removeAfter) {
                     spawnedParticlesForMessages.remove(message);
                     return true;
@@ -127,19 +114,8 @@ public class MessageLifecycleManager {
                 if (message.isPinned()) {
                     return false;
                 }
-                int effectiveAge = tickCounter - (int)message.getSpawnTick();
-                if (!hudMode && effectiveAge == removeAfter - 1 && !spawnedParticlesForMessages.contains(message)) {
-                    if (particleManager != null) {
-                        Vec3d finalPos = MessageViewDetector.calculateFallingPosition(
-                            message.getPosition(),
-                            effectiveAge,
-                            message.getYaw(),
-                            message.getPitch()
-                        );
-                        MessageParticleSpawner.spawnParticlesForMessage(message, particleManager, client, finalPos);
-                        spawnedParticlesForMessages.add(message);
-                    }
-                }
+                int effectiveAge = tickCounter - (int) message.getSpawnTick();
+                trySpawnBreakParticles(message, client, effectiveAge, removeAfter, hudMode);
                 if (effectiveAge > removeAfter) {
                     spawnedParticlesForMessages.remove(message);
                     return true;
@@ -147,6 +123,33 @@ public class MessageLifecycleManager {
                 return false;
             });
         }
+    }
+
+    private void trySpawnBreakParticles(
+        Message message,
+        MinecraftClient client,
+        int effectiveAge,
+        int removeAfter,
+        boolean hudMode
+    ) {
+        if (hudMode || particleManager == null || spawnedParticlesForMessages.contains(message)) {
+            return;
+        }
+        // Партиклы — в конце падения, когда панель «разбивается» (последний кадр fall-анимации).
+        if (effectiveAge < removeAfter - 1) {
+            return;
+        }
+        int shatterAge = removeAfter - 1;
+        Vec3d panelCenter = MessageViewDetector.calculateFallingPosition(
+            message.getPosition(),
+            shatterAge,
+            message.getYaw(),
+            message.getPitch()
+        );
+        MessageParticleSpawner.spawnParticlesForMessage(
+            message, particleManager, client, panelCenter, shatterAge
+        );
+        spawnedParticlesForMessages.add(message);
     }
     
     /**
@@ -294,7 +297,10 @@ public class MessageLifecycleManager {
         if (activeMessages.contains(message)) {
             // Спавним партиклы на текущей позиции
             if (particleManager != null) {
-                MessageParticleSpawner.spawnParticlesForMessage(message, particleManager, client, message.getPosition());
+                int age = message.getEffectiveAge(tickCounter);
+                MessageParticleSpawner.spawnParticlesForMessage(
+                    message, particleManager, client, message.getPosition(), age
+                );
             }
             
             // Удаляем сообщение

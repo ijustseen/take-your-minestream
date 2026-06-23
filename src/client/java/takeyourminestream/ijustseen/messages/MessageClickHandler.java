@@ -2,25 +2,19 @@ package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import takeyourminestream.ijustseen.core.MessagePanelConstants;
 import takeyourminestream.ijustseen.utils.CameraPositionCompat;
 
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.List;
 
 /**
- * Обработчик кликов по сообщениям
+ * Обработчик кликов по 3D-сообщениям в мире.
  */
 public class MessageClickHandler {
-    private static final float CLICK_DISTANCE = 100.0f;
-    private static final int EMOTE_ICON_SIZE = 12;
-    private static final int EMOTE_ICON_SPACING = 1;
+    private static final float CLICK_DISTANCE = (float) takeyourminestream.ijustseen.core.MessagePanelConstants.MESSAGE_INTERACTION_DISTANCE;
 
     public static final class MessageHit {
         private final Message message;
@@ -45,14 +39,7 @@ public class MessageClickHandler {
             return hitPinIcon;
         }
     }
-    
-    /**
-     * Проверяет, был ли клик по сообщению
-     * @param client Minecraft клиент
-     * @param message Сообщение для проверки
-     * @param tickCounter Текущий счетчик тиков
-     * @return true если клик попал по сообщению
-     */
+
     public static boolean isClickOnMessage(MinecraftClient client, Message message, int tickCounter) {
         return findHit(client, message, tickCounter) != null;
     }
@@ -72,34 +59,24 @@ public class MessageClickHandler {
     public static boolean isHitOnPinIcon(MessageHit hit) {
         return hit != null && hit.isHitPinIcon();
     }
-    
-    /**
-     * Проверяет, смотрит ли игрок на сообщение (более точная проверка)
-     * @param client Minecraft клиент
-     * @param message Сообщение для проверки
-     * @return true если игрок смотрит на сообщение
-     */
+
     public static boolean isLookingAtMessage(MinecraftClient client, Message message) {
         if (client.player == null) {
             return false;
         }
-        
+
         Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
         Vec3d messagePos = message.getPosition();
         double distance = cameraPos.distanceTo(messagePos);
-        
+
         if (distance > CLICK_DISTANCE) {
             return false;
         }
-        
-        // Получаем направление взгляда
+
         Vec3d lookVec = client.player.getRotationVec(1.0f);
         Vec3d toMessage = messagePos.subtract(cameraPos).normalize();
-        
-        // Проверяем угол между направлением взгляда и направлением к сообщению
         double dotProduct = lookVec.dotProduct(toMessage);
-        double angleThreshold = Math.cos(Math.toRadians(10.0)); // 10 градусов
-        
+        double angleThreshold = Math.cos(Math.toRadians(10.0));
         return dotProduct >= angleThreshold;
     }
 
@@ -112,47 +89,16 @@ public class MessageClickHandler {
         Vec3d rayDir = client.player.getRotationVec(1.0f).normalize();
 
         Vec3d panelCenter = message.getPosition();
-        if (!message.isPinned()) {
-            int effectiveAge = message.getEffectiveAge(tickCounter);
-            panelCenter = MessageViewDetector.calculateFallingPosition(
-                message.getPosition(),
-                effectiveAge,
-                message.getYaw(),
-                message.getPitch()
-            );
-        }
 
-        double distanceToMessage = rayOrigin.distanceTo(panelCenter);
-        if (distanceToMessage > CLICK_DISTANCE) {
+        if (rayOrigin.distanceTo(panelCenter) > CLICK_DISTANCE) {
             return null;
         }
 
         TextRenderer textRenderer = client.textRenderer;
-        boolean hasEmotes = !message.getEmotes().isEmpty();
-        float totalTextHeight;
-        int maxTextWidth;
-        if (hasEmotes) {
-            totalTextHeight = textRenderer.fontHeight;
-            maxTextWidth = getEmoteAwareLineWidth(textRenderer, message.getText(), message.getEmotes());
-        } else {
-            List<OrderedText> wrappedText = textRenderer.wrapLines(
-                Text.of(message.getText()),
-                MessagePanelConstants.MESSAGE_WRAP_WIDTH
-            );
-            totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
-            maxTextWidth = 0;
-            for (OrderedText line : wrappedText) {
-                maxTextWidth = Math.max(maxTextWidth, textRenderer.getWidth(line));
-            }
-        }
-
-        int panelWidth = maxTextWidth + MessagePanelConstants.PADDING_X * 2;
-        int panelHeight = (int) totalTextHeight + MessagePanelConstants.PADDING_Y * 2;
-        float baseScale = 0.025f;
-        float configScale = takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SCALE().getScale();
-        float finalScale = baseScale * configScale;
-        double rectWidth = panelWidth * finalScale;
-        double rectHeight = panelHeight * finalScale;
+        MessagePanelLayout.Dimensions dimensions = message.getWorldLayout(textRenderer);
+        float finalScale = MessagePanelLayout.worldScale();
+        int effectiveAge = message.isPinned() ? 0 : message.getEffectiveAge(tickCounter);
+        float fallOffsetY = MessagePanelLayout.fallOffsetY(effectiveAge);
 
         Matrix4f worldFromLocal = new Matrix4f()
             .translation((float) panelCenter.x, (float) panelCenter.y, (float) panelCenter.z)
@@ -187,53 +133,18 @@ public class MessageClickHandler {
 
         Vec3d hitLocal = localOrigin.add(localDir.multiply(t));
 
-        // Переводим попадание из world-local в "пиксельные" координаты панели,
-        // используя те же формулы, что и в MessageRenderer (включая инверсию Y).
-        double textSpaceX = (hitLocal.x / finalScale) + (maxTextWidth / 2.0);
-        double textSpaceY = (-hitLocal.y / finalScale) + (totalTextHeight / 2.0);
+        // Те же координаты textSpace, что и в MessageRenderer (инверсия Y из-за scale(..., -scale, ...)).
+        double textSpaceX = (hitLocal.x / finalScale) + (dimensions.maxTextWidth() / 2.0);
+        double textSpaceY = (-hitLocal.y / finalScale) + (dimensions.totalTextHeight() / 2.0) - fallOffsetY;
 
-        double panelX0 = -MessagePanelConstants.PADDING_X;
-        double panelY0 = -MessagePanelConstants.PADDING_Y;
-        double panelX1 = panelX0 + panelWidth;
-        double panelY1 = panelY0 + panelHeight;
-
-        boolean insidePanel = textSpaceX >= panelX0 && textSpaceX <= panelX1
-            && textSpaceY >= panelY0 && textSpaceY <= panelY1;
-        boolean insidePinIcon = false;
-        if (message.isPinned()) {
-            double pinX0 = panelWidth - MessagePanelConstants.PADDING_X - (MessagePanelConstants.PIN_ICON_SIZE / 2.0) + MessagePanelConstants.PIN_ICON_MARGIN;
-            double pinY0 = -MessagePanelConstants.PADDING_Y - (MessagePanelConstants.PIN_ICON_SIZE / 2.0) - MessagePanelConstants.PIN_ICON_MARGIN;
-            double pinX1 = pinX0 + MessagePanelConstants.PIN_ICON_SIZE;
-            double pinY1 = pinY0 + MessagePanelConstants.PIN_ICON_SIZE;
-
-            insidePinIcon = textSpaceX >= pinX0 && textSpaceX <= pinX1
-                && textSpaceY >= pinY0 && textSpaceY <= pinY1;
-        }
+        boolean insidePanel = MessagePanelLayout.isInsidePanel(dimensions, textSpaceX, textSpaceY);
+        boolean insidePinIcon = message.isPinned()
+            && MessagePanelLayout.isInsidePinIcon(dimensions, textSpaceX, textSpaceY);
 
         if (!insidePanel && !insidePinIcon) {
             return null;
         }
 
         return new MessageHit(message, t, insidePinIcon);
-    }
-
-    private static int getEmoteAwareLineWidth(TextRenderer textRenderer, String text, java.util.List<MessageEmote> emotes) {
-        int width = 0;
-        int cursor = 0;
-        java.util.List<MessageEmote> sorted = new java.util.ArrayList<>(emotes);
-        sorted.sort(Comparator.comparingInt(MessageEmote::getStartIndex));
-        for (MessageEmote emote : sorted) {
-            if (emote.getStartIndex() < 0 || emote.getEndIndex() < emote.getStartIndex() || emote.getEndIndex() >= text.length()) continue;
-            if (emote.getStartIndex() < cursor) continue;
-            if (emote.getStartIndex() > cursor) {
-                width += textRenderer.getWidth(text.substring(cursor, emote.getStartIndex()));
-            }
-            width += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
-            cursor = emote.getEndIndex() + 1;
-        }
-        if (cursor < text.length()) {
-            width += textRenderer.getWidth(text.substring(cursor));
-        }
-        return width;
     }
 }

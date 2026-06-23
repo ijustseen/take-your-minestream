@@ -21,7 +21,6 @@ import takeyourminestream.ijustseen.ui.gui.GuiLayerFlush;
 import takeyourminestream.ijustseen.ui.gui.HistoryMessageActionPopup;
 import takeyourminestream.ijustseen.ui.gui.MessageCardLayout;
 import takeyourminestream.ijustseen.ui.gui.MessageCardRenderer;
-import takeyourminestream.ijustseen.ui.gui.TwitchToggleHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +40,8 @@ public class MessageHistoryScreen extends Screen {
     private final BlockedUsernameManager blockedUsernameManager = BlockedUsernameManager.getInstance();
     private final HistoryMessageActionPopup actionPopup = new HistoryMessageActionPopup();
 
-    private int historyScrollOffset = 0;
+    // Открываем историю прокрученной вниз — к самым свежим сообщениям
+    private int historyScrollOffset = Integer.MAX_VALUE;
     private int pinnedScrollOffset = 0;
     private int contentMaxWidth = 0;
     private int panelWidth = 0;
@@ -67,7 +67,7 @@ public class MessageHistoryScreen extends Screen {
     private final List<HistoryCard> pinnedCards = new ArrayList<>();
 
     public MessageHistoryScreen(@Nullable Screen parent, MessageLifecycleManager lifecycleManager) {
-        super(Text.translatable("takeyourminestream.history.title"));
+        super(Text.translatable("takeyourstreamchat.history.title"));
         this.parent = parent;
         this.lifecycleManager = lifecycleManager;
     }
@@ -82,26 +82,18 @@ public class MessageHistoryScreen extends Screen {
         int buttonSpacing = 10;
 
         this.addDrawableChild(ButtonWidget.builder(
-            Text.translatable("takeyourminestream.history.clear"),
+            Text.translatable("takeyourstreamchat.history.clear"),
             btn -> {
                 lifecycleManager.clearMessageHistory();
                 actionPopup.dismiss();
                 updateLayout();
             }
-        ).dimensions(centerX - buttonWidth * 3 / 2 - buttonSpacing, buttonY, buttonWidth, 20).build());
+        ).dimensions(centerX - buttonWidth - buttonSpacing / 2, buttonY, buttonWidth, 20).build());
 
         this.addDrawableChild(ButtonWidget.builder(
-            TwitchToggleHelper.buttonLabel(),
-            btn -> {
-                TwitchToggleHelper.toggle();
-                btn.setMessage(TwitchToggleHelper.buttonLabel());
-            }
-        ).dimensions(centerX - buttonWidth / 2, buttonY, buttonWidth, 20).build());
-
-        this.addDrawableChild(ButtonWidget.builder(
-            Text.translatable("takeyourminestream.history.close"),
+            Text.translatable("takeyourstreamchat.history.close"),
             btn -> this.close()
-        ).dimensions(centerX + buttonWidth / 2 + buttonSpacing, buttonY, buttonWidth, 20).build());
+        ).dimensions(centerX + buttonSpacing / 2, buttonY, buttonWidth, 20).build());
     }
 
     private static int computeColumnPanelWidth() {
@@ -217,7 +209,7 @@ public class MessageHistoryScreen extends Screen {
 
         ModUiTheme.drawTitle(context, this.textRenderer, this.title, this.width);
 
-        Text historyCountText = Text.translatable("takeyourminestream.history.count", lifecycleManager.getMessageHistorySize());
+        Text historyCountText = Text.translatable("takeyourstreamchat.history.count", lifecycleManager.getMessageHistorySize());
         int historyCountWidth = this.textRenderer.getWidth(historyCountText);
         context.drawText(
             this.textRenderer,
@@ -229,7 +221,7 @@ public class MessageHistoryScreen extends Screen {
         );
 
         Text pinnedTitleText = Text.translatable(
-            "takeyourminestream.history.pinned_count",
+            "takeyourstreamchat.history.pinned_count",
             lifecycleManager.getAllPinnedMessages().size()
         );
         int pinnedTitleWidth = this.textRenderer.getWidth(pinnedTitleText);
@@ -313,8 +305,8 @@ public class MessageHistoryScreen extends Screen {
     ) {
         if (cards.isEmpty()) {
             Text emptyText = pinnedColumn
-                ? Text.translatable("takeyourminestream.history.pinned_empty").formatted(Formatting.GRAY)
-                : Text.translatable("takeyourminestream.history.empty").formatted(Formatting.GRAY);
+                ? Text.translatable("takeyourstreamchat.history.pinned_empty").formatted(Formatting.GRAY)
+                : Text.translatable("takeyourstreamchat.history.empty").formatted(Formatting.GRAY);
             renderWrappedEmptyHint(context, emptyText, contentLeft);
             return;
         }
@@ -398,7 +390,7 @@ public class MessageHistoryScreen extends Screen {
         }
         context.drawTooltip(
             this.textRenderer,
-            Text.translatable("takeyourminestream.history.click_for_actions"),
+            Text.translatable("takeyourstreamchat.history.click_for_actions"),
             mouseX,
             mouseY
         );
@@ -420,7 +412,7 @@ public class MessageHistoryScreen extends Screen {
     }
 
     private void renderFooterHint(DrawContext context) {
-        Text helpText = Text.translatable("takeyourminestream.history.scroll_hint").formatted(Formatting.DARK_GRAY);
+        Text helpText = Text.translatable("takeyourstreamchat.history.scroll_hint").formatted(Formatting.DARK_GRAY);
         int textWidth = this.textRenderer.getWidth(helpText);
         context.drawText(
             this.textRenderer,
@@ -486,9 +478,9 @@ public class MessageHistoryScreen extends Screen {
                     this.client
                 );
                 if (result == MessageHistoryActions.PinToggleResult.PINNED) {
-                    showFeedback("takeyourminestream.history.message_pinned", null);
+                    showFeedback("takeyourstreamchat.history.message_pinned", null);
                 } else if (result == MessageHistoryActions.PinToggleResult.UNPINNED) {
-                    showFeedback("takeyourminestream.history.message_unpinned", null);
+                    showFeedback("takeyourstreamchat.history.message_unpinned", null);
                 }
             }
             case BLOCK -> {
@@ -497,14 +489,14 @@ public class MessageHistoryScreen extends Screen {
                     return;
                 }
                 if (MessageHistoryActions.blockUser(username, blockedUsernameManager)) {
-                    showFeedback("takeyourminestream.history.user_blocked", username);
+                    showFeedback("takeyourstreamchat.history.user_blocked", username);
                 } else {
-                    showFeedback("takeyourminestream.history.user_already_blocked", username);
+                    showFeedback("takeyourstreamchat.history.user_already_blocked", username);
                 }
             }
             case REPLAY -> {
                 if (MessageHistoryActions.replay(card.message, lifecycleManager, this.client)) {
-                    showFeedback("takeyourminestream.history.message_replayed", null);
+                    showFeedback("takeyourstreamchat.history.message_replayed", null);
                 }
             }
         }

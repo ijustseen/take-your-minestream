@@ -137,4 +137,4 @@ messageSpawner.setCurrentMessage("");
 
 - Для каждого мира/сервера создаётся отдельный JSON-файл.
 - Хранятся: текст, позиция (`x/y/z`) и поворот (`yaw/pitch`), плюс цвет автора при наличии.
-- Файлы находятся в `config/take-your-minestream/pinned-messages/`.
+- Файлы находятся в `config/take-your-stream-chat/pinned-messages/`.

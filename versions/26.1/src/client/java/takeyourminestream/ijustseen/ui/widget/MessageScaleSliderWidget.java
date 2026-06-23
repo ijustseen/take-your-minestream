@@ -60,11 +60,11 @@ public class MessageScaleSliderWidget extends AbstractSliderButton {
 
     private static Component getDisplayText(MessageScale scale) {
         return switch (scale) {
-            case TINY -> Component.translatable("takeyourminestream.config.scale_tiny");
-            case SMALL -> Component.translatable("takeyourminestream.config.scale_small");
-            case NORMAL -> Component.translatable("takeyourminestream.config.scale_normal");
-            case LARGE -> Component.translatable("takeyourminestream.config.scale_large");
-            case HUGE -> Component.translatable("takeyourminestream.config.scale_huge");
+            case TINY -> Component.translatable("takeyourstreamchat.config.scale_tiny");
+            case SMALL -> Component.translatable("takeyourstreamchat.config.scale_small");
+            case NORMAL -> Component.translatable("takeyourstreamchat.config.scale_normal");
+            case LARGE -> Component.translatable("takeyourstreamchat.config.scale_large");
+            case HUGE -> Component.translatable("takeyourstreamchat.config.scale_huge");
         };
     }
 }

@@ -45,8 +45,8 @@ public class WorldEventHandler {
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             if (messageSpawner != null) {
                 var app = TakeYourMineStreamClient.getInstance();
-                if (app != null && app.getTwitchManager() != null && app.getTwitchManager().isConnected()) {
-                    app.getTwitchManager().disconnect();
+                if (app != null && app.getChatConnectionManager() != null && app.getChatConnectionManager().isConnected()) {
+                    app.getChatConnectionManager().disconnect();
                 }
                 PinnedMessageStore.saveForCurrentWorld(messageSpawner.getLifecycleManager());
                 messageSpawner.pause();
@@ -66,9 +66,9 @@ public class WorldEventHandler {
             var app = TakeYourMineStreamClient.getInstance();
             if (ModConfig.isAUTO_CONNECT_IRC_ON_JOIN()
                 && app != null
-                && app.getTwitchManager() != null
-                && !app.getTwitchManager().isConnected()) {
-                app.getTwitchManager().connect(messageSpawner);
+                && app.getChatConnectionManager() != null
+                && !app.getChatConnectionManager().isConnected()) {
+                app.getChatConnectionManager().connect(messageSpawner);
             }
         }
     }
@@ -76,8 +76,8 @@ public class WorldEventHandler {
     public static void onWorldLeave(MessageSpawner messageSpawner) {
         if (messageSpawner != null && !messageSpawner.isPaused()) {
             var app = TakeYourMineStreamClient.getInstance();
-            if (app != null && app.getTwitchManager() != null && app.getTwitchManager().isConnected()) {
-                app.getTwitchManager().disconnect();
+            if (app != null && app.getChatConnectionManager() != null && app.getChatConnectionManager().isConnected()) {
+                app.getChatConnectionManager().disconnect();
             }
             PinnedMessageStore.saveForCurrentWorld(messageSpawner.getLifecycleManager());
             messageSpawner.pause();

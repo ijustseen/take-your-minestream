@@ -1,5 +1,82 @@
 # Changelog
 
+## [2.0.0] - 2026-06-12
+
+### MAJOR UPDATE — multi-platform chat, UI overhaul & rebrand
+
+**Take Your MineStream** is now **Take Your Stream Chat** (`tysc`, mod id `take-your-stream-chat`). Settings and pins migrate automatically from 1.x (`take-your-minestream` folder / `tyms` jars).
+
+This release is a breaking change in scope: chat is no longer Twitch-only, settings and HUD were reworked, and several gameplay defaults changed.
+
+### Added
+
+- **Multi-platform live chat**: Twitch, **YouTube**, **Kick**, and **TikTok** — connect several sources at once from Settings → General
+- Unified chat stack: `ChatConnectionManager`, `ChatMessagePipeline`, `IncomingChatMessage`, per-platform clients
+- **Platform icons** on message cards (3D, HUD, history) with accent-colored panel borders
+- **Chat role filter** applies to **all platforms** (subscriber/member, VIP, mod, broadcaster) via shared badge parsing (`ChatAuthorRoles`)
+- **HUD overlay** rework: slide-in animation, smooth fade-out, chat-like stacking (newest at bottom), nick color from platform when available
+- HUD stays visible in **inventory and container screens**; hidden on ESC menu and other full screens
+- **MessagePanelLayout** — single source of truth for 3D panel size (render, click hit-test, look-to-freeze)
+- Localized UI and connection messages (en, ru, de, es, fr, zh — 162 keys each)
+- Settings tab **icons** (General, Messages, In World, Chat History)
+- `PlatformChannelRow`, `ConfigUiHelper`, `ChatConnectToggleHelper`; HTTP layer on `java.net.http.HttpClient` (Kick WAF compatibility)
+- **Chat connect toggle** in settings footer (between Chat History and Done): ON/OFF label, colored dot, **green/red button background** by connection state; same action as the hotkey
+- **Connection status overlay** (`ChatStatusNotifier`): connect/disconnect/connecting shown on the **action bar**, not in chat
+- **TikTok custom emotes** in chat messages (inline emotes + subscriber emote stickers), loaded from TikTok CDN URLs
+- **Spawn distance range** (min/max blocks) for Around and FOP modes in **In World** settings (default 2–5)
+- **Color Unicode emojis** — optional setting (Settings → Messages) renders system emoji glyphs instead of Minecraft font squares; works in 3D, HUD, and history
+
+### Changed
+
+- **Settings screen**: platform toggles per service, channel fields; save reconnects changed platforms; footer **History · Chat · Done**
+- **Chat notifications**: status on action bar; **errors only** in chat (offline / WAF / missing channel, etc.)
+- **Chat History** (formerly Message History): opens scrolled to the bottom; orange history icon
+- **In World** settings tab disabled when spawn mode is HUD
+- Platform cannot be enabled with an empty channel/username
+- **Message scale** presets reduced (~one step smaller): Tiny → 0.35, Normal → 0.75, Huge → 1.25 (Huge ≈ old Large)
+- **3D interaction distance** capped at **16 blocks** (click, pin, drag)
+- **Fall / fade duration** fixed at **0.5 s** — removed from settings (was user-configurable)
+- **Spawn queue**: max **10** pending messages; oldest dropped on overflow; live messages show **immediately** (no artificial spacing)
+- **YouTube poll batches**: when several messages arrive in one poll, they are sorted by `timestampUsec` and shown with real chat intervals (capped at 10 s gaps)
+- Notification sound plays when a message **appears**, not when it enters the queue
+- Role filter description updated for all platforms (all locales)
+- Mod metadata description lists all supported platforms
+
+- **Performance**: cached message panel/HUD layout and emote line wrapping (avoids per-frame recomputation); notification sound throttled to once per tick
+- **3D break particles**: spawn at the **end of the fall** (shatter moment), positions aligned with `MessagePanelLayout` / renderer transforms
+- **FOP spawn mode**: same random placement as **Around player** (radius, height), filtered to **horizontal FOV** with the player treated as looking at the horizon (yaw only, pitch ignored for the cone)
+
+### Fixed
+
+- **Click / hit detection** on large 3D messages with emotes and platform icon (was using wrong emote check and mismatched layout vs renderer)
+- Fall animation offset synced between renderer and click/freeze detection
+- **Kick** chat blocked by WAF (`ChatHttp` rewrite)
+- **TikTok**: live room API (`sourceType=54`); protobuf **wire type 4** (END_GROUP) and unknown fields skipped without killing WSS; parse errors logged at debug, not as connection failures
+- **YouTube**: offline channels no longer reported as “live chat unavailable for video ID” — detects non-live stream and shows **no live stream** for `@handle`; live detection handles spaced JSON, improved video ID selection and watch-page fallback
+- **Platform toggles** — disabling chat or closing settings with platforms OFF no longer reconnects them on save/ESC
+- **Color emoji setting** persisted correctly in config (`enableColorEmojis`); emoji textures load synchronously, no MC-font fallback for emoji provider
+- **Russian** lang file JSON syntax (trailing comma) and key binding label
+- **Mixin** client config package fixed after rebrand (`takeyourminestream.ijustseen.mixin.client`)
+- **Spawn chance** slider: 0% no longer spawns ~1% of messages (`>= chance` fix)
+- **NORMAL** message scale was incorrectly 0.8 instead of intended baseline
+- YouTube initial chat backlog still skipped; live poll batches spread by message timestamps when multiple arrive at once
+
+### Removed
+
+- Twitch-only IRC toggle helper (`TwitchToggleHelper`)
+- **Message fall (seconds)** setting — fixed internal timing
+- HUD left-click to dismiss (not viable with in-game cursor)
+- Queue clear on full disconnect (short capped queue makes tail acceptable)
+
+### Technical
+
+- `MessageHudOverlay`, `MessageHudVisibility`; Minecraft **26.1** HUD via `HudElementRegistry`
+- Version-specific `MessageHudRenderer` / `MouseHandlerMixin` where matrix and mouse APIs differ
+- Stonecutter replacements extended (GUI scaled size, `HandledScreen` → `AbstractContainerScreen` on 26.1)
+- Primary client command: `/streamchat` (`/minestream` kept as alias)
+- Lang namespace: `takeyourstreamchat.*`
+- `ChatStatusNotifier`, `ChatErrorReporter` (overlay vs chat routing); `client.inGameHud` → `client.gui` on 26.1
+
 ## [1.4.3] - 2026-06-02
 
 ### Changed

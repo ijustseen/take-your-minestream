@@ -1,55 +1,51 @@
 package takeyourminestream.ijustseen.input;
 
-import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
-import takeyourminestream.ijustseen.config.ConfigManager;
-import takeyourminestream.ijustseen.integration.twitch.TwitchManager;
-import takeyourminestream.ijustseen.interfaces.ITwitchManager;
-import takeyourminestream.ijustseen.messages.MessageSpawner;
+import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
 import takeyourminestream.ijustseen.ui.screen.ModConfigScreen;
+import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.utils.Logger;
 
-/** Менеджер привязок клавиш (Minecraft 26.1). */
 public class KeyBindingManager {
-    private static final KeyMapping.Category KEY_CATEGORY = KeyMapping.Category.register(
-        Identifier.fromNamespaceAndPath("takeyourminestream", "key_category")
-    );
-    private final ITwitchManager twitchManager;
+    private static final KeyMapping.Category KEY_CATEGORY =
+        KeyMapping.Category.register(Identifier.fromNamespaceAndPath("take-your-stream-chat", "key_category"));
+    private final IChatConnectionManager chatConnectionManager;
     private final MessageSpawner messageSpawner;
-    private KeyMapping openConfigScreenKeyMapping;
-    private KeyMapping startAndStopMessagesKeyMapping;
+    private KeyMapping openConfigScreenKeyBinding;
+    private KeyMapping startAndStopMessagesKeyBinding;
 
-    public KeyBindingManager(ITwitchManager twitchManager, MessageSpawner messageSpawner) {
-        this.twitchManager = twitchManager;
+    public KeyBindingManager(IChatConnectionManager chatConnectionManager, MessageSpawner messageSpawner) {
+        this.chatConnectionManager = chatConnectionManager;
         this.messageSpawner = messageSpawner;
     }
 
     public void registerKeyBindings() {
-        openConfigScreenKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-            "key.takeyourminestream.openconfig",
+        openConfigScreenKeyBinding = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+            "key.takeyourstreamchat.openconfig",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_RIGHT_BRACKET,
             KEY_CATEGORY
         ));
 
-        startAndStopMessagesKeyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-            "key.takeyourminestream.startandstop",
+        startAndStopMessagesKeyBinding = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+            "key.takeyourstreamchat.startandstop",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_LEFT_BRACKET,
             KEY_CATEGORY
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openConfigScreenKeyMapping.consumeClick()) {
+            while (openConfigScreenKeyBinding.consumeClick()) {
                 handleOpenConfigScreen();
             }
-            while (startAndStopMessagesKeyMapping.consumeClick()) {
-                handleTwitchToggle();
+            while (startAndStopMessagesKeyBinding.consumeClick()) {
+                handleChatToggle();
             }
         });
     }
@@ -57,29 +53,26 @@ public class KeyBindingManager {
     private void handleOpenConfigScreen() {
         try {
             net.minecraft.client.Minecraft.getInstance().setScreen(new ModConfigScreen());
-            
         } catch (Exception e) {
             Logger.error("Failed to open settings screen", e);
             Logger.sendErrorToPlayer("Failed to open settings screen");
         }
     }
 
-    private void handleTwitchToggle() {
+    private void handleChatToggle() {
         try {
-            var twitchManager = TwitchManager.getInstance(ConfigManager.getInstance());
             var messageSpawner = TakeYourMineStreamClient.getStaticMessageSpawner();
-
-            if (twitchManager.isConnected()) {
-                twitchManager.disconnect();
+            if (chatConnectionManager.isConnected()) {
+                chatConnectionManager.disconnect();
             } else if (messageSpawner != null) {
-                twitchManager.connect(messageSpawner);
+                chatConnectionManager.connect(messageSpawner);
             }
         } catch (Exception e) {
-            TakeYourMineStreamClient.LOGGER.error("Twitch connection error: ", e);
+            TakeYourMineStreamClient.LOGGER.error("Chat connection error: ", e);
         }
     }
 
     public KeyMapping getOpenConfigScreenKeyBinding() {
-        return openConfigScreenKeyMapping;
+        return openConfigScreenKeyBinding;
     }
 }

@@ -5,8 +5,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
-import net.minecraft.text.MutableText;
-import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import net.minecraft.client.font.TextRenderer;
 import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.config.MessageScale;
@@ -15,7 +14,7 @@ import takeyourminestream.ijustseen.config.ChatRoleFilter;
 import takeyourminestream.ijustseen.config.UnpinMode;
 import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.ModConfig;
-import takeyourminestream.ijustseen.integration.twitch.TwitchManager;
+import takeyourminestream.ijustseen.integration.chat.ChatConnectionManager;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
@@ -23,37 +22,50 @@ import takeyourminestream.ijustseen.ui.widget.ChanceForSpawnSliderWidget;
 import takeyourminestream.ijustseen.ui.widget.ConfigIntTextFieldWidget;
 import takeyourminestream.ijustseen.ui.widget.MessageScaleSliderWidget;
 import takeyourminestream.ijustseen.ui.widget.MessageSoundVolumeSliderWidget;
+import takeyourminestream.ijustseen.ui.gui.ConfigUiHelper;
+import takeyourminestream.ijustseen.ui.gui.ChatConnectToggleHelper;
 import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
+import takeyourminestream.ijustseen.ui.widget.PlatformChannelRow;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ModConfigScreen extends Screen {
     private final @Nullable Screen parent;
-    private String initialChannelName;
     private String hoveredDescriptionKey;
     
     // Категории настроек
     private enum ConfigCategory {
-        GENERAL("takeyourminestream.config.category.general"),
-        MESSAGES("takeyourminestream.config.category.messages"),
-        BEHAVIOR("takeyourminestream.config.category.behavior");
+        GENERAL("takeyourstreamchat.config.category.general", "icon_tab_general"),
+        MESSAGES("takeyourstreamchat.config.category.messages", "icon_tab_messages"),
+        BEHAVIOR("takeyourstreamchat.config.category.behavior", "icon_tab_world");
         
         private final String translationKey;
+        private final Identifier icon;
         
-        ConfigCategory(String translationKey) {
+        ConfigCategory(String translationKey, String iconName) {
             this.translationKey = translationKey;
+            this.icon = Identifier.of("take-your-stream-chat", "textures/gui/" + iconName + ".png");
         }
         
         public Text getText() {
             return Text.translatable(translationKey);
         }
+
+        public Identifier getIcon() {
+            return icon;
+        }
     }
     
+    private static final Identifier ICON_HISTORY =
+        Identifier.of("take-your-stream-chat", "textures/gui/icon_history.png");
+    private static final int BUTTON_ICON_SIZE = 10;
+    private static final int BUTTON_ICON_GAP = 3;
+
     private ConfigCategory currentCategory = ConfigCategory.GENERAL;
     private List<ButtonWidget> categoryButtons = new ArrayList<>();
     private List<ConfigEntry> configEntries = new ArrayList<>();
     private ButtonWidget historyButton;
-    private ButtonWidget twitchButton;
+    private ButtonWidget chatToggleButton;
     private ButtonWidget doneButton;
     
     // Параметры интерфейса
@@ -76,6 +88,9 @@ public class ModConfigScreen extends Screen {
     private static final int SIDE_MARGIN = 24;
     private static final int LABEL_WIDTH = 200;
     private static final int CONTROL_WIDTH = 170;
+    private static final int TOGGLE_BUTTON_WIDTH = 44;
+    private static final int PLATFORM_FIELD_GAP = 6;
+    private static final int PLATFORM_FIELD_WIDTH = CONTROL_WIDTH - TOGGLE_BUTTON_WIDTH - PLATFORM_FIELD_GAP;
     private static final int CONTROL_HEIGHT = 20;
     private static final int DESCRIPTION_HEIGHT = 20;
     
@@ -99,7 +114,7 @@ public class ModConfigScreen extends Screen {
     }
     
     private enum ConfigEntryType {
-        TEXT_FIELD, BUTTON, TOGGLE, SLIDER
+        TEXT_FIELD, BUTTON, TOGGLE, SLIDER, PLATFORM_ROW
     }
 
     public ModConfigScreen() {
@@ -107,14 +122,12 @@ public class ModConfigScreen extends Screen {
     }
 
     public ModConfigScreen(@Nullable Screen parent) {
-        super(Text.translatable("takeyourminestream.config.title"));
+        super(Text.translatable("takeyourstreamchat.config.title"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
-        initialChannelName = ModConfig.getTWITCH_CHANNEL_NAME();
-        
         // Создаем кнопки категорий
         createCategoryButtons();
         
@@ -157,9 +170,15 @@ public class ModConfigScreen extends Screen {
     }
     
     private void updateCategoryButtons() {
+        // В HUD-режиме настройки "В мире" не применимы — вкладка недоступна
+        boolean hudMode = ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET;
         for (int i = 0; i < categoryButtons.size(); i++) {
-            ButtonWidget button = categoryButtons.get(i);
-            button.active = true;
+            ConfigCategory category = ConfigCategory.values()[i];
+            categoryButtons.get(i).active = category != ConfigCategory.BEHAVIOR || !hudMode;
+        }
+        if (hudMode && currentCategory == ConfigCategory.BEHAVIOR) {
+            currentCategory = ConfigCategory.GENERAL;
+            updateCategoryVisibility();
         }
     }
     
@@ -167,46 +186,55 @@ public class ModConfigScreen extends Screen {
         configEntries.clear();
         TextRenderer textRenderer = this.textRenderer;
 
-        // Общие: Twitch, фильтрация чата, частота появления
-        TextFieldWidget channelNameField = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, Text.translatable("takeyourminestream.config.channel_name"));
-        channelNameField.setText(ModConfig.getTWITCH_CHANNEL_NAME());
-        channelNameField.setChangedListener(s -> ConfigManager.getInstance().setConfigValue("twitchChannelName", s));
-        this.addDrawableChild(channelNameField);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.channel_name", "takeyourminestream.config.channel_name.desc", ConfigEntryType.TEXT_FIELD, channelNameField, ConfigCategory.GENERAL));
+        // Подключения к платформам: поле + вкл/выкл справа
+        addPlatformRow(
+            "takeyourstreamchat.config.channel_name",
+            "takeyourstreamchat.config.channel_name.desc",
+            ModConfig.getTWITCH_CHANNEL_NAME(),
+            "twitchChannelName",
+            ModConfig::isTWITCH_ENABLED,
+            ModConfig::setTWITCH_ENABLED,
+            "twitch"
+        );
+        addPlatformRow(
+            "takeyourstreamchat.config.youtube_channel",
+            "takeyourstreamchat.config.youtube_channel.desc",
+            ModConfig.getYOUTUBE_CHANNEL(),
+            "youtubeChannel",
+            ModConfig::isYOUTUBE_ENABLED,
+            ModConfig::setYOUTUBE_ENABLED,
+            "youtube"
+        );
+        addPlatformRow(
+            "takeyourstreamchat.config.kick_channel",
+            "takeyourstreamchat.config.kick_channel.desc",
+            ModConfig.getKICK_CHANNEL(),
+            "kickChannel",
+            ModConfig::isKICK_ENABLED,
+            ModConfig::setKICK_ENABLED,
+            "kick"
+        );
+        addPlatformRow(
+            "takeyourstreamchat.config.tiktok_username",
+            "takeyourstreamchat.config.tiktok_username.desc",
+            ModConfig.getTIKTOK_USERNAME(),
+            "tiktokUsername",
+            ModConfig::isTIKTOK_ENABLED,
+            ModConfig::setTIKTOK_ENABLED,
+            "tiktok"
+        );
 
-        ButtonWidget autoConnectIrcButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isAUTO_CONNECT_IRC_ON_JOIN() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setAUTO_CONNECT_IRC_ON_JOIN(!ModConfig.isAUTO_CONNECT_IRC_ON_JOIN());
-                btn.setMessage(Text.translatable(ModConfig.isAUTO_CONNECT_IRC_ON_JOIN() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(autoConnectIrcButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.auto_connect_irc", "takeyourminestream.config.auto_connect_irc.desc", ConfigEntryType.TOGGLE, autoConnectIrcButton, ConfigCategory.GENERAL));
+        addToggleEntry(
+            "takeyourstreamchat.config.auto_connect_irc",
+            "takeyourstreamchat.config.auto_connect_irc.desc",
+            ModConfig::isAUTO_CONNECT_IRC_ON_JOIN,
+            value -> ModConfig.setAUTO_CONNECT_IRC_ON_JOIN(value),
+            ConfigCategory.GENERAL
+        );
 
-        ButtonWidget automoderationButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isENABLE_AUTOMODERATION() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setENABLE_AUTOMODERATION(!ModConfig.isENABLE_AUTOMODERATION());
-                btn.setMessage(Text.translatable(ModConfig.isENABLE_AUTOMODERATION() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(automoderationButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.automoderation", "takeyourminestream.config.automoderation.desc", ConfigEntryType.TOGGLE, automoderationButton, ConfigCategory.GENERAL));
-
-        ButtonWidget banwordsButton = ButtonWidget.builder(
-            Text.translatable("takeyourminestream.config.banwords_config"),
-            btn -> this.client.setScreen(new BanwordConfigScreen(this))
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(banwordsButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.banwords", "takeyourminestream.config.banwords.desc", ConfigEntryType.BUTTON, banwordsButton, ConfigCategory.GENERAL));
-
-        ButtonWidget regexpButton = ButtonWidget.builder(
-            Text.translatable("takeyourminestream.config.regexps_config"),
-            btn -> this.client.setScreen(new RegexpConfigScreen(this))
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(regexpButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.regexps", "takeyourminestream.config.regexps.desc", ConfigEntryType.BUTTON, regexpButton, ConfigCategory.GENERAL));
+        ChanceForSpawnSliderWidget chanceForSpawnSlider = new ChanceForSpawnSliderWidget(0, 0, CONTROL_WIDTH, 20);
+        this.addDrawableChild(chanceForSpawnSlider);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.chance_for_spawn", "takeyourstreamchat.config.chance_for_spawn.desc", ConfigEntryType.SLIDER, chanceForSpawnSlider, ConfigCategory.GENERAL));
 
         ButtonWidget roleFilterButton = ButtonWidget.builder(
             getRoleFilterButtonText(),
@@ -217,42 +245,44 @@ public class ModConfigScreen extends Screen {
             }
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(roleFilterButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.role_filter", "takeyourminestream.config.role_filter.desc", ConfigEntryType.BUTTON, roleFilterButton, ConfigCategory.GENERAL));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.role_filter", "takeyourstreamchat.config.role_filter.desc", ConfigEntryType.BUTTON, roleFilterButton, ConfigCategory.GENERAL));
 
-        ButtonWidget usernameBlocklistToggle = ButtonWidget.builder(
-            Text.translatable(ModConfig.isENABLE_USERNAME_BLOCKLIST() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setENABLE_USERNAME_BLOCKLIST(!ModConfig.isENABLE_USERNAME_BLOCKLIST());
-                btn.setMessage(Text.translatable(ModConfig.isENABLE_USERNAME_BLOCKLIST() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
+        addToggleEntry(
+            "takeyourstreamchat.config.automoderation",
+            "takeyourstreamchat.config.automoderation.desc",
+            ModConfig::isENABLE_AUTOMODERATION,
+            ModConfig::setENABLE_AUTOMODERATION,
+            ConfigCategory.GENERAL
+        );
+
+        ButtonWidget banwordsButton = ButtonWidget.builder(
+            Text.translatable("takeyourstreamchat.config.banwords_config"),
+            btn -> this.client.setScreen(new BanwordConfigScreen(this))
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(usernameBlocklistToggle);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.username_blocklist", "takeyourminestream.config.username_blocklist.desc", ConfigEntryType.TOGGLE, usernameBlocklistToggle, ConfigCategory.GENERAL));
+        this.addDrawableChild(banwordsButton);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.banwords", "takeyourstreamchat.config.banwords.desc", ConfigEntryType.BUTTON, banwordsButton, ConfigCategory.GENERAL));
+
+        ButtonWidget regexpButton = ButtonWidget.builder(
+            Text.translatable("takeyourstreamchat.config.regexps_config"),
+            btn -> this.client.setScreen(new RegexpConfigScreen(this))
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(regexpButton);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.regexps", "takeyourstreamchat.config.regexps.desc", ConfigEntryType.BUTTON, regexpButton, ConfigCategory.GENERAL));
+
+        addToggleEntry(
+            "takeyourstreamchat.config.username_blocklist",
+            "takeyourstreamchat.config.username_blocklist.desc",
+            ModConfig::isENABLE_USERNAME_BLOCKLIST,
+            ModConfig::setENABLE_USERNAME_BLOCKLIST,
+            ConfigCategory.GENERAL
+        );
 
         ButtonWidget blockedUsersButton = ButtonWidget.builder(
-            Text.translatable("takeyourminestream.config.blocked_users_config"),
+            Text.translatable("takeyourstreamchat.config.blocked_users_config"),
             btn -> this.client.setScreen(new BlockedUsernameConfigScreen(this))
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(blockedUsersButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.blocked_users", "takeyourminestream.config.blocked_users.desc", ConfigEntryType.BUTTON, blockedUsersButton, ConfigCategory.GENERAL));
-
-        ChanceForSpawnSliderWidget chanceForSpawnSlider = new ChanceForSpawnSliderWidget(0, 0, CONTROL_WIDTH, 20);
-        this.addDrawableChild(chanceForSpawnSlider);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.chance_for_spawn", "takeyourminestream.config.chance_for_spawn.desc", ConfigEntryType.SLIDER, chanceForSpawnSlider, ConfigCategory.GENERAL));
-
-        ConfigIntTextFieldWidget messageHistoryMaxField = new ConfigIntTextFieldWidget(
-            textRenderer,
-            0,
-            0,
-            CONTROL_WIDTH,
-            20,
-            Text.translatable("takeyourminestream.config.message_history_max"),
-            "messageHistoryMaxSize",
-            10,
-            500
-        );
-        this.addDrawableChild(messageHistoryMaxField);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_history_max", "takeyourminestream.config.message_history_max.desc", ConfigEntryType.TEXT_FIELD, messageHistoryMaxField, ConfigCategory.GENERAL));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.blocked_users", "takeyourstreamchat.config.blocked_users.desc", ConfigEntryType.BUTTON, blockedUsersButton, ConfigCategory.GENERAL));
 
         // Сообщения: вид, время жизни, звук
         ButtonWidget spawnModeButton = ButtonWidget.builder(
@@ -262,14 +292,15 @@ public class ModConfigScreen extends Screen {
                 var nextMode = currentMode.next();
                 ModConfig.setMESSAGE_SPAWN_MODE(nextMode);
                 btn.setMessage(getSpawnModeButtonText());
+                updateCategoryButtons();
             }
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(spawnModeButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.spawn_mode_label", "takeyourminestream.config.spawn_mode.desc", ConfigEntryType.BUTTON, spawnModeButton, ConfigCategory.MESSAGES));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.spawn_mode_label", "takeyourstreamchat.config.spawn_mode.desc", ConfigEntryType.BUTTON, spawnModeButton, ConfigCategory.MESSAGES));
 
         MessageScaleSliderWidget messageScaleSlider = new MessageScaleSliderWidget(0, 0, CONTROL_WIDTH, 20);
         this.addDrawableChild(messageScaleSlider);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_scale", "takeyourminestream.config.message_scale.desc", ConfigEntryType.SLIDER, messageScaleSlider, ConfigCategory.MESSAGES));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.message_scale", "takeyourstreamchat.config.message_scale.desc", ConfigEntryType.SLIDER, messageScaleSlider, ConfigCategory.MESSAGES));
 
         ConfigIntTextFieldWidget messageLifetimeField = new ConfigIntTextFieldWidget(
             textRenderer,
@@ -277,62 +308,76 @@ public class ModConfigScreen extends Screen {
             0,
             CONTROL_WIDTH,
             20,
-            Text.translatable("takeyourminestream.config.message_lifetime_seconds"),
+            Text.translatable("takeyourstreamchat.config.message_lifetime_seconds"),
             "messageLifetimeSeconds",
             1,
             600
         );
         this.addDrawableChild(messageLifetimeField);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_lifetime_seconds", "takeyourminestream.config.message_lifetime_seconds.desc", ConfigEntryType.TEXT_FIELD, messageLifetimeField, ConfigCategory.MESSAGES));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.message_lifetime_seconds", "takeyourstreamchat.config.message_lifetime_seconds.desc", ConfigEntryType.TEXT_FIELD, messageLifetimeField, ConfigCategory.MESSAGES));
 
-        ConfigIntTextFieldWidget messageFallField = new ConfigIntTextFieldWidget(
+        ButtonWidget showBgButton = createToggleButton(ModConfig::isSHOW_MESSAGE_BACKGROUND, ModConfig::setSHOW_MESSAGE_BACKGROUND);
+        this.addDrawableChild(showBgButton);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.show_message_bg", "takeyourstreamchat.config.show_message_bg.desc", ConfigEntryType.TOGGLE, showBgButton, ConfigCategory.MESSAGES));
+
+        ButtonWidget colorEmojiButton = createToggleButton(ModConfig::isENABLE_COLOR_EMOJIS, ModConfig::setENABLE_COLOR_EMOJIS);
+        this.addDrawableChild(colorEmojiButton);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.color_emojis", "takeyourstreamchat.config.color_emojis.desc", ConfigEntryType.TOGGLE, colorEmojiButton, ConfigCategory.MESSAGES));
+
+        ButtonWidget messageSoundButton = createToggleButton(ModConfig::isENABLE_MESSAGE_SOUND, ModConfig::setENABLE_MESSAGE_SOUND);
+        this.addDrawableChild(messageSoundButton);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.message_sound", "takeyourstreamchat.config.message_sound.desc", ConfigEntryType.TOGGLE, messageSoundButton, ConfigCategory.MESSAGES));
+
+        MessageSoundVolumeSliderWidget messageSoundVolumeSlider = new MessageSoundVolumeSliderWidget(0, 0, CONTROL_WIDTH, 20);
+        this.addDrawableChild(messageSoundVolumeSlider);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.message_sound_volume", "takeyourstreamchat.config.message_sound_volume.desc", ConfigEntryType.SLIDER, messageSoundVolumeSlider, ConfigCategory.MESSAGES));
+
+        ConfigIntTextFieldWidget messageHistoryMaxField = new ConfigIntTextFieldWidget(
             textRenderer,
             0,
             0,
             CONTROL_WIDTH,
             20,
-            Text.translatable("takeyourminestream.config.message_fall_seconds"),
-            "messageFallSeconds",
-            0,
-            120
+            Text.translatable("takeyourstreamchat.config.message_history_max"),
+            "messageHistoryMaxSize",
+            10,
+            500
         );
-        this.addDrawableChild(messageFallField);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_fall_seconds", "takeyourminestream.config.message_fall_seconds.desc", ConfigEntryType.TEXT_FIELD, messageFallField, ConfigCategory.MESSAGES));
-
-        ButtonWidget showBgButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isSHOW_MESSAGE_BACKGROUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setSHOW_MESSAGE_BACKGROUND(!ModConfig.isSHOW_MESSAGE_BACKGROUND());
-                btn.setMessage(Text.translatable(ModConfig.isSHOW_MESSAGE_BACKGROUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(showBgButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.show_message_bg", "takeyourminestream.config.show_message_bg.desc", ConfigEntryType.TOGGLE, showBgButton, ConfigCategory.MESSAGES));
-
-        ButtonWidget messageSoundButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isENABLE_MESSAGE_SOUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setENABLE_MESSAGE_SOUND(!ModConfig.isENABLE_MESSAGE_SOUND());
-                btn.setMessage(Text.translatable(ModConfig.isENABLE_MESSAGE_SOUND() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(messageSoundButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_sound", "takeyourminestream.config.message_sound.desc", ConfigEntryType.TOGGLE, messageSoundButton, ConfigCategory.MESSAGES));
-
-        MessageSoundVolumeSliderWidget messageSoundVolumeSlider = new MessageSoundVolumeSliderWidget(0, 0, CONTROL_WIDTH, 20);
-        this.addDrawableChild(messageSoundVolumeSlider);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.message_sound_volume", "takeyourminestream.config.message_sound_volume.desc", ConfigEntryType.SLIDER, messageSoundVolumeSlider, ConfigCategory.MESSAGES));
+        this.addDrawableChild(messageHistoryMaxField);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.message_history_max", "takeyourstreamchat.config.message_history_max.desc", ConfigEntryType.TEXT_FIELD, messageHistoryMaxField, ConfigCategory.MESSAGES));
 
         // Поведение в мире
-        ButtonWidget freezingButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isENABLE_FREEZING_ON_VIEW() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setENABLE_FREEZING_ON_VIEW(!ModConfig.isENABLE_FREEZING_ON_VIEW());
-                btn.setMessage(Text.translatable(ModConfig.isENABLE_FREEZING_ON_VIEW() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        ConfigIntTextFieldWidget spawnMinDistanceField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourstreamchat.config.spawn_min_distance"),
+            "messageSpawnMinDistance",
+            1,
+            64
+        );
+        this.addDrawableChild(spawnMinDistanceField);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.spawn_min_distance", "takeyourstreamchat.config.spawn_min_distance.desc", ConfigEntryType.TEXT_FIELD, spawnMinDistanceField, ConfigCategory.BEHAVIOR));
+
+        ConfigIntTextFieldWidget spawnMaxDistanceField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourstreamchat.config.spawn_max_distance"),
+            "messageSpawnMaxDistance",
+            1,
+            64
+        );
+        this.addDrawableChild(spawnMaxDistanceField);
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.spawn_max_distance", "takeyourstreamchat.config.spawn_max_distance.desc", ConfigEntryType.TEXT_FIELD, spawnMaxDistanceField, ConfigCategory.BEHAVIOR));
+
+        ButtonWidget freezingButton = createToggleButton(ModConfig::isENABLE_FREEZING_ON_VIEW, ModConfig::setENABLE_FREEZING_ON_VIEW);
         this.addDrawableChild(freezingButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.freezing_on_view", "takeyourminestream.config.freezing_on_view.desc", ConfigEntryType.TOGGLE, freezingButton, ConfigCategory.BEHAVIOR));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.freezing_on_view", "takeyourstreamchat.config.freezing_on_view.desc", ConfigEntryType.TOGGLE, freezingButton, ConfigCategory.BEHAVIOR));
 
         ConfigIntTextFieldWidget maxFreezeDistanceField = new ConfigIntTextFieldWidget(
             textRenderer,
@@ -340,33 +385,21 @@ public class ModConfigScreen extends Screen {
             0,
             CONTROL_WIDTH,
             20,
-            Text.translatable("takeyourminestream.config.max_freeze_distance"),
+            Text.translatable("takeyourstreamchat.config.max_freeze_distance"),
             "maxFreezeDistance",
             1,
             128
         );
         this.addDrawableChild(maxFreezeDistanceField);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.max_freeze_distance", "takeyourminestream.config.max_freeze_distance.desc", ConfigEntryType.TEXT_FIELD, maxFreezeDistanceField, ConfigCategory.BEHAVIOR));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.max_freeze_distance", "takeyourstreamchat.config.max_freeze_distance.desc", ConfigEntryType.TEXT_FIELD, maxFreezeDistanceField, ConfigCategory.BEHAVIOR));
 
-        ButtonWidget followPlayerButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isFOLLOW_PLAYER() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setFOLLOW_PLAYER(!ModConfig.isFOLLOW_PLAYER());
-                btn.setMessage(Text.translatable(ModConfig.isFOLLOW_PLAYER() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        ButtonWidget followPlayerButton = createToggleButton(ModConfig::isFOLLOW_PLAYER, ModConfig::setFOLLOW_PLAYER);
         this.addDrawableChild(followPlayerButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.follow_player", "takeyourminestream.config.follow_player.desc", ConfigEntryType.TOGGLE, followPlayerButton, ConfigCategory.BEHAVIOR));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.follow_player", "takeyourstreamchat.config.follow_player.desc", ConfigEntryType.TOGGLE, followPlayerButton, ConfigCategory.BEHAVIOR));
 
-        ButtonWidget clickToRemoveButton = ButtonWidget.builder(
-            Text.translatable(ModConfig.isENABLE_CLICK_TO_REMOVE() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"),
-            btn -> {
-                ModConfig.setENABLE_CLICK_TO_REMOVE(!ModConfig.isENABLE_CLICK_TO_REMOVE());
-                btn.setMessage(Text.translatable(ModConfig.isENABLE_CLICK_TO_REMOVE() ? "takeyourminestream.config.on" : "takeyourminestream.config.off"));
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        ButtonWidget clickToRemoveButton = createToggleButton(ModConfig::isENABLE_CLICK_TO_REMOVE, ModConfig::setENABLE_CLICK_TO_REMOVE);
         this.addDrawableChild(clickToRemoveButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.click_to_remove", "takeyourminestream.config.click_to_remove.desc", ConfigEntryType.TOGGLE, clickToRemoveButton, ConfigCategory.BEHAVIOR));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.click_to_remove", "takeyourstreamchat.config.click_to_remove.desc", ConfigEntryType.TOGGLE, clickToRemoveButton, ConfigCategory.BEHAVIOR));
 
         ButtonWidget unpinModeButton = ButtonWidget.builder(
             getUnpinModeButtonText(),
@@ -377,7 +410,82 @@ public class ModConfigScreen extends Screen {
             }
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(unpinModeButton);
-        configEntries.add(new ConfigEntry("takeyourminestream.config.unpin_mode", "takeyourminestream.config.unpin_mode.desc", ConfigEntryType.BUTTON, unpinModeButton, ConfigCategory.BEHAVIOR));
+        configEntries.add(new ConfigEntry("takeyourstreamchat.config.unpin_mode", "takeyourstreamchat.config.unpin_mode.desc", ConfigEntryType.BUTTON, unpinModeButton, ConfigCategory.BEHAVIOR));
+    }
+
+    private ButtonWidget createToggleButton(
+        java.util.function.BooleanSupplier getter,
+        java.util.function.Consumer<Boolean> setter
+    ) {
+        return ButtonWidget.builder(
+            ConfigUiHelper.onOffText(getter.getAsBoolean()),
+            btn -> {
+                setter.accept(!getter.getAsBoolean());
+                btn.setMessage(ConfigUiHelper.onOffText(getter.getAsBoolean()));
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, CONTROL_HEIGHT).build();
+    }
+
+    private void addToggleEntry(
+        String labelKey,
+        String descriptionKey,
+        java.util.function.BooleanSupplier getter,
+        java.util.function.Consumer<Boolean> setter,
+        ConfigCategory category
+    ) {
+        ButtonWidget button = createToggleButton(getter, setter);
+        this.addDrawableChild(button);
+        configEntries.add(new ConfigEntry(labelKey, descriptionKey, ConfigEntryType.TOGGLE, button, category));
+    }
+
+    private void addPlatformRow(
+        String labelKey,
+        String descriptionKey,
+        String initialValue,
+        String configKey,
+        java.util.function.BooleanSupplier enabledGetter,
+        java.util.function.Consumer<Boolean> enabledSetter,
+        String platformIconKey
+    ) {
+        TextFieldWidget field = new TextFieldWidget(
+            this.textRenderer,
+            0,
+            0,
+            PLATFORM_FIELD_WIDTH,
+            CONTROL_HEIGHT,
+            Text.translatable(labelKey)
+        );
+        field.setText(initialValue);
+        this.addDrawableChild(field);
+
+        ButtonWidget toggle = ButtonWidget.builder(
+            ConfigUiHelper.onOffText(enabledGetter.getAsBoolean()),
+            btn -> {
+                boolean enabled = !enabledGetter.getAsBoolean();
+                enabledSetter.accept(enabled);
+                btn.setMessage(ConfigUiHelper.onOffText(enabled));
+                applyConnectionSettingsFromConfig(enabled);
+            }
+        ).dimensions(0, 0, TOGGLE_BUTTON_WIDTH, CONTROL_HEIGHT).build();
+        this.addDrawableChild(toggle);
+
+        // Платформу нельзя включить с пустым ником: выключаем и блокируем тумблер
+        Runnable syncToggleAvailability = () -> {
+            boolean hasText = !field.getText().trim().isEmpty();
+            if (!hasText && enabledGetter.getAsBoolean()) {
+                enabledSetter.accept(false);
+            }
+            toggle.active = hasText;
+            toggle.setMessage(ConfigUiHelper.onOffText(enabledGetter.getAsBoolean()));
+        };
+        field.setChangedListener(value -> {
+            ConfigManager.getInstance().setConfigValue(configKey, value);
+            syncToggleAvailability.run();
+        });
+        syncToggleAvailability.run();
+
+        PlatformChannelRow row = new PlatformChannelRow(field, toggle, platformIconKey);
+        configEntries.add(new ConfigEntry(labelKey, descriptionKey, ConfigEntryType.PLATFORM_ROW, row, ConfigCategory.GENERAL));
     }
     
     private void updateCategoryVisibility() {
@@ -400,68 +508,83 @@ public class ModConfigScreen extends Screen {
                 continue;
             }
 
-            setWidgetPosition(entry.widget, rightX, y);
-            boolean visibleInViewport = isElementVisible(y, contentTop, contentBottom);
-            setWidgetVisible(entry.widget, visibleInViewport);
+            if (entry.type == ConfigEntryType.PLATFORM_ROW && entry.widget instanceof PlatformChannelRow row) {
+                positionPlatformRow(row, rightX, y);
+                boolean visibleInViewport = isElementVisible(y, contentTop, contentBottom);
+                setWidgetVisible(row.field, visibleInViewport);
+                setWidgetVisible(row.toggle, visibleInViewport);
+            } else {
+                setWidgetPosition(entry.widget, rightX, y);
+                boolean visibleInViewport = isElementVisible(y, contentTop, contentBottom);
+                setWidgetVisible(entry.widget, visibleInViewport);
+            }
             
             y += ENTRY_HEIGHT + ENTRY_SPACING;
         }
+    }
+
+    private void positionPlatformRow(PlatformChannelRow row, int rightX, int y) {
+        int centeredY = y + (ENTRY_HEIGHT - CONTROL_HEIGHT) / 2;
+        int toggleX = rightX + CONTROL_WIDTH - TOGGLE_BUTTON_WIDTH;
+        row.field.setPosition(rightX, centeredY);
+        row.field.setDimensions(PLATFORM_FIELD_WIDTH, CONTROL_HEIGHT);
+        row.toggle.setPosition(toggleX, centeredY);
+        row.toggle.setDimensions(TOGGLE_BUTTON_WIDTH, CONTROL_HEIGHT);
     }
     
 
     
     private void createBottomButtons() {
-        historyButton = ButtonWidget.builder(Text.translatable("takeyourminestream.config.message_history"), btn -> {
+        historyButton = ButtonWidget.builder(Text.translatable("takeyourstreamchat.config.message_history"), btn -> {
             var messageSpawner = TakeYourMineStreamClient.getStaticMessageSpawner();
             if (messageSpawner != null) {
                 this.client.setScreen(new MessageHistoryScreen(this, messageSpawner.getLifecycleManager()));
             }
         }).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
 
-        twitchButton = ButtonWidget.builder(getTwitchToggleButtonText(), btn -> {
-            handleTwitchToggle();
-            btn.setMessage(getTwitchToggleButtonText());
-            layoutFooterButtons();
-        }).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
-
-        doneButton = ButtonWidget.builder(Text.translatable("gui.done"), btn -> {
-            if (!ModConfig.getTWITCH_CHANNEL_NAME().equals(initialChannelName)) {
-                TwitchManager.getInstance(ConfigManager.getInstance()).onChannelNameChanged(ModConfig.getTWITCH_CHANNEL_NAME());
+        chatToggleButton = ButtonWidget.builder(
+            ChatConnectToggleHelper.buttonLabel(),
+            btn -> {
+                ChatConnectToggleHelper.toggle();
+                btn.setMessage(ChatConnectToggleHelper.buttonLabel());
             }
-            ConfigManager.getInstance().saveConfig();
-            this.close();
-        }).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
+        ).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
+
+        doneButton = ButtonWidget.builder(Text.translatable("gui.done"), btn -> this.close())
+            .dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
 
         this.addDrawableChild(historyButton);
-        this.addDrawableChild(twitchButton);
+        this.addDrawableChild(chatToggleButton);
         this.addDrawableChild(doneButton);
         layoutFooterButtons();
     }
 
     private void layoutFooterButtons() {
-        if (historyButton == null || twitchButton == null || doneButton == null || this.textRenderer == null) {
+        if (historyButton == null || chatToggleButton == null || doneButton == null || this.textRenderer == null) {
             return;
         }
 
-        Text historyLabel = Text.translatable("takeyourminestream.config.message_history");
-        Text twitchLabel = getTwitchToggleButtonText();
+        Text historyLabel = Text.translatable("takeyourstreamchat.config.message_history");
+        Text chatLabel = ChatConnectToggleHelper.buttonLabel();
         Text doneLabel = Text.translatable("gui.done");
 
-        int historyW = this.textRenderer.getWidth(historyLabel) + FOOTER_BUTTON_PADDING * 2;
-        int twitchW = this.textRenderer.getWidth(twitchLabel) + FOOTER_BUTTON_PADDING * 2;
+        int historyW = BUTTON_ICON_SIZE + BUTTON_ICON_GAP
+            + this.textRenderer.getWidth(historyLabel) + FOOTER_BUTTON_PADDING * 2;
+        int chatW = this.textRenderer.getWidth(chatLabel) + FOOTER_BUTTON_PADDING * 2;
         int doneW = this.textRenderer.getWidth(doneLabel) + FOOTER_BUTTON_PADDING * 2;
         int buttonY = getFooterZoneTop();
 
-        int totalWidth = historyW + twitchW + doneW + FOOTER_BUTTON_GAP * 2;
+        int totalWidth = historyW + chatW + doneW + FOOTER_BUTTON_GAP * 2;
         int x = Math.max(8, (this.width - totalWidth) / 2);
 
         historyButton.setPosition(x, buttonY);
         historyButton.setDimensions(historyW, FOOTER_BUTTON_HEIGHT);
         x += historyW + FOOTER_BUTTON_GAP;
 
-        twitchButton.setPosition(x, buttonY);
-        twitchButton.setDimensions(twitchW, FOOTER_BUTTON_HEIGHT);
-        x += twitchW + FOOTER_BUTTON_GAP;
+        chatToggleButton.setPosition(x, buttonY);
+        chatToggleButton.setDimensions(chatW, FOOTER_BUTTON_HEIGHT);
+        chatToggleButton.setMessage(chatLabel);
+        x += chatW + FOOTER_BUTTON_GAP;
 
         doneButton.setPosition(x, buttonY);
         doneButton.setDimensions(doneW, FOOTER_BUTTON_HEIGHT);
@@ -470,12 +593,12 @@ public class ModConfigScreen extends Screen {
 
     private Text getRoleFilterButtonText() {
         return switch (ModConfig.getCHAT_ROLE_FILTER()) {
-            case SUBSCRIBERS -> Text.translatable("takeyourminestream.config.role_filter.subscribers");
-            case VIP -> Text.translatable("takeyourminestream.config.role_filter.vip");
-            case MODS -> Text.translatable("takeyourminestream.config.role_filter.mods");
-            case SUB_OR_VIP -> Text.translatable("takeyourminestream.config.role_filter.sub_or_vip");
-            case SUB_OR_MOD -> Text.translatable("takeyourminestream.config.role_filter.sub_or_mod");
-            default -> Text.translatable("takeyourminestream.config.role_filter.all");
+            case SUBSCRIBERS -> Text.translatable("takeyourstreamchat.config.role_filter.subscribers");
+            case VIP -> Text.translatable("takeyourstreamchat.config.role_filter.vip");
+            case MODS -> Text.translatable("takeyourstreamchat.config.role_filter.mods");
+            case SUB_OR_VIP -> Text.translatable("takeyourstreamchat.config.role_filter.sub_or_vip");
+            case SUB_OR_MOD -> Text.translatable("takeyourstreamchat.config.role_filter.sub_or_mod");
+            default -> Text.translatable("takeyourstreamchat.config.role_filter.all");
         };
     }
 
@@ -483,55 +606,24 @@ public class ModConfigScreen extends Screen {
         var mode = ModConfig.getMESSAGE_SPAWN_MODE();
         switch (mode) {
             case AROUND_PLAYER:
-                return Text.translatable("takeyourminestream.config.around_player");
+                return Text.translatable("takeyourstreamchat.config.around_player");
             case FRONT_OF_PLAYER:
-                return Text.translatable("takeyourminestream.config.fop_only");
+                return Text.translatable("takeyourstreamchat.config.fop_only");
             case HUD_WIDGET:
-                return Text.translatable("takeyourminestream.config.hud_widget");
+                return Text.translatable("takeyourstreamchat.config.hud_widget");
             default:
-                return Text.translatable("takeyourminestream.config.around_player");
+                return Text.translatable("takeyourstreamchat.config.around_player");
         }
     }
 
     private Text getUnpinModeButtonText() {
         return ModConfig.getUNPIN_MODE() == UnpinMode.WHOLE_MESSAGE
-            ? Text.translatable("takeyourminestream.config.unpin_mode.whole_message")
-            : Text.translatable("takeyourminestream.config.unpin_mode.pin_icon");
+            ? Text.translatable("takeyourstreamchat.config.unpin_mode.whole_message")
+            : Text.translatable("takeyourstreamchat.config.unpin_mode.pin_icon");
     }
     
 
     
-    private Text getTwitchToggleButtonText() {
-        var twitchManager = TwitchManager.getInstance(ConfigManager.getInstance());
-        boolean isConnected = twitchManager.isConnected();
-        
-        String statusKey = isConnected ? "takeyourminestream.config.twitch_on" : "takeyourminestream.config.twitch_off";
-        MutableText statusText = Text.translatable(statusKey);
-        
-        // Добавляем цветной индикатор
-        MutableText indicator = Text.literal(" ●").formatted(isConnected ? Formatting.GREEN : Formatting.RED);
-        
-        return statusText.append(indicator);
-    }
-    
-    private void handleTwitchToggle() {
-        try {
-            var twitchManager = TwitchManager.getInstance(ConfigManager.getInstance());
-            var messageSpawner = TakeYourMineStreamClient.getStaticMessageSpawner();
-            
-            if (twitchManager.isConnected()) {
-                twitchManager.disconnect();
-            } else {
-                if (messageSpawner != null) {
-                    twitchManager.connect(messageSpawner);
-                }
-            }
-        } catch (Exception e) {
-            // Логируем ошибку, но не показываем игроку в GUI
-            TakeYourMineStreamClient.LOGGER.error("Twitch connection error: ", e);
-        }
-    }
-
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         updateEntryPositions();
@@ -546,6 +638,11 @@ public class ModConfigScreen extends Screen {
             if (entry.widget instanceof TextFieldWidget w && w.visible) {
                 w.visible = false;
                 temporarilyHidden.add(w);
+            } else if (entry.widget instanceof PlatformChannelRow row) {
+                if (row.field.visible) {
+                    row.field.visible = false;
+                    temporarilyHidden.add(row.field);
+                }
             } else if (entry.widget instanceof ChanceForSpawnSliderWidget w && w.visible) {
                 w.visible = false;
                 temporarilyHidden.add(w);
@@ -590,7 +687,7 @@ public class ModConfigScreen extends Screen {
         drawFixedPanelFooter(context);
 
         Text description = hoveredDescriptionKey == null
-            ? Text.translatable("takeyourminestream.config.hint_default")
+            ? Text.translatable("takeyourstreamchat.config.hint_default")
             : Text.translatable(hoveredDescriptionKey);
 
         int descTop = getDescriptionTop();
@@ -602,23 +699,99 @@ public class ModConfigScreen extends Screen {
             ModUiTheme.TEXT_SECONDARY
         );
 
-        ButtonWidget selectedTab = null;
         for (int i = 0; i < categoryButtons.size(); i++) {
-            if (ConfigCategory.values()[i] == currentCategory) {
-                selectedTab = categoryButtons.get(i);
-                break;
-            }
-        }
-        ScreenUiHelper.renderButtons(context, mouseX, mouseY, categoryButtons, selectedTab);
-        if (historyButton != null) {
-            ScreenUiHelper.renderButtons(
+            ButtonWidget button = categoryButtons.get(i);
+            ConfigCategory category = ConfigCategory.values()[i];
+            drawIconButton(
                 context,
-                mouseX,
-                mouseY,
-                java.util.List.of(historyButton, twitchButton, doneButton),
-                null
+                button,
+                category.getIcon(),
+                category.getText(),
+                isButtonHovered(button, mouseX, mouseY),
+                category == currentCategory
             );
         }
+        if (historyButton != null) {
+            drawIconButton(
+                context,
+                historyButton,
+                ICON_HISTORY,
+                Text.translatable("takeyourstreamchat.config.message_history"),
+                isButtonHovered(historyButton, mouseX, mouseY),
+                false
+            );
+            if (chatToggleButton != null) {
+                boolean chatConnected = ChatConnectionManager.getInstance(ConfigManager.getInstance()).isConnected();
+                ModUiTheme.drawConnectionToggleButton(
+                    context,
+                    this.textRenderer,
+                    chatToggleButton,
+                    chatConnected,
+                    isButtonHovered(chatToggleButton, mouseX, mouseY)
+                );
+            }
+            if (doneButton != null) {
+                ScreenUiHelper.renderButtons(
+                    context,
+                    mouseX,
+                    mouseY,
+                    java.util.List.of(doneButton),
+                    null
+                );
+            }
+        }
+    }
+
+    private static boolean isButtonHovered(ButtonWidget button, int mouseX, int mouseY) {
+        return button.active && ModUiTheme.isHovered(
+            mouseX,
+            mouseY,
+            button.getX(),
+            button.getY(),
+            button.getWidth(),
+            button.getHeight()
+        );
+    }
+
+    /** Кнопка в стиле ModUiTheme с пиксельной иконкой слева от подписи. */
+    private void drawIconButton(
+        DrawContext context,
+        ButtonWidget button,
+        Identifier icon,
+        Text label,
+        boolean hovered,
+        boolean selected
+    ) {
+        ModUiTheme.drawButton(
+            context,
+            this.textRenderer,
+            button.getX(),
+            button.getY(),
+            button.getWidth(),
+            button.getHeight(),
+            Text.empty(),
+            hovered,
+            button.active,
+            selected,
+            true
+        );
+        int textWidth = this.textRenderer.getWidth(label);
+        int totalWidth = BUTTON_ICON_SIZE + BUTTON_ICON_GAP + textWidth;
+        int startX = button.getX() + Math.max(4, (button.getWidth() - totalWidth) / 2);
+        int iconY = button.getY() + (button.getHeight() - BUTTON_ICON_SIZE) / 2;
+        takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer.drawGuiIcon(
+            context, icon, startX, iconY, BUTTON_ICON_SIZE
+        );
+        int textColor = button.active
+            ? (hovered || selected ? ModUiTheme.TEXT_PRIMARY : ModUiTheme.TEXT_SECONDARY)
+            : ModUiTheme.TEXT_HINT;
+        context.drawTextWithShadow(
+            this.textRenderer,
+            label,
+            startX + BUTTON_ICON_SIZE + BUTTON_ICON_GAP,
+            ModUiTheme.centeredTextY(button.getY(), button.getHeight(), this.textRenderer.fontHeight),
+            textColor
+        );
     }
 
     /** Непрокручиваемый низ панели: заливка фона панели, чтобы список настроек не просвечивал. */
@@ -658,6 +831,41 @@ public class ModConfigScreen extends Screen {
                         widget.getMessage(),
                         hovered,
                         widget.active,
+                        false,
+                        true
+                    );
+                }
+            } else if (entry.widget instanceof PlatformChannelRow row) {
+                if (row.field.visible && isElementVisible(row.field.getY(), contentTop, contentBottom)) {
+                    ModUiTheme.drawInputFrame(
+                        context,
+                        row.field.getX(),
+                        row.field.getY(),
+                        row.field.getWidth(),
+                        row.field.getHeight(),
+                        row.field.isFocused()
+                    );
+                    row.field.render(context, mouseX, mouseY, delta);
+                }
+                if (row.toggle.visible && isElementVisible(row.toggle.getY(), contentTop, contentBottom)) {
+                    boolean hovered = ModUiTheme.isHovered(
+                        mouseX,
+                        mouseY,
+                        row.toggle.getX(),
+                        row.toggle.getY(),
+                        row.toggle.getWidth(),
+                        row.toggle.getHeight()
+                    );
+                    ModUiTheme.drawButton(
+                        context,
+                        this.textRenderer,
+                        row.toggle.getX(),
+                        row.toggle.getY(),
+                        row.toggle.getWidth(),
+                        row.toggle.getHeight(),
+                        row.toggle.getMessage(),
+                        hovered,
+                        row.toggle.active,
                         false,
                         true
                     );
@@ -710,8 +918,23 @@ public class ModConfigScreen extends Screen {
             if (isElementVisible(currentY, contentTop, contentBottom)) {
                 boolean rowHovered = mouseX >= rowLeft && mouseX <= rowRight && mouseY >= currentY && mouseY <= currentY + ENTRY_HEIGHT;
                 ModUiTheme.drawListRow(context, rowLeft, currentY, rowRight, currentY + ENTRY_HEIGHT, rowHovered);
+
+                int textX = labelX;
+                if (entry.widget instanceof PlatformChannelRow row && row.platformIconKey != null) {
+                    // Цветная полоска и пиксельная иконка платформы
+                    int accent = 0xFF000000
+                        | takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(row.platformIconKey);
+                    context.fill(rowLeft, currentY, rowLeft + 2, currentY + ENTRY_HEIGHT, accent);
+                    textX = takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer.drawPlatformIcon(
+                        context,
+                        row.platformIconKey,
+                        labelX,
+                        currentY + (20 - takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer.PLATFORM_ICON_SIZE) / 2
+                    );
+                }
+
                 context.drawTextWithShadow(this.textRenderer, Text.translatable(entry.labelKey),
-                    labelX, currentY + (20 - fontHeight) / 2, labelColor);
+                    textX, currentY + (20 - fontHeight) / 2, labelColor);
 
                 if (rowHovered) {
                     hoveredDescriptionKey = entry.descriptionKey;
@@ -843,7 +1066,10 @@ public class ModConfigScreen extends Screen {
     }
 
     private void setWidgetVisible(Object widget, boolean visible) {
-        if (widget instanceof ButtonWidget) {
+        if (widget instanceof PlatformChannelRow row) {
+            row.field.visible = visible;
+            row.toggle.visible = visible;
+        } else if (widget instanceof ButtonWidget) {
             ((ButtonWidget) widget).visible = visible;
         } else if (widget instanceof TextFieldWidget) {
             ((TextFieldWidget) widget).visible = visible;
@@ -873,10 +1099,37 @@ public class ModConfigScreen extends Screen {
 
     @Override
     public void close() {
+        syncPlatformFieldsToConfig();
+        applyConnectionSettingsFromConfig(false);
+        ConfigManager.getInstance().saveConfig();
         if (this.parent != null) {
             this.client.setScreen(this.parent);
         } else {
             this.client.setScreen(null);
         }
+    }
+
+    /** Сохраняет ники/каналы из полей платформ перед закрытием экрана. */
+    private void syncPlatformFieldsToConfig() {
+        for (ConfigEntry entry : configEntries) {
+            if (entry.type != ConfigEntryType.PLATFORM_ROW || !(entry.widget instanceof PlatformChannelRow row)) {
+                continue;
+            }
+            String configKey = switch (row.platformIconKey) {
+                case "twitch" -> "twitchChannelName";
+                case "youtube" -> "youtubeChannel";
+                case "kick" -> "kickChannel";
+                case "tiktok" -> "tiktokUsername";
+                default -> null;
+            };
+            if (configKey != null) {
+                ConfigManager.getInstance().setConfigValue(configKey, row.field.getText());
+            }
+        }
+    }
+
+    /** Отключает выключенные платформы; переподключает изменённые каналы. */
+    private static void applyConnectionSettingsFromConfig(boolean forceReconnect) {
+        ChatConnectionManager.getInstance(ConfigManager.getInstance()).reconnectChangedPlatforms(forceReconnect);
     }
 } 

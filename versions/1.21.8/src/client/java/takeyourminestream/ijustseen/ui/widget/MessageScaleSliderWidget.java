@@ -79,17 +79,17 @@ public class MessageScaleSliderWidget extends SliderWidget {
     private static Text getDisplayText(MessageScale scale) {
         switch (scale) {
             case TINY:
-                return Text.translatable("takeyourminestream.config.scale_tiny");
+                return Text.translatable("takeyourstreamchat.config.scale_tiny");
             case SMALL:
-                return Text.translatable("takeyourminestream.config.scale_small");
+                return Text.translatable("takeyourstreamchat.config.scale_small");
             case NORMAL:
-                return Text.translatable("takeyourminestream.config.scale_normal");
+                return Text.translatable("takeyourstreamchat.config.scale_normal");
             case LARGE:
-                return Text.translatable("takeyourminestream.config.scale_large");
+                return Text.translatable("takeyourstreamchat.config.scale_large");
             case HUGE:
-                return Text.translatable("takeyourminestream.config.scale_huge");
+                return Text.translatable("takeyourstreamchat.config.scale_huge");
             default:
-                return Text.translatable("takeyourminestream.config.scale_normal");
+                return Text.translatable("takeyourstreamchat.config.scale_normal");
         }
     }
 }

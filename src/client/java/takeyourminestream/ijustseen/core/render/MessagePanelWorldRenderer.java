@@ -33,6 +33,27 @@ public final class MessagePanelWorldRenderer {
         return RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_TEXTURE);
     }
 
+    /** Панель: фон + бортик, тонированный цветом платформы. */
+    public static void drawPanelWithBorder(
+        MatrixStack matrices,
+        net.minecraft.client.render.VertexConsumerProvider consumers,
+        int x,
+        int y,
+        int width,
+        int height,
+        float alpha,
+        int borderRgb
+    ) {
+        VertexConsumer base = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_BASE_TEXTURE);
+        drawPanel(matrices, base, x, y, width, height, alpha, 1.0f, 1.0f, 1.0f);
+
+        float red = ((borderRgb >> 16) & 0xFF) / 255.0f;
+        float green = ((borderRgb >> 8) & 0xFF) / 255.0f;
+        float blue = (borderRgb & 0xFF) / 255.0f;
+        VertexConsumer border = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_BORDER_TEXTURE);
+        drawPanel(matrices, border, x, y, width, height, alpha, red, green, blue);
+    }
+
     private static void drawQuad(
         VertexConsumer consumer,
         Matrix4f matrix,

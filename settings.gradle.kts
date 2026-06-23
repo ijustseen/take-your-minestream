@@ -31,4 +31,4 @@ stonecutter {
     create(rootProject)
 }
 
-rootProject.name = "take-your-minestream"
+rootProject.name = "take-your-stream-chat"

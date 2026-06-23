@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 
 public class BlockedUsernameManager {
     private static final Logger LOGGER = Logger.getLogger(BlockedUsernameManager.class.getName());
-    private static final String USER_FILE_NAME = "take-your-minestream-blocked-users.json";
+    private static final String USER_FILE_NAME = "take-your-stream-chat-blocked-users.json";
     private static final Path USER_FILE_PATH;
     private static BlockedUsernameManager instance;
 

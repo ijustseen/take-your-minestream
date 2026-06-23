@@ -11,13 +11,15 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import takeyourminestream.ijustseen.config.MessageSpawnMode;
+import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageClickHandler;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 
 import java.util.ArrayList;
 
-/** Mixin для обработки кликов по сообщениям (1.21.10+). */
+/** Mixin для обработки кликов по 3D-сообщениям (1.21.10+). */
 @Mixin(Mouse.class)
 public class MouseHandlerMixin {
     @Shadow @Final private MinecraftClient client;
@@ -33,6 +35,10 @@ public class MouseHandlerMixin {
         }
 
         if (client.currentScreen != null) {
+            return;
+        }
+
+        if (ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET) {
             return;
         }
 
@@ -68,7 +74,7 @@ public class MouseHandlerMixin {
             return;
         }
 
-        if (!takeyourminestream.ijustseen.config.ModConfig.isENABLE_CLICK_TO_REMOVE()) {
+        if (!ModConfig.isENABLE_CLICK_TO_REMOVE()) {
             return;
         }
 

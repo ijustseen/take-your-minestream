@@ -100,10 +100,10 @@ public final class HistoryMessageActionPopup {
 
     private static Text labelFor(Entry entry) {
         return switch (entry) {
-            case PIN -> Text.translatable("takeyourminestream.history.action.pin");
-            case UNPIN -> Text.translatable("takeyourminestream.history.action.unpin");
-            case BLOCK -> Text.translatable("takeyourminestream.history.action.block");
-            case REPLAY -> Text.translatable("takeyourminestream.history.action.replay");
+            case PIN -> Text.translatable("takeyourstreamchat.history.action.pin");
+            case UNPIN -> Text.translatable("takeyourstreamchat.history.action.unpin");
+            case BLOCK -> Text.translatable("takeyourstreamchat.history.action.block");
+            case REPLAY -> Text.translatable("takeyourstreamchat.history.action.replay");
         };
     }
 

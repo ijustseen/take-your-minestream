@@ -38,7 +38,6 @@ public class MessageRenderer {
     private static final int EMOTE_ICON_SIZE = 12;
     private static final int EMOTE_ICON_SPACING = 1;
     private static final float EMOTE_ICON_Z_OFFSET = 0.02f;
-
     public MessageRenderer(MessageLifecycleManager lifecycleManager, MessageParticleManager particleManager) {
         this.lifecycleManager = lifecycleManager;
         this.particleManager = particleManager;
@@ -78,18 +77,10 @@ public class MessageRenderer {
 
         int tickCounter = lifecycleManager.getTickCounter();
         int age = message.isPinned() ? 0 : message.getEffectiveAge(tickCounter);
+        float fallOffsetY = MessagePanelLayout.fallOffsetY(age);
         int fallTicks = ModConfig.getMESSAGE_FALL_TICKS();
         int fallStart = ModConfig.getMESSAGE_LIFETIME_TICKS();
         int fallAge = age - fallStart;
-        float fallOffsetY = 0.0f;
-        boolean isFalling = false;
-        if (fallAge >= 0 && fallAge < fallTicks) {
-            float fallProgress = (float)fallAge / (float)fallTicks;
-            fallProgress = Math.min(Math.max(fallProgress, 0.0f), 1.0f);
-            float maxFall = 20.0f;
-            fallOffsetY = (fallProgress * fallProgress) * maxFall;
-            isFalling = true;
-        }
         if (fallAge >= fallTicks) {
             // Сообщение уже "разбилось" и не должно отображаться
             matrices.pop();
@@ -111,52 +102,57 @@ public class MessageRenderer {
         matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(state.pitch));
         
         // Применяем масштаб из конфигурации
-        float baseScale = 0.025f;
-        float configScale = takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SCALE().getScale();
-        float finalScale = baseScale * configScale;
+        float finalScale = MessagePanelLayout.worldScale();
         matrices.scale(finalScale, -finalScale, finalScale);
 
-        boolean hasEmotes = !message.getEmotes().isEmpty();
+        MessagePanelLayout.Dimensions layout = message.getWorldLayout(textRenderer);
+        int maxTextWidth = layout.maxTextWidth();
+        float totalTextHeight = layout.totalTextHeight();
+        int panelWidth = layout.panelWidth();
+        int panelHeight = layout.panelHeight();
+        String platformIconKey = message.getPlatformIconKey();
+        int iconOffset = layout.firstLineIconOffset();
+
+        boolean hasEmotes = message.hasInlineEmotes();
+        List<EmoteTextLayout.LineContent> emoteLines = hasEmotes
+            ? message.getEmoteLines(textRenderer)
+            : java.util.Collections.emptyList();
         List<OrderedText> wrappedText = hasEmotes
             ? java.util.Collections.emptyList()
             : textRenderer.wrapLines(Text.of(message.getText()), MessagePanelConstants.MESSAGE_WRAP_WIDTH);
-        float totalTextHeight = hasEmotes ? textRenderer.fontHeight : wrappedText.size() * textRenderer.fontHeight;
-        int maxTextWidth = hasEmotes ? getEmoteAwareLineWidth(textRenderer, message.getText(), message.getEmotes()) : 0;
-        if (!hasEmotes) {
-            for (OrderedText line : wrappedText) {
-                int w = textRenderer.getWidth(line);
-                if (w > maxTextWidth) maxTextWidth = w;
-            }
-        }
-        int panelWidth = maxTextWidth + MessagePanelConstants.PADDING_X * 2;
-        int panelHeight = (int)totalTextHeight + MessagePanelConstants.PADDING_Y * 2;
         // Центрируем текст и панель + применяем падение
         matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
         // Рендерим панель (по флагу)
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
-            MessagePanelWorldRenderer.drawPanel(
+            MessagePanelWorldRenderer.drawPanelWithBorder(
                 matrices,
-                MessagePanelWorldRenderer.panelConsumer(consumers),
+                consumers,
                 -MessagePanelConstants.PADDING_X,
                 -MessagePanelConstants.PADDING_Y,
                 panelWidth,
                 panelHeight,
                 1.0f,
-                1.0f,
-                1.0f,
-                1.0f
+                takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(platformIconKey)
             );
         }
         matrices.translate(0f, 0f, 0.1f);
         // Рендерим текст
         int alphaInt = 0xFF << 24;
         int color = (0xFFFFFF) | alphaInt;
+        if (platformIconKey != null) {
+            renderPlatformIcon(matrices, consumers, platformIconKey);
+        }
         if (hasEmotes) {
-            renderLineWithEmotes(matrices, textRenderer, consumers, message.getText(), message.getEmotes(), color);
+            float lineY = 0.0f;
+            for (int i = 0; i < emoteLines.size(); i++) {
+                EmoteTextLayout.LineContent line = emoteLines.get(i);
+                renderLineWithEmotes(matrices, textRenderer, consumers, line.text(), line.emotes(), color, i == 0 ? iconOffset : 0.0f, lineY);
+                lineY += line.hasEmotes() ? MessagePanelLayout.EMOTE_ICON_SIZE + 1 : textRenderer.fontHeight;
+            }
         } else {
             for (int i = 0; i < wrappedText.size(); i++) {
                 textRenderer.draw(wrappedText.get(i),
-                                0.0F,
+                                i == 0 ? (float) iconOffset : 0.0F,
                                 (float)i * textRenderer.fontHeight,
                                 color,
                                 true,
@@ -234,6 +230,14 @@ public class MessageRenderer {
         drawQuadIcon(consumer, mat, markerX, markerY, markerX + MessagePanelConstants.PIN_ICON_SIZE, markerY + MessagePanelConstants.PIN_ICON_SIZE, PIN_ICON_Z_OFFSET, u0, v0, u1, v1);
     }
 
+    private void renderPlatformIcon(MatrixStack matrices, VertexConsumerProvider consumers, String iconKey) {
+        Identifier texture = TwitchEmoteTextureCache.getTextureIdentifier("platform", iconKey);
+        if (texture == null) return;
+        VertexConsumer consumer = RenderLayerCompat.getTextBuffer(consumers, texture);
+        Matrix4f mat = matrices.peek().getPositionMatrix();
+        drawQuadIcon(consumer, mat, 0, 0, MessagePanelLayout.PLATFORM_ICON_SIZE, MessagePanelLayout.PLATFORM_ICON_SIZE, EMOTE_ICON_Z_OFFSET, 0f, 0f, 1f, 1f);
+    }
+
     private void drawQuadIcon(VertexConsumer consumer, Matrix4f mat, int x0, int y0, int x1, int y1, float z, float u0, float v0, float u1, float v1) {
         int light = 0xF000F0;
         int overlay = OverlayTexture.DEFAULT_UV;
@@ -243,38 +247,24 @@ public class MessageRenderer {
         consumer.vertex(mat, x1, y0, z).color(1f, 1f, 1f, 1.0f).texture(u1, v0).overlay(overlay).light(light).normal(0, 0, -1);
     }
 
-    private int getEmoteAwareLineWidth(TextRenderer textRenderer, String text, List<MessageEmote> emotes) {
-        int width = 0;
-        int cursor = 0;
-        for (MessageEmote emote : getSortedValidEmotes(text, emotes)) {
-            if (emote.getStartIndex() > cursor) {
-                width += textRenderer.getWidth(text.substring(cursor, emote.getStartIndex()));
-            }
-            width += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
-            cursor = emote.getEndIndex() + 1;
-        }
-        if (cursor < text.length()) {
-            width += textRenderer.getWidth(text.substring(cursor));
-        }
-        return width;
-    }
-
     private void renderLineWithEmotes(MatrixStack matrices,
                                       TextRenderer textRenderer,
                                       VertexConsumerProvider consumers,
                                       String text,
                                       List<MessageEmote> emotes,
-                                      int color) {
+                                      int color,
+                                      float startX,
+                                      float y) {
         List<MessageEmote> sortedEmotes = getSortedValidEmotes(text, emotes);
         int cursor = 0;
-        float x = 0.0f;
+        float x = startX;
 
         for (MessageEmote emote : sortedEmotes) {
             if (emote.getStartIndex() > cursor) {
                 String segment = text.substring(cursor, emote.getStartIndex());
                 textRenderer.draw(segment,
                     x,
-                    0.0F,
+                    y,
                     color,
                     true,
                     matrices.peek().getPositionMatrix(),
@@ -291,7 +281,7 @@ public class MessageRenderer {
                 VertexConsumer consumer = RenderLayerCompat.getTextBuffer(consumers, emoteTexture);
                 Matrix4f mat = matrices.peek().getPositionMatrix();
                 int iconX = Math.round(x);
-                int iconY = -1;
+                int iconY = Math.round(y) - 1;
                 drawQuadIcon(consumer,
                     mat,
                     iconX,
@@ -305,12 +295,12 @@ public class MessageRenderer {
                     1f
                 );
                 x += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
-            } else {
+            } else if (!"emoji".equals(emote.getProvider())) {
                 // Fallback: show emote code as text while texture is loading/failed
                 String code = emote.getEmoteCode();
                 textRenderer.draw(code,
                     x,
-                    0.0F,
+                    y,
                     color,
                     true,
                     matrices.peek().getPositionMatrix(),
@@ -320,6 +310,8 @@ public class MessageRenderer {
                     0xF000F0
                 );
                 x += textRenderer.getWidth(code) + EMOTE_ICON_SPACING;
+            } else {
+                x += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
             }
             cursor = emote.getEndIndex() + 1;
         }
@@ -328,7 +320,7 @@ public class MessageRenderer {
             String tail = text.substring(cursor);
             textRenderer.draw(tail,
                 x,
-                0.0F,
+                y,
                 color,
                 true,
                 matrices.peek().getPositionMatrix(),

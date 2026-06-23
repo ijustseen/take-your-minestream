@@ -7,6 +7,8 @@ import net.minecraft.util.Identifier;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.core.storage.StoragePaths;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -113,6 +115,14 @@ public final class TwitchEmoteTextureCache {
     }
 
     private static byte[] downloadImageBytes(String provider, String emoteId) {
+        if ("emoji".equals(provider)) {
+            String sequence = EmojiTextureCache.sequenceFor(emoteId);
+            if (sequence == null || sequence.isEmpty()) {
+                return null;
+            }
+            EmojiTextureCache.preload(emoteId, sequence);
+            return EmojiTextureCache.rasterizeToPng(sequence);
+        }
         if (!"7tv".equals(provider)) {
             return downloadFromUrl(getEmoteUrl(provider, emoteId), provider, emoteId);
         }
@@ -220,6 +230,18 @@ public final class TwitchEmoteTextureCache {
             return null;
         }
 
+        // Встроенные пиксельные иконки платформ (из ресурсов мода, без скачивания)
+        if ("platform".equals(provider)) {
+            return Identifier.of("take-your-stream-chat", "textures/platform/" + emoteId + ".png");
+        }
+
+        if ("emoji".equals(provider)) {
+            String sequence = EmojiTextureCache.sequenceFor(emoteId);
+            if (sequence != null && !sequence.isEmpty()) {
+                EmojiTextureCache.ensureLoaded(emoteId, sequence);
+            }
+        }
+
         String key = cacheKey(provider, emoteId);
         AnimatedTextureSet animated = ANIMATED_TEXTURES.get(key);
         if (animated != null) {
@@ -256,6 +278,34 @@ public final class TwitchEmoteTextureCache {
     public static boolean isLoaded(String provider, String emoteId) {
         String key = cacheKey(provider, emoteId);
         return LOADED_TEXTURES.containsKey(key) || ANIMATED_TEXTURES.containsKey(key);
+    }
+
+    /** Синхронная регистрация уже готовых байтов (локальные emoji PNG). */
+    public static void registerImageBytesNow(String provider, String emoteId, byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0 || emoteId == null || emoteId.isBlank()) {
+            return;
+        }
+
+        String key = cacheKey(provider, emoteId);
+        if (LOADED_TEXTURES.containsKey(key) || ANIMATED_TEXTURES.containsKey(key)) {
+            return;
+        }
+
+        IMAGE_BYTES_CACHE.put(key, imageBytes);
+        saveToDiskCache(provider, emoteId, imageBytes);
+        PENDING_OR_DONE.add(key);
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null) {
+            return;
+        }
+
+        Runnable task = () -> registerImageBytesImmediate(key, provider, emoteId, imageBytes, client);
+        if (RenderSystem.isOnRenderThread()) {
+            task.run();
+        } else {
+            client.execute(task);
+        }
     }
 
     /**
@@ -336,31 +386,40 @@ public final class TwitchEmoteTextureCache {
 
     private static void registerOnRenderThread(String key, String provider, String emoteId, byte[] imageBytes) {
         MinecraftClient client = MinecraftClient.getInstance();
-        client.execute(() -> {
-            try {
-                if ("7tv".equals(provider) && isGifData(imageBytes)) {
-                    if (registerAnimatedGifFrames(key, provider, emoteId, imageBytes, client)) {
-                        return;
-                    }
-                }
+        if (client == null) {
+            return;
+        }
+        client.execute(() -> registerImageBytesImmediate(key, provider, emoteId, imageBytes, client));
+    }
 
-                NativeImage image = decodeNativeImage(imageBytes, provider, emoteId);
-                if (image == null) {
-                    TakeYourMineStreamClient.LOGGER.warn("Failed to decode image for {} emote {}", provider, emoteId);
+    private static void registerImageBytesImmediate(String key,
+                                                    String provider,
+                                                    String emoteId,
+                                                    byte[] imageBytes,
+                                                    MinecraftClient client) {
+        try {
+            if ("7tv".equals(provider) && isGifData(imageBytes)) {
+                if (registerAnimatedGifFrames(key, provider, emoteId, imageBytes, client)) {
                     return;
                 }
-
-                NativeImageBackedTexture texture = new NativeImageBackedTexture(image);
-
-                Identifier textureId = Identifier.of("take-your-minestream", "emotes/" + provider + "/" + getSafeTexturePathPart(emoteId));
-                client.getTextureManager().registerTexture(textureId, texture);
-                TEXTURE_REFS.put(key, texture);
-                LOADED_TEXTURES.put(key, textureId);
-                ANIMATED_TEXTURES.remove(key);
-            } catch (Exception e) {
-                TakeYourMineStreamClient.LOGGER.error("Error creating texture for {} emote {}", provider, emoteId, e);
             }
-        });
+
+            NativeImage image = decodeNativeImage(imageBytes, provider, emoteId);
+            if (image == null) {
+                TakeYourMineStreamClient.LOGGER.warn("Failed to decode image for {} emote {}", provider, emoteId);
+                return;
+            }
+
+            NativeImageBackedTexture texture = new NativeImageBackedTexture(image);
+
+            Identifier textureId = Identifier.of("take-your-stream-chat", "emotes/" + provider + "/" + getSafeTexturePathPart(emoteId));
+            client.getTextureManager().registerTexture(textureId, texture);
+            TEXTURE_REFS.put(key, texture);
+            LOADED_TEXTURES.put(key, textureId);
+            ANIMATED_TEXTURES.remove(key);
+        } catch (Exception e) {
+            TakeYourMineStreamClient.LOGGER.error("Error creating texture for {} emote {}", provider, emoteId, e);
+        }
     }
 
     private static boolean isGifData(byte[] bytes) {
@@ -422,7 +481,7 @@ public final class TwitchEmoteTextureCache {
                     if (nativeFrame == null) continue;
 
                     Identifier frameId = Identifier.of(
-                            "take-your-minestream",
+                            "take-your-stream-chat",
                             "emotes/" + provider + "/" + getSafeTexturePathPart(emoteId) + "_f" + frameIndex
                     );
                     NativeImageBackedTexture frameTexture = new NativeImageBackedTexture(nativeFrame);

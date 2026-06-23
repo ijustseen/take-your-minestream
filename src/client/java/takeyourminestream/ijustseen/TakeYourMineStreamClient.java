@@ -8,10 +8,10 @@ import takeyourminestream.ijustseen.filtering.FilteringManager;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.messages.MessageSystemFactory;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
-import takeyourminestream.ijustseen.interfaces.ITwitchManager;
+import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
 import takeyourminestream.ijustseen.config.ConfigManager;
-import takeyourminestream.ijustseen.integration.twitch.TwitchManager;
+import takeyourminestream.ijustseen.integration.chat.ChatConnectionManager;
 import takeyourminestream.ijustseen.commands.CommandManager;
 import takeyourminestream.ijustseen.input.KeyBindingManager;
 import takeyourminestream.ijustseen.utils.Logger;
@@ -20,12 +20,12 @@ import takeyourminestream.ijustseen.utils.Logger;
  * Главный класс клиентской части мода
  */
 public class TakeYourMineStreamClient implements ClientModInitializer {
-    public static final String MOD_ID = "take-your-minestream";
+    public static final String MOD_ID = "take-your-stream-chat";
     public static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static TakeYourMineStreamClient instance;
     private IConfigManager configManager;
-    private ITwitchManager twitchManager;
+    private IChatConnectionManager chatConnectionManager;
     private IBanwordManager banwordManager;
     private BlockedUsernameManager blockedUsernameManager;
     private FilteringManager filteringManager;
@@ -38,7 +38,7 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         instance = this;
         try {
             initializeMod();
-            Logger.info("Take Your MineStream initialized");
+            Logger.info("Take Your Stream Chat initialized");
         } catch (Exception e) {
             Logger.error("Failed to initialize mod", e);
         }
@@ -50,14 +50,14 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         banwordManager = BanwordManager.getInstance();
         blockedUsernameManager = BlockedUsernameManager.getInstance();
         filteringManager = FilteringManager.getInstance();
-        twitchManager = TwitchManager.getInstance(configManager);
+        chatConnectionManager = ChatConnectionManager.getInstance(configManager);
         
         // Инициализация системы сообщений
         messageSpawner = MessageSystemFactory.createMessageSystem();
         
         // Инициализация менеджеров команд и клавиш
-        commandManager = new CommandManager(twitchManager, banwordManager, blockedUsernameManager, messageSpawner);
-        keyBindingManager = new KeyBindingManager(twitchManager, messageSpawner);
+        commandManager = new CommandManager(chatConnectionManager, banwordManager, blockedUsernameManager, messageSpawner);
+        keyBindingManager = new KeyBindingManager(chatConnectionManager, messageSpawner);
         
         // Регистрация команд и клавиш
         commandManager.registerCommands();
@@ -77,8 +77,14 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         return configManager;
     }
 
-    public ITwitchManager getTwitchManager() {
-        return twitchManager;
+    public IChatConnectionManager getChatConnectionManager() {
+        return chatConnectionManager;
+    }
+
+    /** @deprecated Use {@link #getChatConnectionManager()} */
+    @Deprecated
+    public IChatConnectionManager getTwitchManager() {
+        return chatConnectionManager;
     }
 
     public IBanwordManager getBanwordManager() {

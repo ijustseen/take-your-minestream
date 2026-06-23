@@ -21,6 +21,69 @@ public class ModConfig {
         return (String) ConfigManager.getInstance().getConfigValue("twitchChannelName");
     }
 
+    public static boolean isTWITCH_ENABLED() {
+        Object value = ConfigManager.getInstance().getConfigValue("twitchEnabled");
+        return value == null || (Boolean) value;
+    }
+
+    public static void setTWITCH_ENABLED(boolean value) {
+        ConfigManager.getInstance().setConfigValue("twitchEnabled", value);
+    }
+
+    public static boolean isYOUTUBE_ENABLED() {
+        Object value = ConfigManager.getInstance().getConfigValue("youtubeEnabled");
+        return value != null && (Boolean) value;
+    }
+
+    public static void setYOUTUBE_ENABLED(boolean value) {
+        ConfigManager.getInstance().setConfigValue("youtubeEnabled", value);
+    }
+
+    public static String getYOUTUBE_CHANNEL() {
+        Object value = ConfigManager.getInstance().getConfigValue("youtubeChannel");
+        return value instanceof String s ? s : "";
+    }
+
+    public static void setYOUTUBE_CHANNEL(String value) {
+        ConfigManager.getInstance().setConfigValue("youtubeChannel", value);
+    }
+
+    public static boolean isKICK_ENABLED() {
+        Object value = ConfigManager.getInstance().getConfigValue("kickEnabled");
+        return value != null && (Boolean) value;
+    }
+
+    public static void setKICK_ENABLED(boolean value) {
+        ConfigManager.getInstance().setConfigValue("kickEnabled", value);
+    }
+
+    public static String getKICK_CHANNEL() {
+        Object value = ConfigManager.getInstance().getConfigValue("kickChannel");
+        return value instanceof String s ? s : "";
+    }
+
+    public static void setKICK_CHANNEL(String value) {
+        ConfigManager.getInstance().setConfigValue("kickChannel", value);
+    }
+
+    public static boolean isTIKTOK_ENABLED() {
+        Object value = ConfigManager.getInstance().getConfigValue("tiktokEnabled");
+        return value != null && (Boolean) value;
+    }
+
+    public static void setTIKTOK_ENABLED(boolean value) {
+        ConfigManager.getInstance().setConfigValue("tiktokEnabled", value);
+    }
+
+    public static String getTIKTOK_USERNAME() {
+        Object value = ConfigManager.getInstance().getConfigValue("tiktokUsername");
+        return value instanceof String s ? s : "";
+    }
+
+    public static void setTIKTOK_USERNAME(String value) {
+        ConfigManager.getInstance().setConfigValue("tiktokUsername", value);
+    }
+
     public static int getMESSAGE_LIFETIME_TICKS() {
         // Приоритет секунд; fallback на тики
         Object sec = ConfigManager.getInstance().getConfigValue("messageLifetimeSeconds");
@@ -31,11 +94,7 @@ public class ModConfig {
     }
 
     public static int getMESSAGE_FALL_TICKS() {
-        Object sec = ConfigManager.getInstance().getConfigValue("messageFallSeconds");
-        if (sec instanceof Number) {
-            return (int) Math.round(((Number) sec).doubleValue() * 20.0);
-        }
-        return (Integer) ConfigManager.getInstance().getConfigValue("messageFallTicks");
+        return takeyourminestream.ijustseen.core.MessagePanelConstants.MESSAGE_FALL_TICKS;
     }
 
     public static String[] getNICK_COLORS() {
@@ -48,6 +107,16 @@ public class ModConfig {
 
     public static double getMAX_FREEZE_DISTANCE() {
         return (Double) ConfigManager.getInstance().getConfigValue("maxFreezeDistance");
+    }
+
+    public static int getMESSAGE_SPAWN_MIN_DISTANCE() {
+        Object value = ConfigManager.getInstance().getConfigValue("messageSpawnMinDistance");
+        return value instanceof Number number ? number.intValue() : 2;
+    }
+
+    public static int getMESSAGE_SPAWN_MAX_DISTANCE() {
+        Object value = ConfigManager.getInstance().getConfigValue("messageSpawnMaxDistance");
+        return value instanceof Number number ? number.intValue() : 5;
     }
 
     public static boolean isMESSAGES_IN_FRONT_OF_PLAYER_ONLY() {
@@ -104,6 +173,15 @@ public class ModConfig {
 
     public static void setSHOW_MESSAGE_BACKGROUND(boolean value) {
         ConfigManager.getInstance().setConfigValue("showMessageBackground", value);
+    }
+
+    public static boolean isENABLE_COLOR_EMOJIS() {
+        Object value = ConfigManager.getInstance().getConfigValue("enableColorEmojis");
+        return value == null || (Boolean) value;
+    }
+
+    public static void setENABLE_COLOR_EMOJIS(boolean value) {
+        ConfigManager.getInstance().setConfigValue("enableColorEmojis", value);
     }
 
     public static boolean isFOLLOW_PLAYER() {

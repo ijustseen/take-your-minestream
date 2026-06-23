@@ -176,6 +176,7 @@ public final class PinnedMessageStore {
         Path modRoot = StoragePaths.getModRootDir();
         Path legacyRoot = StoragePaths.getLegacyModRootDir();
         StoragePaths.migrateDirectoryIfNeeded(legacyRoot.resolve(STORE_DIR), modRoot.resolve(STORE_DIR));
+        StoragePaths.migrateDirectoryIfNeeded(StoragePaths.getLegacyGameModRootDir().resolve(STORE_DIR), modRoot.resolve(STORE_DIR));
         String worldKey = resolveWorldDimensionKey(client);
         String fileName = sanitize(worldKey) + "-" + shortHash(worldKey) + ".json";
         return modRoot.resolve(STORE_DIR).resolve(fileName);

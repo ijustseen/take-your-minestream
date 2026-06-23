@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "take-your-minestream",
+  "id": "take-your-stream-chat",
   "version": "${version}",
-  "name": "Take Your MineStream",
-  "description": "A minecraft modification for streamers, that allows messages from your Twitch chat to be displayed in your game. In-Game Settings: Access configuration screen with key binding (default: ])",
+  "name": "Take Your Stream Chat",
+  "description": "Display live chat from Twitch, YouTube, Kick, and TikTok in Minecraft — 3D billboards or HUD overlay. In-game settings: ] (default)",
   "authors": ["ijustseen"],
   "contact": {
-    "homepage": "https://modrinth.com/mod/take-your-minestream",
+    "homepage": "https://modrinth.com/mod/take-your-stream-chat",
     "sources": "https://github.com/ijustseen/take-your-minestream"
   },
   "license": "MIT",
-  "icon": "assets/take-your-minestream/icon.png",
+  "icon": "assets/take-your-stream-chat/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": ["takeyourminestream.ijustseen.TakeYourMineStreamClient"],
@@ -18,7 +18,7 @@
   },
   "mixins": [
     {
-      "config": "take-your-minestream.client.mixins.json",
+      "config": "take-your-stream-chat.client.mixins.json",
       "environment": "client"
     }
   ],

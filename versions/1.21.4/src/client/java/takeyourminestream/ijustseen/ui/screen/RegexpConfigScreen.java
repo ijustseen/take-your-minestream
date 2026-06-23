@@ -28,7 +28,7 @@ public class RegexpConfigScreen extends Screen {
     private final List<String> regexpList = new ArrayList<>();
 
     public RegexpConfigScreen(@Nullable Screen parent) {
-        super(Text.translatable("takeyourminestream.regexps.title"));
+        super(Text.translatable("takeyourstreamchat.regexps.title"));
         this.parent = parent;
     }
 
@@ -43,10 +43,10 @@ public class RegexpConfigScreen extends Screen {
         int buttonH = 20;
         int spacing = 10;
 
-        inputField = new TextFieldWidget(this.textRenderer, PADDING, bottomY - buttonH - spacing, this.width - PADDING * 2 - buttonW - spacing, buttonH, Text.translatable("takeyourminestream.banwords.input"));
+        inputField = new TextFieldWidget(this.textRenderer, PADDING, bottomY - buttonH - spacing, this.width - PADDING * 2 - buttonW - spacing, buttonH, Text.translatable("takeyourstreamchat.banwords.input"));
         this.addDrawableChild(inputField);
 
-        this.addDrawableChild(ButtonWidget.builder(Text.translatable("takeyourminestream.banwords.add"), btn -> {
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("takeyourstreamchat.banwords.add"), btn -> {
             String pattern = inputField.getText();
             if (pattern != null && !pattern.trim().isEmpty()) {
                 filteringManager.addRegexp(pattern);

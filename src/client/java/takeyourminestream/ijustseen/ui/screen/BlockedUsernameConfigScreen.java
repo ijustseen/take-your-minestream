@@ -12,17 +12,17 @@ public class BlockedUsernameConfigScreen extends AbstractStringListScreen {
     private final BlockedUsernameManager blockedUsernameManager = BlockedUsernameManager.getInstance();
 
     public BlockedUsernameConfigScreen(@Nullable Screen parent) {
-        super(Text.translatable("takeyourminestream.blocked_users.title"), parent);
+        super(Text.translatable("takeyourstreamchat.blocked_users.title"), parent);
     }
 
     @Override
     protected Text inputPlaceholder() {
-        return Text.translatable("takeyourminestream.blocked_users.input");
+        return Text.translatable("takeyourstreamchat.blocked_users.input");
     }
 
     @Override
     protected Text addButtonLabel() {
-        return Text.translatable("takeyourminestream.blocked_users.add");
+        return Text.translatable("takeyourstreamchat.blocked_users.add");
     }
 
     @Override

@@ -66,7 +66,7 @@ public enum ChatRoleFilter {
         };
     }
 
-    static Set<String> parseBadgeTypes(String badgesTag) {
+    public static Set<String> parseBadgeTypes(String badgesTag) {
         Set<String> types = new HashSet<>();
         if (badgesTag == null || badgesTag.isEmpty()) {
             return types;

@@ -48,7 +48,7 @@
 ./gradlew :26.1:build :26.1:buildAndCollect
 ```
 
-Имена артефактов: `tyms-<mod.version>+<minecraft>.jar` (например `tyms-1.4.3+1.21.11.jar`, `tyms-1.4.3+26.1.jar`).
+Имена артефактов: `tysc-<mod.version>+<minecraft>.jar` (например `tysc-2.0.0+1.21.11.jar`, `tysc-2.0.0+26.1.jar`).
 
 ### Minecraft 26.1 / 26.1.1 / 26.1.2
 

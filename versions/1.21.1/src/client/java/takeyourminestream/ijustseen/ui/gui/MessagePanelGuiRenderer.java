@@ -23,13 +23,50 @@ public final class MessagePanelGuiRenderer {
     }
 
     public static void drawPanel(DrawContext context, int x, int y, int width, int height, float alpha) {
+        drawPanel(context, x, y, width, height, alpha, MessagePanelConstants.DEFAULT_BORDER_RGB);
+    }
+
+    public static void drawPanel(DrawContext context, int x, int y, int width, int height, float alpha, int borderRgb) {
+        drawSlices(context, MessagePanelConstants.PANEL_BASE_TEXTURE, x, y, width, height, 1.0f, 1.0f, 1.0f, alpha);
+        float red = ((borderRgb >> 16) & 0xFF) / 255.0f;
+        float green = ((borderRgb >> 8) & 0xFF) / 255.0f;
+        float blue = (borderRgb & 0xFF) / 255.0f;
+        drawSlices(context, MessagePanelConstants.PANEL_BORDER_TEXTURE, x, y, width, height, red, green, blue, alpha);
+    }
+
+    private static void drawSlices(
+        DrawContext context,
+        net.minecraft.util.Identifier texture,
+        int x,
+        int y,
+        int width,
+        int height,
+        float red,
+        float green,
+        float blue,
+        float alpha
+    ) {
+        boolean tinted = red < 1.0f || green < 1.0f || blue < 1.0f || alpha < 1.0f;
+        if (tinted) {
+            RenderSystem.setShaderColor(red, green, blue, alpha);
+        }
         for (MessagePanel9Slice.GuiSlice slice : MessagePanel9Slice.guiSlices(x, y, width, height)) {
-            drawTextured(context, MessagePanelConstants.PANEL_TEXTURE,
-                slice.x(), slice.y(),
-                slice.width(), slice.height(),
-                slice.texU(), slice.texV(),
-                slice.regionWidth(), slice.regionHeight(),
-                alpha);
+            context.drawTexture(
+                texture,
+                slice.x(),
+                slice.y(),
+                slice.width(),
+                slice.height(),
+                slice.texU(),
+                slice.texV(),
+                slice.regionWidth(),
+                slice.regionHeight(),
+                MessagePanelConstants.TEX_SIZE,
+                MessagePanelConstants.TEX_SIZE
+            );
+        }
+        if (tinted) {
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
     }
 
