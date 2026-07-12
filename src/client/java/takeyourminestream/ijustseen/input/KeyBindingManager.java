@@ -8,6 +8,7 @@ import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import takeyourminestream.ijustseen.ui.screen.ModConfigScreen;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.utils.Logger;
@@ -55,7 +56,7 @@ public class KeyBindingManager {
 
     private void handleOpenConfigScreen() {
         try {
-            net.minecraft.client.MinecraftClient.getInstance().setScreen(new ModConfigScreen());
+            ScreenNavigationCompat.open(net.minecraft.client.MinecraftClient.getInstance(), new ModConfigScreen());
         } catch (Exception e) {
             Logger.error("Failed to open settings screen", e);
             Logger.sendErrorToPlayer("Failed to open settings screen");

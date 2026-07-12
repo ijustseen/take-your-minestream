@@ -16,6 +16,7 @@ import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.integration.chat.ChatConnectionManager;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 import takeyourminestream.ijustseen.ui.widget.ChanceForSpawnSliderWidget;
@@ -257,14 +258,14 @@ public class ModConfigScreen extends Screen {
 
         ButtonWidget banwordsButton = ButtonWidget.builder(
             Text.translatable("takeyourstreamchat.config.banwords_config"),
-            btn -> this.client.setScreen(new BanwordConfigScreen(this))
+            btn -> ScreenNavigationCompat.open(this.client, new BanwordConfigScreen(this))
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(banwordsButton);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.banwords", "takeyourstreamchat.config.banwords.desc", ConfigEntryType.BUTTON, banwordsButton, ConfigCategory.GENERAL));
 
         ButtonWidget regexpButton = ButtonWidget.builder(
             Text.translatable("takeyourstreamchat.config.regexps_config"),
-            btn -> this.client.setScreen(new RegexpConfigScreen(this))
+            btn -> ScreenNavigationCompat.open(this.client, new RegexpConfigScreen(this))
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(regexpButton);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.regexps", "takeyourstreamchat.config.regexps.desc", ConfigEntryType.BUTTON, regexpButton, ConfigCategory.GENERAL));
@@ -279,7 +280,7 @@ public class ModConfigScreen extends Screen {
 
         ButtonWidget blockedUsersButton = ButtonWidget.builder(
             Text.translatable("takeyourstreamchat.config.blocked_users_config"),
-            btn -> this.client.setScreen(new BlockedUsernameConfigScreen(this))
+            btn -> ScreenNavigationCompat.open(this.client, new BlockedUsernameConfigScreen(this))
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(blockedUsersButton);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.blocked_users", "takeyourstreamchat.config.blocked_users.desc", ConfigEntryType.BUTTON, blockedUsersButton, ConfigCategory.GENERAL));
@@ -538,7 +539,7 @@ public class ModConfigScreen extends Screen {
         historyButton = ButtonWidget.builder(Text.translatable("takeyourstreamchat.config.message_history"), btn -> {
             var messageSpawner = TakeYourMineStreamClient.getStaticMessageSpawner();
             if (messageSpawner != null) {
-                this.client.setScreen(new MessageHistoryScreen(this, messageSpawner.getLifecycleManager()));
+                ScreenNavigationCompat.open(this.client, new MessageHistoryScreen(this, messageSpawner.getLifecycleManager()));
             }
         }).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
 
@@ -1103,9 +1104,9 @@ public class ModConfigScreen extends Screen {
         applyConnectionSettingsFromConfig(false);
         ConfigManager.getInstance().saveConfig();
         if (this.parent != null) {
-            this.client.setScreen(this.parent);
+            ScreenNavigationCompat.open(this.client, this.parent);
         } else {
-            this.client.setScreen(null);
+            ScreenNavigationCompat.open(this.client, null);
         }
     }
 

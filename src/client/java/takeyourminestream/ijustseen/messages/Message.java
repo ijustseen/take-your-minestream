@@ -34,6 +34,7 @@ public class Message {
     private float followBasisYaw;
     private boolean pinned;
     private Long historySourceId;
+    private String dimensionKey;
 
     private volatile MessagePanelLayout.Dimensions cachedWorldLayout;
     private volatile List<EmoteTextLayout.LineContent> cachedEmoteLines;
@@ -135,6 +136,11 @@ public class Message {
     public long getId() { return id; }
     public Long getHistorySourceId() { return historySourceId; }
     public void setHistorySourceId(Long historySourceId) { this.historySourceId = historySourceId; }
+    public String getDimensionKey() { return dimensionKey; }
+    public void setDimensionKey(String dimensionKey) { this.dimensionKey = dimensionKey; }
+    public boolean isInDimension(String currentDimensionKey) {
+        return dimensionKey != null && dimensionKey.equals(currentDimensionKey);
+    }
     
     /**
      * Вычисляет эффективный возраст сообщения с учетом замороженного времени

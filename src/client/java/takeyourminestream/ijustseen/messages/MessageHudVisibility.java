@@ -1,6 +1,7 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.client.MinecraftClient;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 
@@ -15,7 +16,7 @@ public final class MessageHudVisibility {
         if (client == null || client.player == null || client.world == null) {
             return false;
         }
-        Screen screen = client.currentScreen;
+        Screen screen = ScreenNavigationCompat.current(client);
         if (screen == null) {
             return true;
         }

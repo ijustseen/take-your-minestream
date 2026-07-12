@@ -36,6 +36,7 @@ public final class MessageHistoryActions {
                 return PinToggleResult.UNPINNED;
             }
             historySource.setPinned(true);
+            PinnedMessageStore.tagWithCurrentDimension(historySource, client);
             PinnedMessageStore.saveForCurrentWorld(lifecycleManager);
             return PinToggleResult.PINNED;
         }
@@ -111,6 +112,7 @@ public final class MessageHistoryActions {
             source.getEmotes()
         );
         message.setPinned(pinned);
+        PinnedMessageStore.tagWithCurrentDimension(message, client);
         return message;
     }
 }

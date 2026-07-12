@@ -37,7 +37,9 @@ public class MessageHudRenderer {
         float hudScale = ModConfig.getMESSAGE_SCALE().getScale();
         List<MessageHudOverlay.PreparedCard> cards = MessageHudOverlay.prepare(
             textRenderer,
-            lifecycleManager.getActiveMessages(),
+            lifecycleManager.getActiveMessages().stream()
+                .filter(message -> PinnedMessageStore.belongsToCurrentWorld(message, client))
+                .toList(),
             lifecycleManager.getTickCounter(),
             screenWidth
         );

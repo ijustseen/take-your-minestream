@@ -1,22 +1,18 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.OrderedText;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.core.MessagePanelConstants;
+import takeyourminestream.ijustseen.core.text.LegacySectionText;
 import net.minecraft.util.math.RotationAxis;
 
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Comparator;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.util.Identifier;
 import org.joml.Matrix4f;
 import net.minecraft.client.render.OverlayTexture;
@@ -32,7 +28,7 @@ import takeyourminestream.ijustseen.core.render.MessagePanelWorldRenderer;
 public class MessageRenderer {
     private final MessageLifecycleManager lifecycleManager;
     private final MessageParticleManager particleManager;
-    private final java.util.WeakHashMap<Message, SmoothingState> smoothing = new java.util.WeakHashMap<>();
+    private final java.util.WeakHashMap<Message, MessageRenderSmoothing> smoothing = new java.util.WeakHashMap<>();
 
     private static final float PIN_ICON_Z_OFFSET = -0.02f;
     private static final int EMOTE_ICON_SIZE = 12;
@@ -59,6 +55,9 @@ public class MessageRenderer {
             List<Message> activeMessages = lifecycleManager.getActiveMessages();
 
             for (Message message : activeMessages) {
+                if (!PinnedMessageStore.belongsToCurrentWorld(message, client)) {
+                    continue;
+                }
                 renderMessage(client, message, matrices, textRenderer, consumers);
             }
             // Рендер партиклов
@@ -88,18 +87,18 @@ public class MessageRenderer {
         }
 
         // Сверхплавная интерполяция на стороне рендера (кадровая)
-        SmoothingState state = smoothing.computeIfAbsent(message, m -> SmoothingState.fromMessage(m));
+        MessageRenderSmoothing state = smoothing.computeIfAbsent(message, MessageRenderSmoothing::fromMessage);
         state.updateTowards(message);
 
         Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
 
         matrices.translate(
-            state.pos.x - cameraPos.getX(),
-            state.pos.y - cameraPos.getY(),
-            state.pos.z - cameraPos.getZ()
+            state.pos().x - cameraPos.getX(),
+            state.pos().y - cameraPos.getY(),
+            state.pos().z - cameraPos.getZ()
         );
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-state.yaw));
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(state.pitch));
+        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-state.yaw()));
+        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(state.pitch()));
         
         // Применяем масштаб из конфигурации
         float finalScale = MessagePanelLayout.worldScale();
@@ -119,7 +118,7 @@ public class MessageRenderer {
             : java.util.Collections.emptyList();
         List<OrderedText> wrappedText = hasEmotes
             ? java.util.Collections.emptyList()
-            : textRenderer.wrapLines(Text.of(message.getText()), MessagePanelConstants.MESSAGE_WRAP_WIDTH);
+            : textRenderer.wrapLines(LegacySectionText.parse(message.getText()), MessagePanelConstants.MESSAGE_WRAP_WIDTH);
         // Центрируем текст и панель + применяем падение
         matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
         // Рендерим панель (по флагу)
@@ -170,53 +169,6 @@ public class MessageRenderer {
         matrices.pop();
     }
 
-    // Состояние сглаживания для кадро-зависимой интерполяции
-    private static class SmoothingState {
-        Vec3d pos;
-        float yaw;
-        float pitch;
-        long lastNs;
-
-        // Константы времён сглаживания (секунды)
-        private static final double TAU_POS = 0.15;   // чем больше, тем медленнее
-        private static final double TAU_ANG = 0.12;
-
-        static SmoothingState fromMessage(Message m) {
-            SmoothingState s = new SmoothingState();
-            s.pos = m.getPosition();
-            s.yaw = m.getYaw();
-            s.pitch = m.getPitch();
-            s.lastNs = System.nanoTime();
-            return s;
-        }
-
-        void updateTowards(Message target) {
-            long now = System.nanoTime();
-            double dt = Math.max(0.0, (now - lastNs) / 1_000_000_000.0);
-            lastNs = now;
-
-            // Экспоненциальное сглаживание к цели
-            double alphaPos = 1.0 - Math.exp(-dt / TAU_POS);
-            double alphaAng = 1.0 - Math.exp(-dt / TAU_ANG);
-
-            Vec3d tp = target.getPosition();
-            this.pos = new Vec3d(
-                lerp(this.pos.x, tp.x, alphaPos),
-                lerp(this.pos.y, tp.y, alphaPos),
-                lerp(this.pos.z, tp.z, alphaPos)
-            );
-
-            this.yaw = lerpAngleDeg(this.yaw, target.getYaw(), (float)alphaAng);
-            this.pitch = lerpAngleDeg(this.pitch, target.getPitch(), (float)alphaAng);
-        }
-
-        private static double lerp(double a, double b, double t) { return a + (b - a) * t; }
-        private static float lerpAngleDeg(float a, float b, float t) {
-            float delta = net.minecraft.util.math.MathHelper.wrapDegrees(b - a);
-            return a + delta * t;
-        }
-    }
-    
     private void renderPinIcon(MatrixStack matrices, int panelWidth, VertexConsumerProvider consumers) {
         VertexConsumer consumer = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PIN_TEXTURE);
         Matrix4f mat = matrices.peek().getPositionMatrix();
@@ -255,7 +207,7 @@ public class MessageRenderer {
                                       int color,
                                       float startX,
                                       float y) {
-        List<MessageEmote> sortedEmotes = getSortedValidEmotes(text, emotes);
+        List<MessageEmote> sortedEmotes = MessageEmoteSorting.sortedValid(text, emotes);
         int cursor = 0;
         float x = startX;
 
@@ -330,28 +282,5 @@ public class MessageRenderer {
                 0xF000F0
             );
         }
-    }
-
-    private List<MessageEmote> getSortedValidEmotes(String text, List<MessageEmote> emotes) {
-        if (emotes == null || emotes.isEmpty()) {
-            return java.util.Collections.emptyList();
-        }
-
-        List<MessageEmote> sorted = new ArrayList<>(emotes);
-        sorted.sort(Comparator.comparingInt(MessageEmote::getStartIndex));
-
-        List<MessageEmote> valid = new ArrayList<>();
-        int nextAllowedStart = 0;
-        for (MessageEmote emote : sorted) {
-            if (emote.getStartIndex() < 0 || emote.getEndIndex() < emote.getStartIndex() || emote.getEndIndex() >= text.length()) {
-                continue;
-            }
-            if (emote.getStartIndex() < nextAllowedStart) {
-                continue;
-            }
-            valid.add(emote);
-            nextAllowedStart = emote.getEndIndex() + 1;
-        }
-        return valid;
     }
 } 

@@ -1,6 +1,7 @@
 package takeyourminestream.ijustseen.ui.screen;
 
 import net.minecraft.client.gui.screen.Screen;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
@@ -565,9 +566,9 @@ public class MessageHistoryScreen extends Screen {
     public void close() {
         actionPopup.dismiss();
         if (this.parent != null) {
-            this.client.setScreen(this.parent);
+            ScreenNavigationCompat.open(this.client, this.parent);
         } else {
-            this.client.setScreen(null);
+            ScreenNavigationCompat.open(this.client, null);
         }
     }
 

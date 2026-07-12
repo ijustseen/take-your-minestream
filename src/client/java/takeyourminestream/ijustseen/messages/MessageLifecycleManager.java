@@ -248,6 +248,14 @@ public class MessageLifecycleManager {
         activeMessages.removeIf(message -> !message.isPinned());
         spawnedParticlesForMessages.removeIf(message -> !message.isPinned());
     }
+
+    public void removeMessagesOutsideDimension(String dimensionKey) {
+        if (dimensionKey == null || dimensionKey.isBlank()) {
+            return;
+        }
+        activeMessages.removeIf(message -> !message.isInDimension(dimensionKey));
+        spawnedParticlesForMessages.removeIf(message -> !message.isInDimension(dimensionKey));
+    }
     
     /**
      * Возвращает список активных сообщений
@@ -340,6 +348,7 @@ public class MessageLifecycleManager {
             message.getEmotes()
         );
         replacement.setPinned(false);
+        replacement.setDimensionKey(message.getDimensionKey());
 
         int idx = activeMessages.indexOf(message);
         activeMessages.set(idx, replacement);

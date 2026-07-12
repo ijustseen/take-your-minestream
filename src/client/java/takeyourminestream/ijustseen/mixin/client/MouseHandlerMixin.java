@@ -15,6 +15,8 @@ import takeyourminestream.ijustseen.config.MessageSpawnMode;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageClickHandler;
+import takeyourminestream.ijustseen.messages.PinnedMessageStore;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 
 import java.util.ArrayList;
@@ -34,7 +36,7 @@ public class MouseHandlerMixin {
             return;
         }
 
-        if (client.currentScreen != null) {
+        if (ScreenNavigationCompat.current(client) != null) {
             return;
         }
 
@@ -87,6 +89,9 @@ public class MouseHandlerMixin {
         }
 
         for (Message message : new ArrayList<>(lifecycleManager.getActiveMessages())) {
+            if (!PinnedMessageStore.belongsToCurrentWorld(message, client)) {
+                continue;
+            }
             if (message.isPinned()) {
                 continue;
             }

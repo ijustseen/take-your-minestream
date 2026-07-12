@@ -36,6 +36,8 @@ public class WorldEventHandler {
             }
 
             if (!lastDimensionKey.equals(currentDimensionKey)) {
+                PinnedMessageStore.saveForDimension(messageSpawner.getLifecycleManager(), lastDimensionKey);
+                messageSpawner.getLifecycleManager().removeMessagesOutsideDimension(currentDimensionKey);
                 lastDimensionKey = currentDimensionKey;
                 PinnedMessageStore.loadForCurrentWorld(messageSpawner.getLifecycleManager());
                 Logger.info("Dimension changed, pinned messages reloaded for " + currentDimensionKey);

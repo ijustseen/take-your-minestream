@@ -5,6 +5,8 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
+import takeyourminestream.ijustseen.utils.HudOverlayCompat;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -77,11 +79,8 @@ public final class ChatStatusNotifier {
             return;
         }
         client.execute(() -> {
-            if (client.inGameHud == null) {
-                return;
-            }
             if (OFFLINE_WARNINGS.isEmpty()) {
-                client.inGameHud.setOverlayMessage(Text.empty(), false);
+                HudOverlayCompat.setOverlayMessage(client, Text.empty(), false);
                 return;
             }
 
@@ -94,7 +93,7 @@ public final class ChatStatusNotifier {
             }
 
             Text overlay = buildCompactOfflineOverlay(client, entries);
-            client.inGameHud.setOverlayMessage(overlay, false);
+            HudOverlayCompat.setOverlayMessage(client, overlay, false);
         });
     }
 
@@ -169,9 +168,6 @@ public final class ChatStatusNotifier {
             return;
         }
         client.execute(() -> {
-            if (client.inGameHud == null) {
-                return;
-            }
             String dedupeKey = text.getString();
             long now = System.currentTimeMillis();
             Long previous = LAST_SHOWN_MS.get(dedupeKey);
@@ -179,7 +175,7 @@ public final class ChatStatusNotifier {
                 return;
             }
             LAST_SHOWN_MS.put(dedupeKey, now);
-            client.inGameHud.setOverlayMessage(text, tinted);
+            HudOverlayCompat.setOverlayMessage(client, text, tinted);
         });
     }
 

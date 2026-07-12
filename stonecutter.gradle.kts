@@ -21,9 +21,11 @@ stonecutter parameters {
             replace("net.minecraft.client.font.TextRenderer", "net.minecraft.client.gui.Font")
             replace("net.minecraft.client.gui.screen.Screen", "net.minecraft.client.gui.screens.Screen")
             replace("net.minecraft.client.gui.screen.ingame.HandledScreen", "net.minecraft.client.gui.screens.inventory.AbstractContainerScreen")
+            replace("net.minecraft.text.Text", "net.minecraft.network.chat.Component")
             replace("net.minecraft.text.MutableText", "net.minecraft.network.chat.MutableComponent")
             replace("net.minecraft.text.OrderedText", "net.minecraft.util.FormattedCharSequence")
-            replace("net.minecraft.text.Text", "net.minecraft.network.chat.Component")
+            replace("net.minecraft.text.Style", "net.minecraft.network.chat.Style")
+            replace("net.minecraft.text.TextColor", "net.minecraft.network.chat.TextColor")
             replace("net.minecraft.util.Identifier", "net.minecraft.resources.Identifier")
             replace("net.minecraft.util.math.Vec3d", "net.minecraft.world.phys.Vec3")
             replace("net.minecraft.util.Formatting", "net.minecraft.ChatFormatting")
@@ -90,6 +92,7 @@ stonecutter parameters {
             replace("Text.translatable", "Component.translatable")
             replace("Text.empty", "Component.empty")
             replace("Text.of(", "Component.literal(")
+            replace("Formatting.byCode", "ChatFormatting.getByCode")
             replace("Formatting.", "ChatFormatting.")
             replace(".formatted(", ".withStyle(")
             replace(": Text ", ": Component ")
@@ -151,7 +154,7 @@ stonecutter parameters {
             replace("TextRenderer.TextLayerType.POLYGON_OFFSET", "Font.DisplayMode.POLYGON_OFFSET")
 
             // World / level rendering
-            replace("WorldRenderEvents.AFTER_ENTITIES", "LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES")
+            replace("WorldRenderEvents.AFTER_ENTITIES", "LevelRenderEvents.AFTER_SOLID_FEATURES")
             replace("context.matrices()", "context.poseStack()")
             replace("context.consumers()", "context.bufferSource()")
 
@@ -159,7 +162,7 @@ stonecutter parameters {
             replace("matrices.push()", "matrices.pushPose()")
             replace("matrices.pop()", "matrices.popPose()")
             replace("matrices.peek().getPositionMatrix()", "matrices.last().pose()")
-            replace("matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-", "matrices.mulPose(Axis.YN.rotationDegrees(")
+            replace("matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-", "matrices.mulPose(Axis.YP.rotationDegrees(-")
             replace("matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(", "matrices.mulPose(Axis.XP.rotationDegrees(")
             replace("matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(", "matrices.mulPose(Axis.ZP.rotationDegrees(")
 
@@ -247,6 +250,16 @@ stonecutter parameters {
             replace("btn -> this.close()", "btn -> this.onClose()")
             replace("btn -> close()", "btn -> onClose()")
             replace("@Override\n    public void close()", "@Override\n    public void onClose()")
+        }
+        string(eval(current.version, ">= 26.2")) {
+            replace("getMainCamera()", "mainCamera()")
+            replace("client.inGameHud.setOverlayMessage", "client.gui.hud.setOverlayMessage")
+            replace("client.setScreen(", "client.setScreenAndShow(")
+            replace("this.minecraft.setScreen(", "this.minecraft.setScreenAndShow(")
+            replace("minecraft.setScreen(", "minecraft.setScreenAndShow(")
+            replace("Minecraft.getInstance().setScreen(", "Minecraft.getInstance().setScreenAndShow(")
+            replace("client.screen", "client.gui.screen()")
+            replace("minecraft.screen", "minecraft.gui.screen()")
         }
     }
 }

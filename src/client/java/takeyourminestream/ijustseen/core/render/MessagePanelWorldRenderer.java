@@ -29,10 +29,6 @@ public final class MessagePanelWorldRenderer {
         }
     }
 
-    public static VertexConsumer panelConsumer(net.minecraft.client.render.VertexConsumerProvider consumers) {
-        return RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_TEXTURE);
-    }
-
     /** Панель: фон + бортик, тонированный цветом платформы. */
     public static void drawPanelWithBorder(
         MatrixStack matrices,

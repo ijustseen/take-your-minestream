@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
 
 import java.util.ArrayList;
@@ -188,9 +189,9 @@ public abstract class AbstractStringListScreen extends Screen {
             return;
         }
         if (this.parent != null) {
-            this.client.setScreen(this.parent);
+            ScreenNavigationCompat.open(this.client, this.parent);
         } else {
-            this.client.setScreen(null);
+            ScreenNavigationCompat.open(this.client, null);
         }
     }
 

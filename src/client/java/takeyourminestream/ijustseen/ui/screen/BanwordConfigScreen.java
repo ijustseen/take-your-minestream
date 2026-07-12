@@ -7,6 +7,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.client.gui.Click;
 import org.jetbrains.annotations.Nullable;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
@@ -223,9 +224,9 @@ public class BanwordConfigScreen extends Screen {
     @Override
     public void close() {
         if (this.parent != null) {
-            MinecraftClient.getInstance().setScreen(this.parent);
+            ScreenNavigationCompat.open(this.client, this.parent);
         } else {
-            MinecraftClient.getInstance().setScreen(null);
+            ScreenNavigationCompat.open(this.client, null);
         }
     }
 }

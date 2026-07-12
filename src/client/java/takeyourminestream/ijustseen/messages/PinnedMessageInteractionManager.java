@@ -40,7 +40,9 @@ public class PinnedMessageInteractionManager {
 
         MessageClickHandler.MessageHit hit = MessageClickHandler.findClosestMessageHit(
             client,
-            new ArrayList<>(lifecycleManager.getActiveMessages()),
+            lifecycleManager.getActiveMessages().stream()
+                .filter(message -> PinnedMessageStore.belongsToCurrentWorld(message, client))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new)),
             lifecycleManager.getTickCounter()
         );
 
@@ -60,6 +62,7 @@ public class PinnedMessageInteractionManager {
 
         if (!wasPinned) {
             message.setPinned(true);
+            PinnedMessageStore.tagWithCurrentDimension(message, client);
             PinnedMessageStore.saveForCurrentWorld(lifecycleManager);
         }
 

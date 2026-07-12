@@ -1,5 +1,44 @@
 # Changelog
 
+## [2.0.1] - 2026-07-12
+
+Patch release after **2.0.0** (`550b7b5`). All items below ship only in **2.0.1** artifacts (`tysc-2.0.1+<mc>.jar`), not in 2.0.0.
+
+### Added
+
+- **Minecraft 26.2** support (`tysc-2.0.1+26.2.jar`, Fabric API 0.154.2+, Java 25)
+- **`LegacySectionText`** — parses legacy `§` color codes in 3D message text (Twitch and other platforms)
+- **Runtime dimension binding** for every active message (`Message.dimensionKey`): spawn, pin, restore from history
+- **`ScreenNavigationCompat`** and **`HudOverlayCompat`** — shared entry points for screen navigation and action-bar overlay across 1.21.x / 26.1 / 26.2
+- Stonecutter rules for **26.2** APIs: `mainCamera()`, `setScreenAndShow`, `gui.screen()`, HUD overlay path
+- **`MessageEmoteSorting`** and **`MessageRenderSmoothing`** — extracted from `MessageRenderer` (shared by 1.21.x and 26.x)
+
+### Fixed
+
+- **Pinned / chat messages visible in other dimensions** (e.g. mod worlds such as Aether) — messages are tagged, filtered on render/HUD/click, cleared on dimension change, and pins are saved per dimension before reload ([#8](https://github.com/ijustseen/take-your-minestream/issues/8))
+- **3D message rotation** around the player on 26.2 — corrected Mojang axis mapping (`POSITIVE_Y` → `Axis.YP`, not `YN`)
+- **26.2 world rendering** — `COLLECT_SUBMITS` + `SubmitNodeCollector` submit pipeline instead of removed `bufferSource` draw path
+- **Invisible 3D text** on 26.2 — fixed `submitText` argument order (`light` / `color`)
+- **Nick / message colors** on 26.2 — `§` codes parsed via `LegacySectionText` instead of raw `Component.literal`
+- **26.1** render event — `LevelRenderEvents.AFTER_SOLID_FEATURES` instead of removed `AFTER_ENTITIES`
+- **Click handling** — filter messages by current dimension; 26.1 and 26.2 `MouseHandlerMixin` behaviour aligned
+- **Break particles** on 26.2 — float quad coordinates (no `Math.round`), matching 26.1
+- **Settings / history navigation** on 26.2 — screens opened via `setScreenAndShow` compat layer
+
+### Changed
+
+- On dimension change: save pins for the **previous** dimension, remove all messages from other dimensions, then load pins for the new one
+- `PinnedMessageStore.saveForDimension()` — persists only pins whose `dimensionKey` matches the target file
+- 26.1 and 26.2 client overrides aligned; only the render pipeline differs where the API requires it
+- UI screens, keybinding, chat status overlay, and HUD visibility use compat helpers instead of direct `setScreen` / `inGameHud` / `currentScreen` calls
+
+### Technical
+
+- `SubmitGeometryHelper`, submit-based `MessageRenderer`, `MessagePanelWorldRenderer`, and `MessageParticleManager` for 26.2
+- `RenderLayerCompat` stub for 26.2 submit pipeline; removed unused `panelConsumer` helper
+- Stonecutter: `Style` / `TextColor` mappings, `Formatting.byCode` → `ChatFormatting.getByCode`
+- Overrides in `versions/26.2/src/`; `settings.gradle.kts` adds **26.2** to the Stonecutter matrix
+
 ## [2.0.0] - 2026-06-12
 
 ### MAJOR UPDATE — multi-platform chat, UI overhaul & rebrand

@@ -48,6 +48,7 @@ public class MessageSpawner {
             var message = new Message(
                 messageText, position, tick, 0, 0, authorColor, Vec3d.ZERO, queued.emotes
             );
+            PinnedMessageStore.tagWithCurrentDimension(message, client);
             lifecycleManager.addMessage(message);
         } else {
             var position = (spawnMode == takeyourminestream.ijustseen.config.MessageSpawnMode.FRONT_OF_PLAYER)
@@ -64,6 +65,7 @@ public class MessageSpawner {
             var message = new Message(
                 messageText, position, tick, yaw, pitch, authorColor, worldOffset, queued.emotes
             );
+            PinnedMessageStore.tagWithCurrentDimension(message, client);
             lifecycleManager.addMessage(message);
         }
         playNewMessageSound(tick);

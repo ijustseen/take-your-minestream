@@ -58,6 +58,8 @@ public final class PinnedMessageStore {
             return;
         }
 
+        String dimensionKey = getCurrentDimensionKey(client);
+
         try (Reader reader = Files.newBufferedReader(file)) {
             PinnedMessagesFile data = GSON.fromJson(reader, FILE_TYPE);
             if (data == null || data.messages == null) {
@@ -82,6 +84,7 @@ public final class PinnedMessageStore {
                         .collect(java.util.stream.Collectors.toList()) : java.util.Collections.emptyList()
                 );
                 message.setPinned(true);
+                message.setDimensionKey(dimensionKey);
                 // Предзагружаем текстуры эмоутов для закреплённых сообщений
                 if (entry.emotes != null) {
                     for (PinnedEmoteEntry emote : entry.emotes) {
@@ -101,11 +104,21 @@ public final class PinnedMessageStore {
             return;
         }
 
-        Path file = getStorageFile(client);
-        String worldKey = resolveWorldDimensionKey(client);
+        saveForDimension(lifecycleManager, getCurrentDimensionKey(client));
+    }
+
+    public static synchronized void saveForDimension(MessageLifecycleManager lifecycleManager, String dimensionKey) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || lifecycleManager == null || dimensionKey == null || dimensionKey.isBlank()) {
+            return;
+        }
+
+        Path file = getStorageFileForDimension(client, dimensionKey);
+        String worldKey = resolveBaseWorldKey(client) + "|dimension:" + dimensionKey;
 
         List<PinnedMessageEntry> entries = lifecycleManager.getActiveMessages().stream()
             .filter(Message::isPinned)
+            .filter(message -> dimensionKey.equals(message.getDimensionKey()))
             .sorted(Comparator.comparing(Message::getText))
             .map(message -> {
                 PinnedMessageEntry entry = new PinnedMessageEntry();
@@ -172,14 +185,35 @@ public final class PinnedMessageStore {
         }
     }
 
-    private static Path getStorageFile(MinecraftClient client) {
+    public static String getCurrentDimensionKey(MinecraftClient client) {
+        return resolveDimensionKey(client);
+    }
+
+    public static void tagWithCurrentDimension(Message message, MinecraftClient client) {
+        if (message != null && client != null && client.world != null) {
+            message.setDimensionKey(getCurrentDimensionKey(client));
+        }
+    }
+
+    public static boolean belongsToCurrentWorld(Message message, MinecraftClient client) {
+        if (message == null || client == null || client.world == null) {
+            return false;
+        }
+        return message.isInDimension(getCurrentDimensionKey(client));
+    }
+
+    private static Path getStorageFileForDimension(MinecraftClient client, String dimensionKey) {
         Path modRoot = StoragePaths.getModRootDir();
         Path legacyRoot = StoragePaths.getLegacyModRootDir();
         StoragePaths.migrateDirectoryIfNeeded(legacyRoot.resolve(STORE_DIR), modRoot.resolve(STORE_DIR));
         StoragePaths.migrateDirectoryIfNeeded(StoragePaths.getLegacyGameModRootDir().resolve(STORE_DIR), modRoot.resolve(STORE_DIR));
-        String worldKey = resolveWorldDimensionKey(client);
+        String worldKey = resolveBaseWorldKey(client) + "|dimension:" + dimensionKey;
         String fileName = sanitize(worldKey) + "-" + shortHash(worldKey) + ".json";
         return modRoot.resolve(STORE_DIR).resolve(fileName);
+    }
+
+    private static Path getStorageFile(MinecraftClient client) {
+        return getStorageFileForDimension(client, resolveDimensionKey(client));
     }
 
     private static Path getLegacyStorageFile(MinecraftClient client) {
