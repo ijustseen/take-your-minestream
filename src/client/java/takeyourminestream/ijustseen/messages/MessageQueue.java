@@ -16,13 +16,23 @@ public class MessageQueue {
         public final java.util.List<MessageEmote> emotes;
         /** Тик, начиная с которого сообщение можно показать. */
         public final int readyAtTick;
+        /** Не ждать текстуры дольше этого тика — иначе чат встанет на мёртвом CDN. */
+        public final int textureDeadlineTick;
         final long sequence;
 
-        public QueuedMessage(String text, Integer authorColorRgb, java.util.List<MessageEmote> emotes, int readyAtTick, long sequence) {
+        public QueuedMessage(
+            String text,
+            Integer authorColorRgb,
+            java.util.List<MessageEmote> emotes,
+            int readyAtTick,
+            int textureDeadlineTick,
+            long sequence
+        ) {
             this.text = text;
             this.authorColorRgb = authorColorRgb;
             this.emotes = emotes == null ? java.util.Collections.emptyList() : java.util.List.copyOf(emotes);
             this.readyAtTick = readyAtTick;
+            this.textureDeadlineTick = textureDeadlineTick;
             this.sequence = sequence;
         }
     }
@@ -32,13 +42,26 @@ public class MessageQueue {
         .thenComparingLong(m -> m.sequence);
 
     /** Макс. ожидающих сообщений; лишние (с самым поздним показом) отбрасываются. */
-    private static final int MAX_QUEUE_SIZE = 10;
+    private static final int MAX_QUEUE_SIZE = 16;
 
     private final PriorityBlockingQueue<QueuedMessage> messageQueue = new PriorityBlockingQueue<>(11, ORDER);
     private final AtomicLong sequence = new AtomicLong();
 
-    public void enqueueMessage(String message, Integer authorColorRgb, java.util.List<MessageEmote> emotes, int readyAtTick) {
-        offerWithCap(new QueuedMessage(message, authorColorRgb, emotes, readyAtTick, sequence.getAndIncrement()));
+    public void enqueueMessage(
+        String message,
+        Integer authorColorRgb,
+        java.util.List<MessageEmote> emotes,
+        int readyAtTick,
+        int textureDeadlineTick
+    ) {
+        offerWithCap(new QueuedMessage(
+            message,
+            authorColorRgb,
+            emotes,
+            readyAtTick,
+            textureDeadlineTick,
+            sequence.getAndIncrement()
+        ));
     }
 
     private void offerWithCap(QueuedMessage message) {
@@ -60,7 +83,10 @@ public class MessageQueue {
 
     public QueuedMessage pollReady(int currentTick) {
         QueuedMessage head = messageQueue.peek();
-        if (head != null && head.readyAtTick <= currentTick) {
+        if (head == null || head.readyAtTick > currentTick) {
+            return null;
+        }
+        if (currentTick >= head.textureDeadlineTick || TwitchEmoteTextureCache.areEmotesReady(head.emotes)) {
             return messageQueue.poll();
         }
         return null;

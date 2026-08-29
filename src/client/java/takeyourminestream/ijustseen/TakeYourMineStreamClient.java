@@ -7,6 +7,7 @@ import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.filtering.FilteringManager;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.messages.MessageSystemFactory;
+import takeyourminestream.ijustseen.messages.TwitchEmoteTextureCache;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
 import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
@@ -65,6 +66,7 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         
         // Регистрация обработчиков событий мира
         WorldEventHandler.register(messageSpawner);
+        TwitchEmoteTextureCache.registerClientTick();
 
         LOGGER.info("All mod components initialized");
     }

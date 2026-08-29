@@ -10,6 +10,9 @@ import net.minecraft.util.math.Vec3d;
  * Отвечает за спавн новых сообщений из очереди
  */
 public class MessageSpawner {
+    /** 8 с при 20 TPS: не дольше HTTP-таймаута загрузки, но и не вечная пауза чата. */
+    private static final int EMOTE_WAIT_TICKS = 160;
+
     private final MessageQueue messageQueue;
     private final MessageLifecycleManager lifecycleManager;
     private final PinnedMessageInteractionManager pinnedInteractionManager;
@@ -22,6 +25,7 @@ public class MessageSpawner {
         this.pinnedInteractionManager = new PinnedMessageInteractionManager(lifecycleManager);
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            TwitchEmoteTextureCache.drainUploads(client);
             if (client.player != null && client.world != null) {
                 pinnedInteractionManager.tick(client);
                 lifecycleManager.updateMessages(client);
@@ -86,7 +90,13 @@ public class MessageSpawner {
 
     public void enqueueMessage(String message, Integer authorColorRgb, java.util.List<MessageEmote> emotes, int readyAtTick) {
         if (!paused) {
-            messageQueue.enqueueMessage(message, authorColorRgb, emotes, readyAtTick);
+            messageQueue.enqueueMessage(
+                message,
+                authorColorRgb,
+                emotes,
+                readyAtTick,
+                readyAtTick + EMOTE_WAIT_TICKS
+            );
         }
     }
 

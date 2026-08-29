@@ -1,5 +1,6 @@
 package takeyourminestream.ijustseen.messages;
 
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
@@ -7,32 +8,20 @@ import net.minecraft.util.Identifier;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.core.storage.StoragePaths;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.awt.image.BufferedImage;
-import java.awt.Graphics2D;
-import java.awt.AlphaComposite;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.metadata.IIOMetadata;
-import javax.imageio.stream.ImageInputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.w3c.dom.Node;
-import org.w3c.dom.NamedNodeMap;
 
 public final class TwitchEmoteTextureCache {
     private static final Map<String, Identifier> LOADED_TEXTURES = new ConcurrentHashMap<>();
@@ -40,13 +29,16 @@ public final class TwitchEmoteTextureCache {
     private static final Map<String, NativeImageBackedTexture> TEXTURE_REFS = new ConcurrentHashMap<>();
     private static final Map<String, byte[]> IMAGE_BYTES_CACHE = new ConcurrentHashMap<>();
     private static final Set<String> PENDING_OR_DONE = ConcurrentHashMap.newKeySet();
-    private static final ExecutorService DOWNLOAD_EXECUTOR = Executors.newFixedThreadPool(3, runnable -> {
+    private static final Set<String> FAILED = ConcurrentHashMap.newKeySet();
+    private static final Set<String> REUPLOADING = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentLinkedQueue<PendingUpload> UPLOAD_QUEUE = new ConcurrentLinkedQueue<>();
+    private static final int MAX_TEXTURES_PER_TICK = 3;
+    private static final ExecutorService DOWNLOAD_EXECUTOR = Executors.newFixedThreadPool(4, runnable -> {
         Thread thread = new Thread(runnable, "TYMS-EmoteLoader");
         thread.setDaemon(true);
         return thread;
     });
 
-    // Папка дискового кеша
     private static final Path CACHE_DIR;
 
     static {
@@ -56,7 +48,6 @@ public final class TwitchEmoteTextureCache {
         CACHE_DIR = modRoot.resolve("emote-cache");
     }
 
-    // CDN URL-шаблоны по провайдерам
     private static final String TWITCH_URL = "https://static-cdn.jtvnw.net/emoticons/v2/%s/static/dark/1.0";
     private static final String SEVENTV_URL_PNG = "https://cdn.7tv.app/emote/%s/1x.png";
     private static final String SEVENTV_URL_GIF = "https://cdn.7tv.app/emote/%s/1x.gif";
@@ -98,12 +89,38 @@ public final class TwitchEmoteTextureCache {
         }
     }
 
+    private static final class PendingUpload {
+        private final String key;
+        private final String provider;
+        private final String emoteId;
+        private final EmoteImageCodec.DecodedEmote decoded;
+        private final boolean replace;
+
+        private PendingUpload(String key, String provider, String emoteId, EmoteImageCodec.DecodedEmote decoded, boolean replace) {
+            this.key = key;
+            this.provider = provider;
+            this.emoteId = emoteId;
+            this.decoded = decoded;
+            this.replace = replace;
+        }
+
+        private int textureCount() {
+            return decoded.textureCount();
+        }
+
+        private void close() {
+            decoded.close();
+        }
+    }
+
     private static final String BROWSER_USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-    /**
-     * Возвращает URL для скачивания эмоута по провайдеру и ID.
-     */
+    public static void registerClientTick() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> drainUploads(client));
+        DOWNLOAD_EXECUTOR.execute(EmojiTextureCache::warmup);
+    }
+
     private static String getEmoteUrl(String provider, String emoteId) {
         if (emoteId != null && (emoteId.startsWith("http://") || emoteId.startsWith("https://"))) {
             return emoteId;
@@ -116,6 +133,9 @@ public final class TwitchEmoteTextureCache {
 
     private static String getSafeTexturePathPart(String emoteId) {
         String lowered = emoteId.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9._-]", "_");
+        if (lowered.length() > 48) {
+            lowered = lowered.substring(0, 48);
+        }
         String hash = Integer.toHexString(emoteId.hashCode());
         return lowered + "_" + hash;
     }
@@ -126,7 +146,6 @@ public final class TwitchEmoteTextureCache {
             if (sequence == null || sequence.isEmpty()) {
                 return null;
             }
-            EmojiTextureCache.preload(emoteId, sequence);
             return EmojiTextureCache.rasterizeToPng(sequence);
         }
         if (!"7tv".equals(provider)) {
@@ -137,37 +156,6 @@ public final class TwitchEmoteTextureCache {
         if (pngBytes != null) return pngBytes;
 
         return downloadFromUrl(String.format(SEVENTV_URL_GIF, emoteId), provider, emoteId);
-    }
-
-    private static NativeImage decodeNativeImage(byte[] imageBytes, String provider, String emoteId) {
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) {
-            NativeImage image = NativeImage.read(bais);
-            if (image != null) {
-                return image;
-            }
-        } catch (Exception ignored) {
-        }
-
-        // Fallback for formats unsupported by NativeImage input reader (e.g. GIF frames)
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) {
-            BufferedImage buffered = ImageIO.read(bais);
-            if (buffered == null) {
-                return null;
-            }
-
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                if (!ImageIO.write(buffered, "png", baos)) {
-                    return null;
-                }
-
-                try (ByteArrayInputStream pngInput = new ByteArrayInputStream(baos.toByteArray())) {
-                    return NativeImage.read(pngInput);
-                }
-            }
-        } catch (Exception e) {
-            TakeYourMineStreamClient.LOGGER.warn("Failed fallback decode for {} emote {}: {}", provider, emoteId, e.getMessage());
-            return null;
-        }
     }
 
     private static byte[] downloadFromUrl(String url, String provider, String emoteId) {
@@ -213,16 +201,10 @@ public final class TwitchEmoteTextureCache {
         }
     }
 
-    /**
-     * Ключ кеша — комбинация провайдера и ID (чтобы не было конфликтов).
-     */
     private static String cacheKey(String provider, String emoteId) {
         return provider + ":" + emoteId;
     }
 
-    /**
-     * Предзагрузка текстуры — вызывается сразу при парсинге эмоутов.
-     */
     public static void preload(String emoteId) {
         preload("twitch", emoteId);
     }
@@ -245,7 +227,6 @@ public final class TwitchEmoteTextureCache {
             return null;
         }
 
-        // Встроенные пиксельные иконки платформ (из ресурсов мода, без скачивания)
         if ("platform".equals(provider)) {
             return Identifier.of("take-your-stream-chat", "textures/platform/" + emoteId + ".png");
         }
@@ -253,7 +234,7 @@ public final class TwitchEmoteTextureCache {
         if ("emoji".equals(provider)) {
             String sequence = EmojiTextureCache.sequenceFor(emoteId);
             if (sequence != null && !sequence.isEmpty()) {
-                EmojiTextureCache.ensureLoaded(emoteId, sequence);
+                EmojiTextureCache.remember(emoteId, sequence);
             }
         }
 
@@ -265,20 +246,18 @@ public final class TwitchEmoteTextureCache {
 
         Identifier existing = LOADED_TEXTURES.get(key);
         if (existing != null) {
-            // Проверяем, что текстура всё ещё валидна в TextureManager
             MinecraftClient client = MinecraftClient.getInstance();
             if (client != null) {
                 net.minecraft.client.texture.AbstractTexture tex = client.getTextureManager().getTexture(existing);
                 NativeImageBackedTexture ourTex = TEXTURE_REFS.get(key);
                 if (ourTex != null && tex != ourTex) {
-                    reRegisterFromCache(key, provider, emoteId, client);
+                    reRegisterFromCache(key, provider, emoteId);
                     return existing;
                 }
             }
             return existing;
         }
 
-        // Запускаем скачивание
         if (PENDING_OR_DONE.add(key)) {
             DOWNLOAD_EXECUTOR.execute(() -> downloadAndRegister(provider, emoteId));
         }
@@ -295,7 +274,34 @@ public final class TwitchEmoteTextureCache {
         return LOADED_TEXTURES.containsKey(key) || ANIMATED_TEXTURES.containsKey(key);
     }
 
-    /** Синхронная регистрация уже готовых байтов (локальные emoji PNG). */
+    public static boolean isFailed(String provider, String emoteId) {
+        return FAILED.contains(cacheKey(provider, emoteId));
+    }
+
+    /** Локальные иконки сразу готовы; удалённые — когда загружены или окончательно не открылись. */
+    public static boolean isResolved(String provider, String emoteId) {
+        if (provider == null || emoteId == null || emoteId.isBlank()) {
+            return true;
+        }
+        if ("platform".equals(provider) || RoleBadges.PROVIDER.equals(provider)) {
+            return true;
+        }
+        return isLoaded(provider, emoteId) || isFailed(provider, emoteId);
+    }
+
+    public static boolean areEmotesReady(java.util.Collection<MessageEmote> emotes) {
+        if (emotes == null || emotes.isEmpty()) {
+            return true;
+        }
+        for (MessageEmote emote : emotes) {
+            if (!isResolved(emote.getProvider(), emote.getEmoteId())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Кладёт готовые байты в фоновую очередь декодирования. */
     public static void registerImageBytesNow(String provider, String emoteId, byte[] imageBytes) {
         if (imageBytes == null || imageBytes.length == 0 || emoteId == null || emoteId.isBlank()) {
             return;
@@ -308,39 +314,39 @@ public final class TwitchEmoteTextureCache {
 
         IMAGE_BYTES_CACHE.put(key, imageBytes);
         saveToDiskCache(provider, emoteId, imageBytes);
-        PENDING_OR_DONE.add(key);
+        if (PENDING_OR_DONE.add(key)) {
+            DOWNLOAD_EXECUTOR.execute(() -> decodeAndEnqueue(key, provider, emoteId, imageBytes, false));
+        }
+    }
 
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null) {
+    private static void reRegisterFromCache(String key, String provider, String emoteId) {
+        if (!REUPLOADING.add(key)) {
             return;
         }
-
-        Runnable task = () -> registerImageBytesImmediate(key, provider, emoteId, imageBytes, client);
-        if (RenderSystem.isOnRenderThread()) {
-            task.run();
-        } else {
-            client.execute(task);
-        }
-    }
-
-    /**
-     * Перерегистрирует текстуру из кеша байтов
-     */
-    private static void reRegisterFromCache(String key, String provider, String emoteId, MinecraftClient client) {
         byte[] bytes = IMAGE_BYTES_CACHE.get(key);
         if (bytes == null) {
-            // Попробовать загрузить с диска
             bytes = loadFromDiskCache(provider, emoteId);
-            if (bytes == null) return;
+            if (bytes == null) {
+                REUPLOADING.remove(key);
+                return;
+            }
             IMAGE_BYTES_CACHE.put(key, bytes);
         }
-        registerOnRenderThread(key, provider, emoteId, bytes);
+        final byte[] imageBytes = bytes;
+        DOWNLOAD_EXECUTOR.execute(() -> {
+            try {
+                decodeAndEnqueue(key, provider, emoteId, imageBytes, true);
+            } finally {
+                REUPLOADING.remove(key);
+            }
+        });
     }
 
-    // ─── Дисковый кеш ───
-
     private static Path diskCachePath(String provider, String emoteId) {
-        return CACHE_DIR.resolve(provider).resolve(emoteId + ".png");
+        String fileName = emoteId.matches("[a-zA-Z0-9._-]+")
+            ? emoteId + ".png"
+            : getSafeTexturePathPart(emoteId) + ".png";
+        return CACHE_DIR.resolve(provider).resolve(fileName);
     }
 
     private static byte[] loadFromDiskCache(String provider, String emoteId) {
@@ -365,291 +371,145 @@ public final class TwitchEmoteTextureCache {
         }
     }
 
-    // ─── Скачивание и регистрация ───
-
     private static void downloadAndRegister(String provider, String emoteId) {
         String key = cacheKey(provider, emoteId);
 
-        // 1. Попробовать дисковый кеш
         byte[] imageBytes = loadFromDiskCache(provider, emoteId);
         if (imageBytes != null && imageBytes.length > 0) {
             IMAGE_BYTES_CACHE.put(key, imageBytes);
-            registerOnRenderThread(key, provider, emoteId, imageBytes);
+            decodeAndEnqueue(key, provider, emoteId, imageBytes, false);
             return;
         }
 
-        // 2. Скачать из CDN
         try {
             imageBytes = downloadImageBytes(provider, emoteId);
-            if (imageBytes == null) {
+            if (imageBytes == null || imageBytes.length == 0) {
+                markFailed(key);
                 return;
             }
 
-            if (imageBytes.length == 0) {
-                return;
-            }
-
-            // Сохранить на диск
             saveToDiskCache(provider, emoteId, imageBytes);
             IMAGE_BYTES_CACHE.put(key, imageBytes);
-            registerOnRenderThread(key, provider, emoteId, imageBytes);
-
+            decodeAndEnqueue(key, provider, emoteId, imageBytes, false);
         } catch (Exception e) {
+            markFailed(key);
             TakeYourMineStreamClient.LOGGER.warn("Error downloading {} emote {}: {}", provider, emoteId, e.getMessage());
         }
     }
 
-    private static void registerOnRenderThread(String key, String provider, String emoteId, byte[] imageBytes) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null) {
+    private static void decodeAndEnqueue(String key, String provider, String emoteId, byte[] imageBytes, boolean replace) {
+        if (!replace && (LOADED_TEXTURES.containsKey(key) || ANIMATED_TEXTURES.containsKey(key))) {
             return;
         }
-        client.execute(() -> registerImageBytesImmediate(key, provider, emoteId, imageBytes, client));
-    }
-
-    private static void registerImageBytesImmediate(String key,
-                                                    String provider,
-                                                    String emoteId,
-                                                    byte[] imageBytes,
-                                                    MinecraftClient client) {
         try {
-            if ("7tv".equals(provider) && isGifData(imageBytes)) {
-                if (registerAnimatedGifFrames(key, provider, emoteId, imageBytes, client)) {
-                    return;
-                }
-            }
-
-            NativeImage image = decodeNativeImage(imageBytes, provider, emoteId);
-            if (image == null) {
+            EmoteImageCodec.DecodedEmote decoded = EmoteImageCodec.decode(imageBytes, provider);
+            if (decoded == null || decoded.textureCount() == 0) {
+                markFailed(key);
                 TakeYourMineStreamClient.LOGGER.warn("Failed to decode image for {} emote {}", provider, emoteId);
                 return;
             }
+            UPLOAD_QUEUE.add(new PendingUpload(key, provider, emoteId, decoded, replace));
+        } catch (Exception e) {
+            markFailed(key);
+            TakeYourMineStreamClient.LOGGER.error("Error decoding {} emote {}", provider, emoteId, e);
+        }
+    }
 
-            NativeImageBackedTexture texture = new NativeImageBackedTexture(
-                () -> "tyms-emote-" + provider + "-" + emoteId, image);
+    private static void markFailed(String key) {
+        FAILED.add(key);
+    }
 
-            Identifier textureId = Identifier.of("take-your-stream-chat", "emotes/" + provider + "/" + getSafeTexturePathPart(emoteId));
+    static void drainUploads(MinecraftClient client) {
+        if (client == null) {
+            return;
+        }
+
+        int uploaded = 0;
+        while (uploaded < MAX_TEXTURES_PER_TICK) {
+            PendingUpload next = UPLOAD_QUEUE.peek();
+            if (next == null) {
+                break;
+            }
+            int cost = Math.max(1, next.textureCount());
+            if (uploaded > 0 && uploaded + cost > MAX_TEXTURES_PER_TICK) {
+                break;
+            }
+            UPLOAD_QUEUE.poll();
+            uploaded += uploadDecoded(next, client);
+        }
+    }
+
+    private static int uploadDecoded(PendingUpload pending, MinecraftClient client) {
+        String key = pending.key;
+        if (!pending.replace && (LOADED_TEXTURES.containsKey(key) || ANIMATED_TEXTURES.containsKey(key))) {
+            pending.close();
+            return 0;
+        }
+
+        try {
+            EmoteImageCodec.DecodedEmote decoded = pending.decoded;
+            if (decoded.animated()) {
+                return registerAnimated(key, pending.provider, pending.emoteId, decoded.frames(), client);
+            }
+
+            NativeImage image = decoded.image();
+            if (image == null) {
+                markFailed(key);
+                return 0;
+            }
+            NativeImageBackedTexture texture = createBackedTexture(
+                "tyms-emote-" + pending.provider + "-" + pending.emoteId,
+                image
+            );
+            Identifier textureId = Identifier.of(
+                "take-your-stream-chat",
+                "emotes/" + pending.provider + "/" + getSafeTexturePathPart(pending.emoteId)
+            );
             client.getTextureManager().registerTexture(textureId, texture);
             TEXTURE_REFS.put(key, texture);
             LOADED_TEXTURES.put(key, textureId);
             ANIMATED_TEXTURES.remove(key);
+            return 1;
         } catch (Exception e) {
-            TakeYourMineStreamClient.LOGGER.error("Error creating texture for {} emote {}", provider, emoteId, e);
+            markFailed(key);
+            TakeYourMineStreamClient.LOGGER.error("Error creating texture for {} emote {}", pending.provider, pending.emoteId, e);
+            return 0;
         }
     }
 
-    private static boolean isGifData(byte[] bytes) {
-        return bytes != null
-                && bytes.length >= 6
-                && bytes[0] == 'G'
-                && bytes[1] == 'I'
-                && bytes[2] == 'F'
-                && bytes[3] == '8'
-                && (bytes[4] == '7' || bytes[4] == '9')
-                && bytes[5] == 'a';
+    private static int registerAnimated(
+        String key,
+        String provider,
+        String emoteId,
+        List<EmoteImageCodec.DecodedFrame> frames,
+        MinecraftClient client
+    ) {
+        List<Identifier> frameIds = new ArrayList<>(frames.size());
+        List<Integer> frameDurations = new ArrayList<>(frames.size());
+        for (int frameIndex = 0; frameIndex < frames.size(); frameIndex++) {
+            EmoteImageCodec.DecodedFrame frame = frames.get(frameIndex);
+            Identifier frameId = Identifier.of(
+                "take-your-stream-chat",
+                "emotes/" + provider + "/" + getSafeTexturePathPart(emoteId) + "_f" + frameIndex
+            );
+            NativeImageBackedTexture frameTexture = createBackedTexture(
+                "tyms-emote-" + provider + "-" + emoteId + "-f" + frameIndex,
+                frame.image()
+            );
+            client.getTextureManager().registerTexture(frameId, frameTexture);
+            frameIds.add(frameId);
+            frameDurations.add(frame.delayMs());
+        }
+        ANIMATED_TEXTURES.put(key, new AnimatedTextureSet(List.copyOf(frameIds), List.copyOf(frameDurations)));
+        LOADED_TEXTURES.remove(key);
+        return frameIds.size();
     }
 
-    private static boolean registerAnimatedGifFrames(String key,
-                                                     String provider,
-                                                     String emoteId,
-                                                     byte[] imageBytes,
-                                                     MinecraftClient client) {
-        try (ImageInputStream imageInputStream = ImageIO.createImageInputStream(new ByteArrayInputStream(imageBytes))) {
-            java.util.Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName("gif");
-            if (!readers.hasNext()) {
-                return false;
-            }
-
-            ImageReader gifReader = readers.next();
-            try {
-                gifReader.setInput(imageInputStream, false, false);
-                int frameCount = gifReader.getNumImages(true);
-                if (frameCount <= 0) {
-                    return false;
-                }
-
-                int[] canvasSize = getGifCanvasSize(gifReader);
-                int canvasWidth = Math.max(1, canvasSize[0]);
-                int canvasHeight = Math.max(1, canvasSize[1]);
-                BufferedImage canvas = new BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB);
-                BufferedImage previousCanvas = null;
-
-                List<Identifier> frameIds = new ArrayList<>(frameCount);
-                List<Integer> frameDurations = new ArrayList<>(frameCount);
-
-                for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
-                    BufferedImage frame = gifReader.read(frameIndex);
-                    if (frame == null) continue;
-                    final int stableFrameIndex = frameIndex;
-
-                    GifFrameMeta meta = readGifFrameMeta(gifReader.getImageMetadata(frameIndex));
-                    if ("restoreToPrevious".equals(meta.disposalMethod)) {
-                        previousCanvas = copyBufferedImage(canvas);
-                    }
-
-                    Graphics2D drawGraphics = canvas.createGraphics();
-                    drawGraphics.drawImage(frame, meta.left, meta.top, null);
-                    drawGraphics.dispose();
-
-                    BufferedImage composedFrame = copyBufferedImage(canvas);
-
-                    NativeImage nativeFrame = bufferedImageToNativeImage(composedFrame);
-                    if (nativeFrame == null) continue;
-
-                    Identifier frameId = Identifier.of(
-                            "take-your-stream-chat",
-                            "emotes/" + provider + "/" + getSafeTexturePathPart(emoteId) + "_f" + frameIndex
-                    );
-                    NativeImageBackedTexture frameTexture = new NativeImageBackedTexture(
-                            () -> "tyms-emote-" + provider + "-" + emoteId + "-f" + stableFrameIndex,
-                            nativeFrame
-                    );
-                    client.getTextureManager().registerTexture(frameId, frameTexture);
-
-                    frameIds.add(frameId);
-                    frameDurations.add(meta.delayMs);
-
-                    if ("restoreToBackgroundColor".equals(meta.disposalMethod)) {
-                        Graphics2D clearGraphics = canvas.createGraphics();
-                        clearGraphics.setComposite(AlphaComposite.Clear);
-                        clearGraphics.fillRect(meta.left, meta.top, frame.getWidth(), frame.getHeight());
-                        clearGraphics.dispose();
-                    } else if ("restoreToPrevious".equals(meta.disposalMethod) && previousCanvas != null) {
-                        canvas = copyBufferedImage(previousCanvas);
-                        previousCanvas = null;
-                    }
-                }
-
-                if (frameIds.isEmpty()) {
-                    return false;
-                }
-
-                ANIMATED_TEXTURES.put(key, new AnimatedTextureSet(List.copyOf(frameIds), List.copyOf(frameDurations)));
-                LOADED_TEXTURES.remove(key);
-                return true;
-            } finally {
-                gifReader.dispose();
-            }
-        } catch (Exception e) {
-            TakeYourMineStreamClient.LOGGER.warn("Error parsing GIF for {} emote {}: {}", provider, emoteId, e.getMessage());
-            return false;
-        }
-    }
-
-    private static NativeImage bufferedImageToNativeImage(BufferedImage bufferedImage) {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            if (!ImageIO.write(bufferedImage, "png", baos)) {
-                return null;
-            }
-            try (ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray())) {
-                return NativeImage.read(bais);
-            }
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static BufferedImage copyBufferedImage(BufferedImage src) {
-        BufferedImage copy = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = copy.createGraphics();
-        g.drawImage(src, 0, 0, null);
-        g.dispose();
-        return copy;
-    }
-
-    private static int[] getGifCanvasSize(ImageReader reader) {
-        try {
-            IIOMetadata streamMeta = reader.getStreamMetadata();
-            if (streamMeta != null) {
-                String format = streamMeta.getNativeMetadataFormatName();
-                if (format != null) {
-                    Node root = streamMeta.getAsTree(format);
-                    Node child = root.getFirstChild();
-                    while (child != null) {
-                        if ("LogicalScreenDescriptor".equals(child.getNodeName())) {
-                            NamedNodeMap attrs = child.getAttributes();
-                            if (attrs != null) {
-                                Node w = attrs.getNamedItem("logicalScreenWidth");
-                                Node h = attrs.getNamedItem("logicalScreenHeight");
-                                if (w != null && h != null) {
-                                    return new int[] { Integer.parseInt(w.getNodeValue()), Integer.parseInt(h.getNodeValue()) };
-                                }
-                            }
-                            break;
-                        }
-                        child = child.getNextSibling();
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return new int[] { 28, 28 };
-    }
-
-    private static final class GifFrameMeta {
-        final int left;
-        final int top;
-        final int delayMs;
-        final String disposalMethod;
-
-        GifFrameMeta(int left, int top, int delayMs, String disposalMethod) {
-            this.left = left;
-            this.top = top;
-            this.delayMs = delayMs;
-            this.disposalMethod = disposalMethod;
-        }
-    }
-
-    private static GifFrameMeta readGifFrameMeta(IIOMetadata metadata) {
-        int left = 0;
-        int top = 0;
-        int delayMs = 100;
-        String disposalMethod = "none";
-
-        if (metadata == null) {
-            return new GifFrameMeta(left, top, delayMs, disposalMethod);
-        }
-
-        try {
-            String formatName = metadata.getNativeMetadataFormatName();
-            if (formatName == null) {
-                return new GifFrameMeta(left, top, delayMs, disposalMethod);
-            }
-
-            Node root = metadata.getAsTree(formatName);
-            Node child = root.getFirstChild();
-            while (child != null) {
-                if ("GraphicControlExtension".equals(child.getNodeName())) {
-                    NamedNodeMap attrs = child.getAttributes();
-                    if (attrs != null) {
-                        Node delayNode = attrs.getNamedItem("delayTime");
-                        if (delayNode != null) {
-                            int centiseconds = Integer.parseInt(delayNode.getNodeValue());
-                            delayMs = Math.max(20, centiseconds * 10);
-                        }
-                        Node disposalNode = attrs.getNamedItem("disposalMethod");
-                        if (disposalNode != null) {
-                            disposalMethod = disposalNode.getNodeValue();
-                        }
-                    }
-                } else if ("ImageDescriptor".equals(child.getNodeName())) {
-                    NamedNodeMap attrs = child.getAttributes();
-                    if (attrs != null) {
-                        Node leftNode = attrs.getNamedItem("imageLeftPosition");
-                        Node topNode = attrs.getNamedItem("imageTopPosition");
-                        if (leftNode != null) {
-                            left = Integer.parseInt(leftNode.getNodeValue());
-                        }
-                        if (topNode != null) {
-                            top = Integer.parseInt(topNode.getNodeValue());
-                        }
-                    }
-                }
-                child = child.getNextSibling();
-            }
-        } catch (Exception ignored) {
-        }
-
-        return new GifFrameMeta(left, top, delayMs, disposalMethod);
+    private static NativeImageBackedTexture createBackedTexture(String debugName, NativeImage image) {
+        //? if >=1.21.8 {
+        return new NativeImageBackedTexture(() -> debugName, image);
+        //?} else {
+        return new NativeImageBackedTexture(image);
+        //?}
     }
 }

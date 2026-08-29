@@ -208,6 +208,7 @@ stonecutter parameters {
             replace("public static Text ", "public static Component ")
             replace("ServerInfo ", "ServerData ")
             replace("NativeImageBackedTexture", "DynamicTexture")
+            replace("new NativeImageBackedTexture(", "new DynamicTexture(")
             replace("WorldSavePath", "LevelResource")
             replace("private static RenderLayer ", "private static RenderType ")
             replace("client.getServer()", "client.getSingleplayerServer()")

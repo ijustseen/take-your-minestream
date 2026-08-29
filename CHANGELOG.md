@@ -31,6 +31,15 @@ contributed by **Adi**.
 - **Automoderation and username blocklist** — each is a single row now: on/off switch plus a gear button that opens the banwords / blocked usernames list
 - **Dependent settings** — HUD position and offsets appear only in HUD widget mode; panel colors are greyed out without the message background, border color while the border follows the platform, notification volume without the sound, and freeze distance without freezing
 - **Message shatter particles** — most shards use the panel fill color; the rest use the panel border color (platform accent or the custom border), not the author nick color
+- **Emotes, stickers and color emoji no longer hitch the game** — download, AWT rasterization and GIF decode run on background loader threads; GPU upload is capped at a few textures per tick. Large stickers are downscaled to 128 px. The emoji font is warmed up at client init
+- **Messages wait for pictures** — a bubble is shown only after its emotes/stickers/emoji textures are ready (or after 8 s if a CDN never answers), so codes no longer flash as raw text
+- **26.2 missing panel border** — fill and border were submitted on the same plane; `COLLECT_SUBMITS` sometimes drew the fill on top. The border is now offset slightly toward the camera
+
+### Technical
+
+- `EmoteImageCodec` — off-thread decode / GIF frames / downscale; `TwitchEmoteTextureCache` queues uploads and tracks failed loads
+- Shared `TwitchEmoteTextureCache` for all MC versions; Stonecutter picks the `NativeImageBackedTexture` / `DynamicTexture` constructor (`//? if >=1.21.8`)
+- Message queue holds a texture deadline; spawn drains GPU uploads before polling ready messages
 
 ## [2.0.1] - 2026-07-12
 

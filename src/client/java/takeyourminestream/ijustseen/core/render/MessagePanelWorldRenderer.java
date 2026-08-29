@@ -60,7 +60,10 @@ public final class MessagePanelWorldRenderer {
         float green = ((resolvedBorderRgb >> 8) & 0xFF) / 255.0f;
         float blue = (resolvedBorderRgb & 0xFF) / 255.0f;
         VertexConsumer border = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_BORDER_TEXTURE);
+        matrices.push();
+        matrices.translate(0f, 0f, 0.02f);
         drawPanel(matrices, border, x, y, width, height, alpha, red, green, blue);
+        matrices.pop();
     }
 
     private static void drawQuad(

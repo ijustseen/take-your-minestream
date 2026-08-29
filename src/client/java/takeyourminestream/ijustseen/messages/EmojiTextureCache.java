@@ -15,8 +15,8 @@ import javax.imageio.ImageIO;
 
 /** Растеризация системных цветных эмодзи в PNG для inline-отрисовки. */
 public final class EmojiTextureCache {
-    private static final int RENDER_SIZE = 96;
-    private static final int GLYPH_SIZE = 72;
+    private static final int RENDER_SIZE = 64;
+    private static final int GLYPH_SIZE = 48;
     private static final Map<String, String> SEQUENCE_BY_ID = new ConcurrentHashMap<>();
     private static final String AWT_GLYPH_TYPE = "java.awt.F" + "ont";
     private static final String AWT_METRICS_TYPE = "java.awt.F" + "ontMetrics";
@@ -27,6 +27,8 @@ public final class EmojiTextureCache {
     private static final Method METRICS_ASCENT;
     private static final Method METRICS_DESCENT;
     private static final Method GLYPH_CAN_DISPLAY;
+
+    private static volatile Object cachedGlyph;
 
     static {
         try {
@@ -58,26 +60,31 @@ public final class EmojiTextureCache {
         return sb.toString();
     }
 
-    public static void preload(String cacheId, String sequence) {
-        ensureLoaded(cacheId, sequence);
-    }
-
-    /** Растеризует и регистрирует текстуру до показа сообщения. */
-    public static boolean ensureLoaded(String cacheId, String sequence) {
+    public static void remember(String cacheId, String sequence) {
         if (cacheId == null || cacheId.isBlank() || sequence == null || sequence.isEmpty()) {
-            return false;
+            return;
         }
         SEQUENCE_BY_ID.put(cacheId, sequence);
-        if (TwitchEmoteTextureCache.isLoaded("emoji", cacheId)) {
-            return true;
-        }
+    }
 
-        byte[] png = rasterizeToPng(sequence);
-        if (png == null) {
-            return false;
-        }
-        TwitchEmoteTextureCache.registerImageBytesNow("emoji", cacheId, png);
+    public static void preload(String cacheId, String sequence) {
+        remember(cacheId, sequence);
+        TwitchEmoteTextureCache.preload("emoji", cacheId);
+    }
+
+    /** Ставит растеризацию в фон; не блокирует игровой поток. */
+    public static boolean ensureLoaded(String cacheId, String sequence) {
+        preload(cacheId, sequence);
         return TwitchEmoteTextureCache.isLoaded("emoji", cacheId);
+    }
+
+    /** Прогрев системного emoji-шрифта на фоне, чтобы первый чат не ждал загрузку TTF. */
+    public static void warmup() {
+        try {
+            rasterizeToPng("😀");
+        } catch (Exception e) {
+            TakeYourMineStreamClient.LOGGER.debug("Emoji font warmup skipped: {}", e.toString());
+        }
     }
 
     public static String sequenceFor(String cacheId) {
@@ -143,10 +150,19 @@ public final class EmojiTextureCache {
         }
     }
 
+    private static boolean canDisplay(Object awtGlyph, String sequence) throws ReflectiveOperationException {
+        return (int) GLYPH_CAN_DISPLAY.invoke(awtGlyph, sequence) == -1;
+    }
+
     private static Object resolveEmojiGlyph(String sequence) throws ReflectiveOperationException {
+        Object cached = cachedGlyph;
+        if (cached != null && canDisplay(cached, sequence)) {
+            return cached;
+        }
         for (String family : emojiGlyphFamilies()) {
             Object awtGlyph = createAwtGlyph(family, GLYPH_SIZE);
-            if ((int) GLYPH_CAN_DISPLAY.invoke(awtGlyph, sequence) == -1) {
+            if (canDisplay(awtGlyph, sequence)) {
+                cachedGlyph = awtGlyph;
                 return awtGlyph;
             }
         }

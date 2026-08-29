@@ -7,6 +7,12 @@ import takeyourminestream.ijustseen.utils.SubmitGeometryHelper;
 
 /** 9-slice панель сообщений в 3D-мире (Minecraft 26.2). */
 public final class MessagePanelWorldRenderer {
+    /**
+     * Бортик чуть ближе к камере, чем заливка: в 26.2 translucent стоят в одну
+     * плоскость и сортировка COLLECT_SUBMITS иногда рисует фон поверх рамки.
+     */
+    private static final float BORDER_Z = 0.02f;
+
     private MessagePanelWorldRenderer() {}
 
     /** Панель: фон + бортик, тонированный цветом платформы. */
@@ -29,6 +35,7 @@ public final class MessagePanelWorldRenderer {
             y,
             width,
             height,
+            0f,
             alpha,
             ((baseRgb >> 16) & 0xFF) / 255.0f,
             ((baseRgb >> 8) & 0xFF) / 255.0f,
@@ -47,6 +54,7 @@ public final class MessagePanelWorldRenderer {
             y,
             width,
             height,
+            BORDER_Z,
             alpha,
             red,
             green,

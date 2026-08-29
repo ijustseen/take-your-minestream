@@ -111,6 +111,7 @@ public final class SubmitGeometryHelper {
         int y,
         int width,
         int height,
+        float z,
         float alpha,
         float red,
         float green,
@@ -119,7 +120,7 @@ public final class SubmitGeometryHelper {
         collector.submitCustomGeometry(
             poseStack,
             RenderTypes.entityTranslucent(texture),
-            (pose, consumer) -> writePanelSlices(consumer, pose, x, y, width, height, alpha, red, green, blue)
+            (pose, consumer) -> writePanelSlices(consumer, pose, x, y, width, height, z, alpha, red, green, blue)
         );
     }
 
@@ -130,16 +131,17 @@ public final class SubmitGeometryHelper {
         int y,
         int width,
         int height,
+        float z,
         float alpha,
         float red,
         float green,
         float blue
     ) {
         for (MessagePanel9Slice.WorldSlice slice : MessagePanel9Slice.worldSlices(x, y, width, height)) {
-            addVertex(consumer, pose, slice.x0(), slice.y0(), 0, slice.u0(), slice.v0(), red, green, blue, alpha);
-            addVertex(consumer, pose, slice.x0(), slice.y1(), 0, slice.u0(), slice.v1(), red, green, blue, alpha);
-            addVertex(consumer, pose, slice.x1(), slice.y1(), 0, slice.u1(), slice.v1(), red, green, blue, alpha);
-            addVertex(consumer, pose, slice.x1(), slice.y0(), 0, slice.u1(), slice.v0(), red, green, blue, alpha);
+            addVertex(consumer, pose, slice.x0(), slice.y0(), z, slice.u0(), slice.v0(), red, green, blue, alpha);
+            addVertex(consumer, pose, slice.x0(), slice.y1(), z, slice.u0(), slice.v1(), red, green, blue, alpha);
+            addVertex(consumer, pose, slice.x1(), slice.y1(), z, slice.u1(), slice.v1(), red, green, blue, alpha);
+            addVertex(consumer, pose, slice.x1(), slice.y0(), z, slice.u1(), slice.v0(), red, green, blue, alpha);
         }
     }
 

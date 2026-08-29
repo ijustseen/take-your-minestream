@@ -232,7 +232,7 @@ public final class ChatMessagePipeline {
             if (!emojiEmotes.isEmpty()) {
                 parsedEmotes = UnicodeEmojiParser.mergeNonOverlapping(parsedEmotes, emojiEmotes);
                 for (MessageEmote emoji : emojiEmotes) {
-                    EmojiTextureCache.ensureLoaded(emoji.getEmoteId(), emoji.getEmoteCode());
+                    EmojiTextureCache.preload(emoji.getEmoteId(), emoji.getEmoteCode());
                 }
             }
         }
