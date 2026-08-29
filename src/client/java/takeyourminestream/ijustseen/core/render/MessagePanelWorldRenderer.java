@@ -40,12 +40,25 @@ public final class MessagePanelWorldRenderer {
         float alpha,
         int borderRgb
     ) {
-        VertexConsumer base = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_BASE_TEXTURE);
-        drawPanel(matrices, base, x, y, width, height, alpha, 1.0f, 1.0f, 1.0f);
+        int baseRgb = takeyourminestream.ijustseen.core.MessagePanelColors.baseRgb();
+        VertexConsumer base = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_TEXTURE);
+        drawPanel(
+            matrices,
+            base,
+            x,
+            y,
+            width,
+            height,
+            alpha,
+            ((baseRgb >> 16) & 0xFF) / 255.0f,
+            ((baseRgb >> 8) & 0xFF) / 255.0f,
+            (baseRgb & 0xFF) / 255.0f
+        );
 
-        float red = ((borderRgb >> 16) & 0xFF) / 255.0f;
-        float green = ((borderRgb >> 8) & 0xFF) / 255.0f;
-        float blue = (borderRgb & 0xFF) / 255.0f;
+        int resolvedBorderRgb = takeyourminestream.ijustseen.core.MessagePanelColors.borderRgb(borderRgb);
+        float red = ((resolvedBorderRgb >> 16) & 0xFF) / 255.0f;
+        float green = ((resolvedBorderRgb >> 8) & 0xFF) / 255.0f;
+        float blue = (resolvedBorderRgb & 0xFF) / 255.0f;
         VertexConsumer border = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_BORDER_TEXTURE);
         drawPanel(matrices, border, x, y, width, height, alpha, red, green, blue);
     }

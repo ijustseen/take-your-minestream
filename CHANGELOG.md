@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.1.0] - 2026-08-29
+
+Release after **2.0.1**. Fixes player-reported YouTube/TikTok issues, reworks platform settings into
+per-platform pages and adds appearance customization. Ideas and the TikTok role-detection approach
+contributed by **Adi**.
+
+### Fixed
+
+- **YouTube EU cookie consent** — `HttpClient` now pre-seeds `CONSENT` and `SOCS` cookies so EU/EEA IPs get the real watch/live-chat payload instead of the consent interstitial ([#9](https://github.com/ijustseen/take-your-minestream/issues/9))
+- **YouTube live-chat emojis** — named stickers such as `face-purple-crying` and channel custom emojis were dropped (parser only read `run.text`). They are now parsed from `message.runs[].emoji` and drawn inline from YouTube CDN thumbnails
+- **Kick emotes** — `[emote:id:name]` tokens in chat were shown as raw text. They are now parsed and drawn inline from `files.kick.com`
+- **TikTok comments missing for some users** — parse chat text from newer protobuf fields, accept prefixed method names, keep the full TikTok cookie jar on the websocket, and skip malformed user payloads without dropping the comment ([#10](https://github.com/ijustseen/take-your-minestream/issues/10))
+
+### Added
+
+- **Independent role toggles per source** — “Show everyone” on by default (other roles then inactive). Turn it off to keep subscribers / VIP / mods / followers that the platform actually sends ([#11](https://github.com/ijustseen/take-your-minestream/issues/11))
+- **HUD widget position** — choose a screen corner and X/Y pixel inset ([#11](https://github.com/ijustseen/take-your-minestream/issues/11))
+- **Per-platform settings pages** (`PlatformConfigScreen`) — platform banner, back button, channel/username field, role filters and all platform toggles in one place
+- **Panel colors** — HEX fill tint and border color with a full HSV color picker (saturation square, hue slider, preview); Escape applies the color; default fill is black; border can follow the platform brand color
+- **Reset to defaults** — two-click confirm in Chat & filters restores factory settings (banwords / blocked names / regexps are kept)
+- **Role badges** — host / mod / VIP / subscriber pixel badges before the author name in 3D panels, HUD cards and history
+- **Per-platform mute and sound** — hide a platform's messages or its notification sound without disconnecting
+- **TikTok gifts and follows** as optional chat events (off by default); streak gifts are announced once, on streak end
+
+### Changed
+
+- **Enabling a source no longer starts the parser** — a source switch only adds it to the parsed list; connections open when the chat parser is started (Chat ON) and new sources join a running parser
+- **Main settings screen** — platforms are now banner cards, two per row (same look as the platform page header): icon, name, on/off switch and a gear button that opens the platform page
+- **Automoderation and username blocklist** — each is a single row now: on/off switch plus a gear button that opens the banwords / blocked usernames list
+- **Dependent settings** — HUD position and offsets appear only in HUD widget mode; panel colors are greyed out without the message background, border color while the border follows the platform, notification volume without the sound, and freeze distance without freezing
+- **Message shatter particles** — most shards use the panel fill color; the rest use the panel border color (platform accent or the custom border), not the author nick color
+
 ## [2.0.1] - 2026-07-12
 
 Patch release after **2.0.0** (`550b7b5`). All items below ship only in **2.0.1** artifacts (`tysc-2.0.1+<mc>.jar`), not in 2.0.0.

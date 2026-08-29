@@ -8,6 +8,7 @@ import takeyourminestream.ijustseen.core.text.ChatMessageParser;
 import takeyourminestream.ijustseen.messages.EmoteTextLayout;
 import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageEmote;
+import takeyourminestream.ijustseen.messages.RoleBadges;
 
 import java.util.List;
 
@@ -46,9 +47,10 @@ public final class MessageCardLayout {
     }
 
     private static int usernameIconOffset(Message message) {
-        return message.getPlatformIconKey() != null
+        int platformOffset = message.getPlatformIconKey() != null
             ? MessageEmoteGuiRenderer.PLATFORM_ICON_SIZE + 2
             : 0;
+        return platformOffset + RoleBadges.guiRowWidth(message.getRoleBadgeKeys().size());
     }
 
     public static Layout computeHud(TextRenderer textRenderer, Message message, int maxAvailableWidth) {

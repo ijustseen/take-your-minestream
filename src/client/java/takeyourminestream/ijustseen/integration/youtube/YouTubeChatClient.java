@@ -1,6 +1,5 @@
 package takeyourminestream.ijustseen.integration.youtube;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -411,8 +410,8 @@ public class YouTubeChatClient implements ChatConnection {
             return;
         }
 
-        String message = extractMessageText(renderer);
-        if (message.isBlank()) {
+        YouTubeEmoteParser.Parsed parsed = YouTubeEmoteParser.parse(renderer);
+        if (parsed.text().isBlank()) {
             return;
         }
 
@@ -432,14 +431,15 @@ public class YouTubeChatClient implements ChatConnection {
             authorChannelId = renderer.get("authorExternalChannelId").getAsString();
         }
         if (renderer.has("authorBadges")) {
-            roles = ChatAuthorRoles.fromBadgeHints(renderer.get("authorBadges").toString());
+            roles = rolesFromYouTubeBadges(renderer.get("authorBadges"));
         }
 
         Long timestampMicros = parseTimestampMicros(renderer);
         IncomingChatMessage incoming = IncomingChatMessage.builder(ChatPlatform.YOUTUBE)
             .authorLogin(authorChannelId.isBlank() ? authorName : authorChannelId)
             .displayName(authorName.isBlank() ? "Viewer" : authorName)
-            .text(message)
+            .text(parsed.text())
+            .emotes(parsed.emotes())
             .roles(roles)
             .sourceTimestampMicros(timestampMicros)
             .build();
@@ -455,29 +455,6 @@ public class YouTubeChatClient implements ChatConnection {
         } catch (NumberFormatException ignored) {
             return null;
         }
-    }
-
-    private static String extractMessageText(JsonObject renderer) {
-        if (!renderer.has("message")) {
-            return "";
-        }
-        JsonElement messageEl = renderer.get("message");
-        if (messageEl.isJsonObject()) {
-            JsonObject messageObj = messageEl.getAsJsonObject();
-            if (messageObj.has("simpleText")) {
-                return messageObj.get("simpleText").getAsString();
-            }
-            if (messageObj.has("runs") && messageObj.get("runs").isJsonArray()) {
-                StringBuilder sb = new StringBuilder();
-                for (JsonElement run : messageObj.getAsJsonArray("runs")) {
-                    if (run.isJsonObject() && run.getAsJsonObject().has("text")) {
-                        sb.append(run.getAsJsonObject().get("text").getAsString());
-                    }
-                }
-                return sb.toString();
-            }
-        }
-        return "";
     }
 
     private static int indexOfPattern(Pattern pattern, String text) {
@@ -514,6 +491,45 @@ public class YouTubeChatClient implements ChatConnection {
     @Override
     public ChatPlatform getPlatform() {
         return ChatPlatform.YOUTUBE;
+    }
+
+    /** Member / Moderator / Owner из {@code authorBadges}; фолловеров и VIP YouTube в live chat не шлёт. */
+    private static ChatAuthorRoles rolesFromYouTubeBadges(JsonElement badges) {
+        boolean member = false;
+        boolean moderator = false;
+        boolean owner = false;
+        if (badges != null && badges.isJsonArray()) {
+            for (JsonElement element : badges.getAsJsonArray()) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject renderer = element.getAsJsonObject();
+                if (renderer.has("liveChatAuthorBadgeRenderer") && renderer.get("liveChatAuthorBadgeRenderer").isJsonObject()) {
+                    renderer = renderer.getAsJsonObject("liveChatAuthorBadgeRenderer");
+                }
+                String iconType = "";
+                if (renderer.has("icon") && renderer.get("icon").isJsonObject()) {
+                    JsonObject icon = renderer.getAsJsonObject("icon");
+                    if (icon.has("iconType") && !icon.get("iconType").isJsonNull()) {
+                        iconType = icon.get("iconType").getAsString();
+                    }
+                }
+                String tooltip = renderer.has("tooltip") && !renderer.get("tooltip").isJsonNull()
+                    ? renderer.get("tooltip").getAsString()
+                    : "";
+                String hay = (iconType + " " + tooltip).toLowerCase(java.util.Locale.ROOT);
+                if (hay.contains("owner")) {
+                    owner = true;
+                }
+                if (hay.contains("moderator")) {
+                    moderator = true;
+                }
+                if (hay.contains("member")) {
+                    member = true;
+                }
+            }
+        }
+        return new ChatAuthorRoles(false, member, false, moderator, owner);
     }
 
     @Override

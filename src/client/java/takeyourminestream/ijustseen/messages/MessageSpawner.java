@@ -68,7 +68,20 @@ public class MessageSpawner {
             PinnedMessageStore.tagWithCurrentDimension(message, client);
             lifecycleManager.addMessage(message);
         }
-        playNewMessageSound(tick);
+        playNewMessageSound(tick, platformKeyOf(queued.emotes));
+    }
+
+    /** Ключ платформы из маркера-эмоута сообщения; null, если платформа неизвестна. */
+    private static String platformKeyOf(java.util.List<MessageEmote> emotes) {
+        if (emotes == null) {
+            return null;
+        }
+        for (MessageEmote emote : emotes) {
+            if ("platform".equals(emote.getProvider())) {
+                return emote.getEmoteId();
+            }
+        }
+        return null;
     }
 
     public void enqueueMessage(String message, Integer authorColorRgb, java.util.List<MessageEmote> emotes, int readyAtTick) {
@@ -117,15 +130,18 @@ public class MessageSpawner {
         messageQueue.clear();
     }
 
-    private void playNewMessageSound(int tick) {
+    private void playNewMessageSound(int tick, String platformKey) {
+        if (!takeyourminestream.ijustseen.config.ModConfig.isENABLE_MESSAGE_SOUND()) {
+            return;
+        }
+        if (platformKey != null
+            && !takeyourminestream.ijustseen.config.ModConfig.isPLATFORM_MESSAGE_SOUND(platformKey)) {
+            return;
+        }
         if (tick == lastSoundTick) {
             return;
         }
         lastSoundTick = tick;
-
-        if (!takeyourminestream.ijustseen.config.ModConfig.isENABLE_MESSAGE_SOUND()) {
-            return;
-        }
 
         float volume = (float) MathHelper.clamp(takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SOUND_VOLUME(), 0.0, 1.0);
         if (volume <= 0.0f) {

@@ -13,6 +13,9 @@ public interface IChatConnectionManager {
 
     boolean isConnected();
 
+    /** Запущен ли парсер чата: включённые источники подключаются только при запущенном парсере. */
+    boolean isParserEnabled();
+
     boolean isPlatformConnected(ChatPlatform platform);
 
     int getConnectedCount();

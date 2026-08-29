@@ -273,6 +273,7 @@ public final class PinnedMessageStore {
         }
     }
 
+    @SuppressWarnings("unused")
     private static final class PinnedMessagesFile {
         int schemaVersion;
         String worldKey;

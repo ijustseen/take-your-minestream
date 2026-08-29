@@ -5,7 +5,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Text;
 import net.minecraft.text.OrderedText;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.core.MessagePanelConstants;
@@ -138,9 +137,7 @@ public class MessageRenderer {
         // Рендерим текст
         int alphaInt = 0xFF << 24;
         int color = (0xFFFFFF) | alphaInt;
-        if (platformIconKey != null) {
-            renderPlatformIcon(matrices, consumers, platformIconKey);
-        }
+        renderIconRow(matrices, consumers, message);
         if (hasEmotes) {
             float lineY = 0.0f;
             for (int i = 0; i < emoteLines.size(); i++) {
@@ -182,12 +179,40 @@ public class MessageRenderer {
         drawQuadIcon(consumer, mat, markerX, markerY, markerX + MessagePanelConstants.PIN_ICON_SIZE, markerY + MessagePanelConstants.PIN_ICON_SIZE, PIN_ICON_Z_OFFSET, u0, v0, u1, v1);
     }
 
-    private void renderPlatformIcon(MatrixStack matrices, VertexConsumerProvider consumers, String iconKey) {
-        Identifier texture = TwitchEmoteTextureCache.getTextureIdentifier("platform", iconKey);
-        if (texture == null) return;
-        VertexConsumer consumer = RenderLayerCompat.getTextBuffer(consumers, texture);
+    /** Иконка платформы и бейджи ролей перед ником. */
+    private void renderIconRow(MatrixStack matrices, VertexConsumerProvider consumers, Message message) {
         Matrix4f mat = matrices.peek().getPositionMatrix();
-        drawQuadIcon(consumer, mat, 0, 0, MessagePanelLayout.PLATFORM_ICON_SIZE, MessagePanelLayout.PLATFORM_ICON_SIZE, EMOTE_ICON_Z_OFFSET, 0f, 0f, 1f, 1f);
+        int iconX = 0;
+        String platformIconKey = message.getPlatformIconKey();
+        if (platformIconKey != null) {
+            Identifier texture = TwitchEmoteTextureCache.getTextureIdentifier("platform", platformIconKey);
+            if (texture != null) {
+                drawQuadIcon(
+                    RenderLayerCompat.getTextBuffer(consumers, texture),
+                    mat,
+                    iconX,
+                    0,
+                    iconX + MessagePanelLayout.PLATFORM_ICON_SIZE,
+                    MessagePanelLayout.PLATFORM_ICON_SIZE,
+                    EMOTE_ICON_Z_OFFSET,
+                    0f, 0f, 1f, 1f
+                );
+            }
+            iconX += MessagePanelLayout.PLATFORM_ICON_SIZE + MessagePanelLayout.EMOTE_ICON_SPACING;
+        }
+        for (String badgeKey : message.getRoleBadgeKeys()) {
+            drawQuadIcon(
+                RenderLayerCompat.getTextBuffer(consumers, RoleBadges.iconTexture(badgeKey)),
+                mat,
+                iconX,
+                0,
+                iconX + RoleBadges.ICON_SIZE,
+                RoleBadges.ICON_SIZE,
+                EMOTE_ICON_Z_OFFSET,
+                0f, 0f, 1f, 1f
+            );
+            iconX += RoleBadges.ICON_SIZE + RoleBadges.WORLD_SPACING;
+        }
     }
 
     private void drawQuadIcon(VertexConsumer consumer, Matrix4f mat, int x0, int y0, int x1, int y1, float z, float u0, float v0, float u1, float v1) {

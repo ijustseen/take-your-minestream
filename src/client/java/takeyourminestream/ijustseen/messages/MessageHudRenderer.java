@@ -11,7 +11,7 @@ import takeyourminestream.ijustseen.ui.gui.MessageCardRenderer;
 
 import java.util.List;
 
-/** HUD-оверлей сообщений чата (правый верхний угол). */
+/** HUD-оверлей сообщений чата (угол и отступ задаются в настройках). */
 public class MessageHudRenderer {
     private final MessageLifecycleManager lifecycleManager;
     private final BlockedUsernameManager blockedUsernameManager = BlockedUsernameManager.getInstance();
@@ -34,6 +34,7 @@ public class MessageHudRenderer {
 
         TextRenderer textRenderer = client.textRenderer;
         int screenWidth = client.getWindow().getScaledWidth();
+        int screenHeight = client.getWindow().getScaledHeight();
         float hudScale = ModConfig.getMESSAGE_SCALE().getScale();
         List<MessageHudOverlay.PreparedCard> cards = MessageHudOverlay.prepare(
             textRenderer,
@@ -41,7 +42,8 @@ public class MessageHudRenderer {
                 .filter(message -> PinnedMessageStore.belongsToCurrentWorld(message, client))
                 .toList(),
             lifecycleManager.getTickCounter(),
-            screenWidth
+            screenWidth,
+            screenHeight
         );
 
         for (MessageHudOverlay.PreparedCard card : cards) {

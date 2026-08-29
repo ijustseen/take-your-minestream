@@ -13,7 +13,7 @@ import takeyourminestream.ijustseen.ui.gui.MessageCardRenderer;
 
 import java.util.List;
 
-/** HUD-оверлей сообщений чата (правый верхний угол). */
+/** HUD-оверлей сообщений чата (угол и отступ задаются в настройках). */
 public class MessageHudRenderer {
     private static final Identifier HUD_ELEMENT_ID = Identifier.fromNamespaceAndPath(
         "take-your-stream-chat",
@@ -45,12 +45,14 @@ public class MessageHudRenderer {
 
         Font textRenderer = client.font;
         int screenWidth = client.getWindow().getGuiScaledWidth();
+        int screenHeight = client.getWindow().getGuiScaledHeight();
         float hudScale = ModConfig.getMESSAGE_SCALE().getScale();
         List<MessageHudOverlay.PreparedCard> cards = MessageHudOverlay.prepare(
             textRenderer,
             lifecycleManager.getActiveMessages(),
             lifecycleManager.getTickCounter(),
-            screenWidth
+            screenWidth,
+            screenHeight
         );
 
         for (MessageHudOverlay.PreparedCard card : cards) {

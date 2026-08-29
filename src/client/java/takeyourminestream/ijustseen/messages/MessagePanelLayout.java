@@ -28,10 +28,15 @@ public final class MessagePanelLayout {
 
     private MessagePanelLayout() {}
 
+    /** Отступ первой строки под иконку платформы и бейджи ролей. */
+    public static int firstLineIconOffset(Message message) {
+        int platformOffset = message.getPlatformIconKey() != null ? PLATFORM_ICON_SIZE + EMOTE_ICON_SPACING : 0;
+        return platformOffset + RoleBadges.worldRowWidth(message.getRoleBadgeKeys().size());
+    }
+
     public static Dimensions compute(TextRenderer textRenderer, Message message) {
         boolean hasInlineEmotes = message.hasInlineEmotes();
-        String platformIconKey = message.getPlatformIconKey();
-        int iconOffset = platformIconKey != null ? PLATFORM_ICON_SIZE + EMOTE_ICON_SPACING : 0;
+        int iconOffset = firstLineIconOffset(message);
 
         float totalTextHeight;
         int maxTextWidth;

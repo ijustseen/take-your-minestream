@@ -8,6 +8,7 @@ import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.filtering.FilteringManager;
 import takeyourminestream.ijustseen.messages.MessageEmote;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
+import takeyourminestream.ijustseen.messages.RoleBadges;
 import takeyourminestream.ijustseen.messages.SevenTVEmoteProvider;
 import takeyourminestream.ijustseen.messages.TwitchEmoteTextureCache;
 import takeyourminestream.ijustseen.messages.UnicodeEmojiParser;
@@ -112,6 +113,17 @@ public final class ChatMessagePipeline {
             return null;
         }
 
+        String platformKey = message.platform().getIconKey();
+        if (!ModConfig.isPLATFORM_SHOW_MESSAGES(platformKey)) {
+            return null;
+        }
+        if (message.eventType() == ChatEventType.GIFT && !ModConfig.isTIKTOK_GIFT_EVENTS()) {
+            return null;
+        }
+        if (message.eventType() == ChatEventType.FOLLOW && !ModConfig.isTIKTOK_FOLLOW_EVENTS()) {
+            return null;
+        }
+
         String displayName = message.displayName() != null && !message.displayName().isBlank()
             ? message.displayName()
             : message.authorLogin();
@@ -126,7 +138,16 @@ public final class ChatMessagePipeline {
             return null;
         }
 
-        if (!message.roles().passes(ModConfig.getCHAT_ROLE_FILTER())) {
+        // События (подарки, подписки) не фильтруются по ролям и шансу показа
+        boolean isEvent = message.eventType().isEvent();
+
+        if (!isEvent && !message.roles().passesSelectedRoles(
+            ModConfig.isPLATFORM_ROLE_ALL(platformKey),
+            ModConfig.isPLATFORM_ROLE_FOLLOWERS(platformKey),
+            ModConfig.isPLATFORM_ROLE_SUBSCRIBERS(platformKey),
+            ModConfig.isPLATFORM_ROLE_VIP(platformKey),
+            ModConfig.isPLATFORM_ROLE_MODS(platformKey)
+        )) {
             return null;
         }
 
@@ -138,12 +159,14 @@ public final class ChatMessagePipeline {
         if (player == null) {
             return null;
         }
-        int chance = ConfigManager.getInstance().getConfigData().getChanceForSpawn();
-        if (chance <= 0) {
-            return null;
-        }
-        if (chance < 100 && player.getRandom().nextInt(100) >= chance) {
-            return null;
+        if (!isEvent) {
+            int chance = ConfigManager.getInstance().getConfigData().getChanceForSpawn();
+            if (chance <= 0) {
+                return null;
+            }
+            if (chance < 100 && player.getRandom().nextInt(100) >= chance) {
+                return null;
+            }
         }
 
         if (message.platform() == ChatPlatform.TWITCH) {
@@ -222,6 +245,17 @@ public final class ChatMessagePipeline {
             -1,
             -1
         ));
+        if (ModConfig.isSHOW_ROLE_BADGES()) {
+            ChatAuthorRoles roles = message.roles();
+            for (String badgeKey : RoleBadges.keysFor(
+                roles.subscriber(),
+                roles.vip(),
+                roles.moderator(),
+                roles.broadcaster()
+            )) {
+                emotesWithIcon.add(new MessageEmote(RoleBadges.PROVIDER, badgeKey, "", -1, -1));
+            }
+        }
 
         return new PreparedSpawn(fullText, rgb, emotesWithIcon);
     }

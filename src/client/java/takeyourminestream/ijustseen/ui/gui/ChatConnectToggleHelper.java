@@ -14,7 +14,7 @@ public final class ChatConnectToggleHelper {
 
     public static Text buttonLabel() {
         ChatConnectionManager manager = ChatConnectionManager.getInstance(ConfigManager.getInstance());
-        boolean connected = manager.isConnected();
+        boolean connected = manager.isParserEnabled();
         int count = manager.getConnectedCount();
 
         String key = connected
@@ -32,7 +32,7 @@ public final class ChatConnectToggleHelper {
         try {
             ChatConnectionManager manager = ChatConnectionManager.getInstance(ConfigManager.getInstance());
             MessageSpawner spawner = TakeYourMineStreamClient.getStaticMessageSpawner();
-            if (manager.isConnected()) {
+            if (manager.isParserEnabled()) {
                 manager.disconnect();
             } else if (spawner != null) {
                 manager.connect(spawner);

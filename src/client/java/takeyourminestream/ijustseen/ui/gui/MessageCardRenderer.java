@@ -12,6 +12,7 @@ import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.messages.EmoteTextLayout;
 import takeyourminestream.ijustseen.messages.Message;
+import takeyourminestream.ijustseen.messages.RoleBadges;
 
 /** Отрисовка одной карточки сообщения в GUI-истории. */
 public final class MessageCardRenderer {
@@ -51,11 +52,7 @@ public final class MessageCardRenderer {
                 usernameLabel.formatted(Formatting.YELLOW, Formatting.UNDERLINE);
             }
 
-            int usernameX = innerX;
-            String platformIconKey = message.getPlatformIconKey();
-            if (platformIconKey != null) {
-                usernameX = MessageEmoteGuiRenderer.drawPlatformIcon(context, platformIconKey, innerX, innerY);
-            }
+            int usernameX = drawIconRow(context, message, innerX, innerY);
 
             context.drawTextWithShadow(textRenderer, usernameLabel, usernameX, innerY, visibleInWorld ? 0xFFFFFFFF : 0xFF888888);
             int usernameWidth = textRenderer.getWidth(usernameLabel);
@@ -129,11 +126,7 @@ public final class MessageCardRenderer {
             if (blocked) {
                 usernameLabel.formatted(Formatting.DARK_RED, Formatting.STRIKETHROUGH);
             }
-            int usernameX = innerX;
-            String platformIconKey = message.getPlatformIconKey();
-            if (platformIconKey != null) {
-                usernameX = MessageEmoteGuiRenderer.drawPlatformIcon(context, platformIconKey, innerX, innerY);
-            }
+            int usernameX = drawIconRow(context, message, innerX, innerY);
             int usernameColor = usernameColor(message, alpha);
             context.drawTextWithShadow(textRenderer, usernameLabel, usernameX, innerY, usernameColor);
             if (blocked) {
@@ -170,6 +163,26 @@ public final class MessageCardRenderer {
                 innerY += textRenderer.fontHeight;
             }
         }
+    }
+
+    /** Иконка платформы и бейджи ролей перед ником; возвращает X начала ника. */
+    private static int drawIconRow(DrawContext context, Message message, int innerX, int innerY) {
+        int iconX = innerX;
+        String platformIconKey = message.getPlatformIconKey();
+        if (platformIconKey != null) {
+            iconX = MessageEmoteGuiRenderer.drawPlatformIcon(context, platformIconKey, iconX, innerY);
+        }
+        int badgeY = innerY + (MessageEmoteGuiRenderer.PLATFORM_ICON_SIZE - RoleBadges.ICON_SIZE) / 2;
+        for (String badgeKey : message.getRoleBadgeKeys()) {
+            iconX = MessageEmoteGuiRenderer.drawGuiIcon(
+                context,
+                RoleBadges.iconTexture(badgeKey),
+                iconX,
+                badgeY,
+                RoleBadges.ICON_SIZE
+            );
+        }
+        return iconX;
     }
 
     private static int usernameColor(Message message, float alpha) {

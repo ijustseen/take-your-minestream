@@ -42,8 +42,10 @@ public final class MessagePanelGuiRenderer {
 
     public static void drawPanel(DrawContext context, int x, int y, int width, int height, float alpha, int borderRgb) {
         int alphaBits = ((int) (Math.min(1.0f, alpha) * 255.0f)) << 24;
-        drawSlices(context, MessagePanelConstants.PANEL_BASE_TEXTURE, x, y, width, height, alphaBits | 0xFFFFFF);
-        drawSlices(context, MessagePanelConstants.PANEL_BORDER_TEXTURE, x, y, width, height, alphaBits | (borderRgb & 0xFFFFFF));
+        int baseRgb = takeyourminestream.ijustseen.core.MessagePanelColors.baseRgb();
+        int resolvedBorderRgb = takeyourminestream.ijustseen.core.MessagePanelColors.borderRgb(borderRgb);
+        drawSlices(context, MessagePanelConstants.PANEL_TEXTURE, x, y, width, height, alphaBits | baseRgb);
+        drawSlices(context, MessagePanelConstants.PANEL_BORDER_TEXTURE, x, y, width, height, alphaBits | resolvedBorderRgb);
     }
 
     private static void drawSlices(

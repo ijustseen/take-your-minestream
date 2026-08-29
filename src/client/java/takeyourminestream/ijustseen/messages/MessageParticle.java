@@ -17,7 +17,7 @@ public class MessageParticle {
     public float pitch;
 
     public enum ParticleType {
-        TEXT_COLOR,
+        BORDER_COLOR,
         BACKGROUND_COLOR
     }
 

@@ -8,6 +8,7 @@ import org.joml.Matrix4f;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
@@ -75,7 +76,7 @@ public class MessageParticleManager {
             Matrix4f mat = matrices.peek().getPositionMatrix();
             VertexConsumer consumer = RenderLayerCompat.getEntityBuffer(consumers, PARTICLE_TEXTURE);
             int light = 0xF000F0;
-            int overlay = 0;
+            int overlay = OverlayTexture.DEFAULT_UV;
             float half = sz / 2.0f;
             float z = 0.02f;
             consumer.vertex(mat, -half, -half, z).color(fr, fg, fb, fa).texture(0, 0).overlay(overlay).light(light).normal(0, 0, -1);

@@ -30,6 +30,10 @@ public final class ChatHttp {
 
     private static final CookieManager COOKIE_MANAGER = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
 
+    static {
+        presetYouTubeConsentCookies();
+    }
+
     private static final HttpClient CLIENT = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_1_1)
         .followRedirects(HttpClient.Redirect.NORMAL)
@@ -38,6 +42,45 @@ public final class ChatHttp {
         .build();
 
     private ChatHttp() {}
+
+    /**
+     * EU/EEA YouTube отдаёт страницу cookie-consent вместо watch/live chat,
+     * если в запросе нет CONSENT/SOCS. Предзасев пропускает interstitial
+     * (тот же приём, что у yt-dlp и Invidious).
+     */
+    private static void presetYouTubeConsentCookies() {
+        try {
+            addCookie("https://www.youtube.com", ".youtube.com", "CONSENT", "YES+cb.20240101-17-p0.en+FX+678");
+            addCookie("https://www.youtube.com", ".youtube.com", "SOCS", "CAI");
+        } catch (IllegalArgumentException e) {
+            addCookie("https://www.youtube.com", "youtube.com", "CONSENT", "YES+cb.20240101-17-p0.en+FX+678");
+            addCookie("https://www.youtube.com", "youtube.com", "SOCS", "CAI");
+        }
+    }
+
+    private static void addCookie(String url, String domain, String name, String value) {
+        HttpCookie cookie = new HttpCookie(name, value);
+        cookie.setVersion(0);
+        cookie.setDomain(domain);
+        cookie.setPath("/");
+        cookie.setMaxAge(60L * 60 * 24 * 365 * 10);
+        COOKIE_MANAGER.getCookieStore().add(URI.create(url), cookie);
+    }
+
+    /** Cookie-заголовок из jar для указанного URL (все подходящие пары name=value). */
+    public static String cookieHeader(String url) {
+        StringBuilder header = new StringBuilder();
+        for (HttpCookie cookie : COOKIE_MANAGER.getCookieStore().get(URI.create(url))) {
+            if (cookie.getName() == null || cookie.getValue() == null || cookie.hasExpired()) {
+                continue;
+            }
+            if (!header.isEmpty()) {
+                header.append("; ");
+            }
+            header.append(cookie.getName()).append('=').append(cookie.getValue());
+        }
+        return header.toString();
+    }
 
     public static String get(String url) throws IOException {
         return get(url, null);
@@ -147,6 +190,7 @@ public final class ChatHttp {
 
     private static void storeTtwidCookie(String url, String value) {
         HttpCookie cookie = new HttpCookie("ttwid", value);
+        cookie.setVersion(0);
         cookie.setDomain(".tiktok.com");
         cookie.setPath("/");
         COOKIE_MANAGER.getCookieStore().add(URI.create(url), cookie);

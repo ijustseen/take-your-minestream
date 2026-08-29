@@ -98,10 +98,16 @@ public final class TwitchEmoteTextureCache {
         }
     }
 
+    private static final String BROWSER_USER_AGENT =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
     /**
      * Возвращает URL для скачивания эмоута по провайдеру и ID.
      */
     private static String getEmoteUrl(String provider, String emoteId) {
+        if (emoteId != null && (emoteId.startsWith("http://") || emoteId.startsWith("https://"))) {
+            return emoteId;
+        }
         return switch (provider) {
             case "7tv" -> String.format(SEVENTV_URL_PNG, emoteId);
             default -> String.format(TWITCH_URL, emoteId);
@@ -173,7 +179,16 @@ public final class TwitchEmoteTextureCache {
             connection.setConnectTimeout(6000);
             connection.setReadTimeout(6000);
             connection.setInstanceFollowRedirects(true);
-            connection.setRequestProperty("User-Agent", "TakeYourMineStream/1.0");
+            connection.setRequestProperty("User-Agent", BROWSER_USER_AGENT);
+            connection.setRequestProperty("Accept", "image/png,image/jpeg,image/webp,image/*;q=0.8");
+            if (url.contains("ggpht.com") || url.contains("googleusercontent.com")
+                || url.contains("youtube.com") || url.contains("ytimg.com")) {
+                connection.setRequestProperty("Referer", "https://www.youtube.com/");
+            } else if (url.contains("files.kick.com") || url.contains("kick.com")) {
+                connection.setRequestProperty("Referer", "https://kick.com/");
+            } else if (url.contains("tiktok") || url.contains("ibyteimg.com") || url.contains("byteimg.com")) {
+                connection.setRequestProperty("Referer", "https://www.tiktok.com/");
+            }
 
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
@@ -464,7 +479,6 @@ public final class TwitchEmoteTextureCache {
                 for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
                     BufferedImage frame = gifReader.read(frameIndex);
                     if (frame == null) continue;
-                    final int stableFrameIndex = frameIndex;
 
                     GifFrameMeta meta = readGifFrameMeta(gifReader.getImageMetadata(frameIndex));
                     if ("restoreToPrevious".equals(meta.disposalMethod)) {
@@ -632,31 +646,5 @@ public final class TwitchEmoteTextureCache {
         }
 
         return new GifFrameMeta(left, top, delayMs, disposalMethod);
-    }
-
-    private static int extractGifFrameDelayMs(IIOMetadata metadata) {
-        if (metadata == null) return 100;
-        try {
-            String formatName = metadata.getNativeMetadataFormatName();
-            if (formatName == null) return 100;
-            Node root = metadata.getAsTree(formatName);
-            Node child = root.getFirstChild();
-            while (child != null) {
-                if ("GraphicControlExtension".equals(child.getNodeName())) {
-                    NamedNodeMap attrs = child.getAttributes();
-                    if (attrs != null) {
-                        Node delayNode = attrs.getNamedItem("delayTime");
-                        if (delayNode != null) {
-                            int centiseconds = Integer.parseInt(delayNode.getNodeValue());
-                            return Math.max(20, centiseconds * 10);
-                        }
-                    }
-                    break;
-                }
-                child = child.getNextSibling();
-            }
-        } catch (Exception ignored) {
-        }
-        return 100;
     }
 }

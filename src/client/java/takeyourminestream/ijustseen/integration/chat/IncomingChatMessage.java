@@ -17,11 +17,13 @@ public record IncomingChatMessage(
     String twitchChannelName,
     String twitchEmotesTag,
     /** Unix-время сообщения в микросекундах (YouTube {@code timestampUsec}); null — показать сразу. */
-    Long sourceTimestampMicros
+    Long sourceTimestampMicros,
+    ChatEventType eventType
 ) {
     public IncomingChatMessage {
         emotes = emotes != null ? emotes : Collections.emptyList();
         roles = roles != null ? roles : ChatAuthorRoles.NONE;
+        eventType = eventType != null ? eventType : ChatEventType.CHAT;
     }
 
     public static Builder builder(ChatPlatform platform) {
@@ -40,6 +42,7 @@ public record IncomingChatMessage(
         private String twitchChannelName;
         private String twitchEmotesTag;
         private Long sourceTimestampMicros;
+        private ChatEventType eventType = ChatEventType.CHAT;
 
         private Builder(ChatPlatform platform) {
             this.platform = platform;
@@ -95,6 +98,11 @@ public record IncomingChatMessage(
             return this;
         }
 
+        public Builder eventType(ChatEventType eventType) {
+            this.eventType = eventType;
+            return this;
+        }
+
         public IncomingChatMessage build() {
             return new IncomingChatMessage(
                 platform,
@@ -107,7 +115,8 @@ public record IncomingChatMessage(
                 twitchRoomId,
                 twitchChannelName,
                 twitchEmotesTag,
-                sourceTimestampMicros
+                sourceTimestampMicros,
+                eventType
             );
         }
     }

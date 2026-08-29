@@ -88,6 +88,20 @@ public class Message {
         return null;
     }
 
+    /** Ключи бейджей ролей автора (provider "badge") в порядке отображения. */
+    public java.util.List<String> getRoleBadgeKeys() {
+        java.util.List<String> keys = null;
+        for (MessageEmote emote : emotes) {
+            if (RoleBadges.PROVIDER.equals(emote.getProvider())) {
+                if (keys == null) {
+                    keys = new java.util.ArrayList<>(4);
+                }
+                keys.add(emote.getEmoteId());
+            }
+        }
+        return keys == null ? java.util.List.of() : keys;
+    }
+
     /** Есть ли инлайн-эмоуты, встроенные в текст (исключая иконку платформы). */
     public boolean hasInlineEmotes() {
         for (MessageEmote emote : emotes) {

@@ -135,20 +135,14 @@ public final class TikTokProto {
 
                 Object value = switch (wireType) {
                     case 0 -> readVarint();
-                    case 1 -> {
-                        pos += 8;
-                        yield 0L;
-                    }
+                    case 1 -> readFixed(8);
                     case 2 -> readLenDelim();
                     case 3 -> {
                         skipGroup();
                         yield null;
                     }
                     case 4 -> null;
-                    case 5 -> {
-                        pos += 4;
-                        yield 0L;
-                    }
+                    case 5 -> readFixed(4);
                     default -> {
                         skipField(wireType);
                         yield null;
@@ -172,14 +166,23 @@ public final class TikTokProto {
             }
         }
 
+        private Long readFixed(int bytes) {
+            if (pos + bytes > end) {
+                pos = end;
+                return null;
+            }
+            pos += bytes;
+            return 0L;
+        }
+
         private void skipField(int wireType) {
             switch (wireType) {
                 case 0 -> readVarint();
-                case 1 -> pos += 8;
+                case 1 -> readFixed(8);
                 case 2 -> readLenDelim();
                 case 3 -> skipGroup();
                 case 4 -> { /* end group */ }
-                case 5 -> pos += 4;
+                case 5 -> readFixed(4);
                 default -> pos = end;
             }
         }

@@ -184,7 +184,7 @@ public class TwitchChatClient implements ChatConnection {
     }
 
     private static ChatAuthorRoles rolesFromBadges(String badgesTag) {
-        return ChatAuthorRoles.fromBadgeHints(badgesTag);
+        return ChatAuthorRoles.fromTwitchBadges(badgesTag);
     }
 
     @Override

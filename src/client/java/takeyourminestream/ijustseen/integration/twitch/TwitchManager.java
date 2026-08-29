@@ -10,6 +10,7 @@ import takeyourminestream.ijustseen.messages.MessageSpawner;
  * @deprecated Use {@link ChatConnectionManager} directly.
  */
 @Deprecated
+@SuppressWarnings("dep-ann")
 public class TwitchManager implements ITwitchManager {
     private static TwitchManager instance;
     private final ChatConnectionManager delegate;

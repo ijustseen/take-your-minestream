@@ -3,7 +3,6 @@ package takeyourminestream.ijustseen.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
-import takeyourminestream.ijustseen.config.ModConfigData;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.core.storage.StoragePaths;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
@@ -68,6 +67,7 @@ public class ConfigManager implements IConfigManager {
                 ModConfigData loadedData = GSON.fromJson(reader, ModConfigData.class);
                 if (loadedData != null) {
                     this.configData = loadedData;
+                    this.configData.migrateLegacyRoleFilter();
                     updateConfigCache();
                     LOGGER.info("Configuration loaded");
                 }
@@ -79,6 +79,14 @@ public class ConfigManager implements IConfigManager {
             LOGGER.info("Configuration file not found, using defaults");
             saveConfig(); // Создаем файл с значениями по умолчанию
         }
+    }
+
+    /** Сбрасывает JSON-конфиг к значениям {@link ModConfigData} по умолчанию. Списки банвордов/ников/regexp не трогает. */
+    public void resetToDefaults() {
+        this.configData = new ModConfigData();
+        this.configData.migrateLegacyRoleFilter();
+        saveConfig();
+        LOGGER.info("Configuration reset to defaults");
     }
 
     @Override
@@ -193,6 +201,24 @@ public class ConfigManager implements IConfigManager {
             case "chatRoleFilter":
                 configData.setChatRoleFilter((takeyourminestream.ijustseen.config.ChatRoleFilter) value);
                 break;
+            case "roleFilterSubscribers":
+                configData.setRoleFilterSubscribers((Boolean) value);
+                break;
+            case "roleFilterVip":
+                configData.setRoleFilterVip((Boolean) value);
+                break;
+            case "roleFilterMods":
+                configData.setRoleFilterMods((Boolean) value);
+                break;
+            case "hudAnchor":
+                configData.setHudAnchor((HudAnchor) value);
+                break;
+            case "hudOffsetX":
+                configData.setHudOffsetX((Integer) value);
+                break;
+            case "hudOffsetY":
+                configData.setHudOffsetY((Integer) value);
+                break;
             case "enableUsernameBlocklist":
                 configData.setEnableUsernameBlocklist((Boolean) value);
                 break;
@@ -201,6 +227,48 @@ public class ConfigManager implements IConfigManager {
                 break;
             case "enableColorEmojis":
                 configData.setEnableColorEmojis((Boolean) value);
+                break;
+            case "panelBaseColorRgb":
+                configData.setPanelBaseColorRgb(((Number) value).intValue());
+                break;
+            case "panelBorderFromPlatform":
+                configData.setPanelBorderFromPlatform((Boolean) value);
+                break;
+            case "panelBorderColorRgb":
+                configData.setPanelBorderColorRgb(((Number) value).intValue());
+                break;
+            case "showRoleBadges":
+                configData.setShowRoleBadges((Boolean) value);
+                break;
+            case "twitchShowMessages":
+                configData.setTwitchShowMessages((Boolean) value);
+                break;
+            case "twitchMessageSound":
+                configData.setTwitchMessageSound((Boolean) value);
+                break;
+            case "youtubeShowMessages":
+                configData.setYoutubeShowMessages((Boolean) value);
+                break;
+            case "youtubeMessageSound":
+                configData.setYoutubeMessageSound((Boolean) value);
+                break;
+            case "kickShowMessages":
+                configData.setKickShowMessages((Boolean) value);
+                break;
+            case "kickMessageSound":
+                configData.setKickMessageSound((Boolean) value);
+                break;
+            case "tiktokShowMessages":
+                configData.setTiktokShowMessages((Boolean) value);
+                break;
+            case "tiktokMessageSound":
+                configData.setTiktokMessageSound((Boolean) value);
+                break;
+            case "tiktokGiftEvents":
+                configData.setTiktokGiftEvents((Boolean) value);
+                break;
+            case "tiktokFollowEvents":
+                configData.setTiktokFollowEvents((Boolean) value);
                 break;
             default:
                 LOGGER.warning("Unknown configuration key: " + key);
@@ -245,9 +313,29 @@ public class ConfigManager implements IConfigManager {
         configCache.put("messageSoundVolume", configData.getMessageSoundVolume());
         configCache.put("autoConnectIrcOnJoin", configData.isAutoConnectIrcOnJoin());
         configCache.put("chatRoleFilter", configData.getChatRoleFilter());
+        configCache.put("roleFilterSubscribers", configData.isRoleFilterSubscribers());
+        configCache.put("roleFilterVip", configData.isRoleFilterVip());
+        configCache.put("roleFilterMods", configData.isRoleFilterMods());
+        configCache.put("hudAnchor", configData.getHudAnchor());
+        configCache.put("hudOffsetX", configData.getHudOffsetX());
+        configCache.put("hudOffsetY", configData.getHudOffsetY());
         configCache.put("enableUsernameBlocklist", configData.isEnableUsernameBlocklist());
         configCache.put("unpinMode", configData.getUnpinMode());
         configCache.put("enableColorEmojis", configData.isEnableColorEmojis());
+        configCache.put("panelBaseColorRgb", configData.getPanelBaseColorRgb());
+        configCache.put("panelBorderFromPlatform", configData.isPanelBorderFromPlatform());
+        configCache.put("panelBorderColorRgb", configData.getPanelBorderColorRgb());
+        configCache.put("showRoleBadges", configData.isShowRoleBadges());
+        configCache.put("twitchShowMessages", configData.isTwitchShowMessages());
+        configCache.put("twitchMessageSound", configData.isTwitchMessageSound());
+        configCache.put("youtubeShowMessages", configData.isYoutubeShowMessages());
+        configCache.put("youtubeMessageSound", configData.isYoutubeMessageSound());
+        configCache.put("kickShowMessages", configData.isKickShowMessages());
+        configCache.put("kickMessageSound", configData.isKickMessageSound());
+        configCache.put("tiktokShowMessages", configData.isTiktokShowMessages());
+        configCache.put("tiktokMessageSound", configData.isTiktokMessageSound());
+        configCache.put("tiktokGiftEvents", configData.isTiktokGiftEvents());
+        configCache.put("tiktokFollowEvents", configData.isTiktokFollowEvents());
     }
 
     public ModConfigData getConfigData() {

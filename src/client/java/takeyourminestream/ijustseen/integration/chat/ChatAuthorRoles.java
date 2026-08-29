@@ -3,37 +3,38 @@ package takeyourminestream.ijustseen.integration.chat;
 import takeyourminestream.ijustseen.config.ChatRoleFilter;
 
 public record ChatAuthorRoles(
+    boolean follower,
     boolean subscriber,
     boolean vip,
     boolean moderator,
     boolean broadcaster
 ) {
-    public static final ChatAuthorRoles NONE = new ChatAuthorRoles(false, false, false, false);
+    public static final ChatAuthorRoles NONE = new ChatAuthorRoles(false, false, false, false, false);
 
     /**
-     * Унифицированный разбор бейджей/ролей с разных платформ.
-     * subscriber = саб/мember, broadcaster = владелец канала/стрим.
+     * Сообщение проходит фильтр: «показывать всех» — без проверки ролей;
+     * иначе достаточно любой включённой роли (ИЛИ).
      */
-    public static ChatAuthorRoles fromBadgeHints(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return NONE;
+    public boolean passesSelectedRoles(
+        boolean showAll,
+        boolean followers,
+        boolean subscribers,
+        boolean vip,
+        boolean mods
+    ) {
+        if (showAll) {
+            return true;
         }
-        String lower = raw.toLowerCase(java.util.Locale.ROOT);
-        boolean subscriber = containsAny(lower,
-            "subscriber", "founder", "member", "premium", "sub_gifter", "sponsor", "superfan");
-        boolean vip = containsAny(lower, "vip", "super_fan", "top_gifter", "gifter");
-        boolean moderator = containsAny(lower, "moderator", "mod_badge", "\"mod\"");
-        boolean broadcaster = containsAny(lower, "broadcaster", "owner", "streamer", "anchor", "host", "og");
-        return new ChatAuthorRoles(subscriber, vip, moderator, broadcaster);
-    }
-
-    private static boolean containsAny(String haystack, String... needles) {
-        for (String needle : needles) {
-            if (haystack.contains(needle)) {
-                return true;
-            }
+        if (followers && follower) {
+            return true;
         }
-        return false;
+        if (subscribers && subscriber) {
+            return true;
+        }
+        if (vip && this.vip) {
+            return true;
+        }
+        return mods && (moderator || broadcaster);
     }
 
     public boolean passes(ChatRoleFilter filter) {
@@ -46,7 +47,32 @@ public record ChatAuthorRoles(
             case MODS -> moderator || broadcaster;
             case SUB_OR_VIP -> subscriber || vip;
             case SUB_OR_MOD -> subscriber || moderator || broadcaster;
+            case VIP_OR_MOD -> vip || moderator || broadcaster;
+            case SUB_OR_VIP_OR_MOD -> subscriber || vip || moderator || broadcaster;
             default -> true;
         };
+    }
+
+    /** Twitch IRC {@code badges}: {@code subscriber/12,vip/1,moderator/1}. Фолловеров в теге нет. */
+    public static ChatAuthorRoles fromTwitchBadges(String badgesTag) {
+        if (badgesTag == null || badgesTag.isBlank()) {
+            return NONE;
+        }
+        boolean subscriber = false;
+        boolean vip = false;
+        boolean moderator = false;
+        boolean broadcaster = false;
+        for (String part : badgesTag.split(",")) {
+            int slash = part.indexOf('/');
+            String name = (slash >= 0 ? part.substring(0, slash) : part).trim().toLowerCase();
+            switch (name) {
+                case "subscriber", "founder" -> subscriber = true;
+                case "vip" -> vip = true;
+                case "moderator" -> moderator = true;
+                case "broadcaster" -> broadcaster = true;
+                default -> { }
+            }
+        }
+        return new ChatAuthorRoles(false, subscriber, vip, moderator, broadcaster);
     }
 }

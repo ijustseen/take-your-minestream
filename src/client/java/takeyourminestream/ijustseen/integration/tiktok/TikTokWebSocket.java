@@ -1,6 +1,7 @@
 package takeyourminestream.ijustseen.integration.tiktok;
 
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.integration.chat.ChatHttp;
 import takeyourminestream.ijustseen.integration.tiktok.proto.TikTokProto;
 import takeyourminestream.ijustseen.messages.MessageEmote;
 
@@ -31,6 +32,11 @@ final class TikTokWebSocket {
             takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles roles,
             List<MessageEmote> emotes);
 
+        /** Подарок; {@code giftName} может быть пустым, если TikTok не прислал детали. */
+        void onGift(long msgId, String uniqueId, String displayName, String giftName, int repeatCount);
+
+        void onFollow(long msgId, String uniqueId, String displayName);
+
         void onLiveEnded();
     }
 
@@ -51,7 +57,7 @@ final class TikTokWebSocket {
         running = true;
         String url = TikTokWssUrl.build(roomId);
         HTTP_CLIENT.newWebSocketBuilder()
-            .header("Cookie", "ttwid=" + ttwid)
+            .header("Cookie", buildCookieHeader())
             .header("User-Agent", USER_AGENT)
             .header("Origin", "https://www.tiktok.com")
             .header("Referer", "https://www.tiktok.com/")
@@ -197,15 +203,30 @@ final class TikTokWebSocket {
         }
     }
 
+    private String buildCookieHeader() {
+        String cookies = ChatHttp.cookieHeader("https://www.tiktok.com/");
+        if (ttwid == null || ttwid.isBlank()) {
+            return cookies;
+        }
+        if (cookies.contains("ttwid=")) {
+            return cookies;
+        }
+        return cookies.isEmpty() ? "ttwid=" + ttwid : cookies + "; ttwid=" + ttwid;
+    }
+
     private void dispatchMessage(TikTokProto.ProtoMap message) {
         try {
             String method = message.getString(1);
             byte[] payload = message.getRawBytes(2);
-            if ("WebcastChatMessage".equals(method)) {
-                handleChat(payload);
-            } else if ("WebcastEmoteChatMessage".equals(method)) {
-                handleEmoteChat(payload);
-            } else if ("WebcastControlMessage".equals(method)) {
+            if (methodEndsWith(method, "WebcastEmoteChatMessage")) {
+                handleEmoteChat(payload, message.getVarint(3));
+            } else if (methodEndsWith(method, "WebcastChatMessage")) {
+                handleChat(payload, message.getVarint(3));
+            } else if (methodEndsWith(method, "WebcastGiftMessage")) {
+                handleGift(payload, message.getVarint(3));
+            } else if (methodEndsWith(method, "WebcastSocialMessage")) {
+                handleSocial(payload, message.getVarint(3));
+            } else if (methodEndsWith(method, "WebcastControlMessage")) {
                 TikTokProto.ProtoMap control = TikTokProto.decode(payload);
                 if (control.getInt(2) == 3) {
                     handler.onLiveEnded();
@@ -216,39 +237,26 @@ final class TikTokWebSocket {
         }
     }
 
-    private void handleChat(byte[] payload) {
+    private void handleChat(byte[] payload, long wrapperMsgId) {
         TikTokProto.ProtoMap chat = TikTokProto.decode(payload);
-        String text = chat.getString(3);
+        String text = extractChatText(chat);
         if (text.isBlank()) {
             return;
         }
 
-        TikTokProto.ProtoMap common = chat.getMessage(1);
-        long msgId = common.getVarint(2);
-
-        TikTokProto.ProtoMap user = chat.getMessage(2);
-        String displayName = user.getString(3);
-        if (displayName.isBlank()) {
-            displayName = "Viewer";
-        }
-        String uniqueId = user.getString(38);
-        if (uniqueId.isBlank()) {
-            uniqueId = displayName;
-        }
-
+        UserIdentity user = extractUserSafe(chat);
         List<MessageEmote> emotes = TikTokEmoteParser.parseChatEmotes(chat, text);
-        String roleHints = collectTikTokUserRoleHints(user);
         handler.onChat(
-            msgId,
-            uniqueId,
-            displayName,
+            resolveMsgId(chat, wrapperMsgId),
+            user.uniqueId(),
+            user.displayName(),
             text,
-            takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles.fromBadgeHints(roleHints),
+            user.roles(),
             emotes
         );
     }
 
-    private void handleEmoteChat(byte[] payload) {
+    private void handleEmoteChat(byte[] payload, long wrapperMsgId) {
         TikTokProto.ProtoMap chat = TikTokProto.decode(payload);
         TikTokProto.ProtoMap emoteDetails = chat.getMessage(3);
         MessageEmote emote = TikTokEmoteParser.parseStandaloneEmote(emoteDetails);
@@ -256,46 +264,211 @@ final class TikTokWebSocket {
             return;
         }
 
-        TikTokProto.ProtoMap common = chat.getMessage(1);
-        long msgId = common.getVarint(2);
-
-        TikTokProto.ProtoMap user = chat.getMessage(2);
-        String displayName = user.getString(3);
-        if (displayName.isBlank()) {
-            displayName = "Viewer";
-        }
-        String uniqueId = user.getString(38);
-        if (uniqueId.isBlank()) {
-            uniqueId = displayName;
-        }
-
-        String roleHints = collectTikTokUserRoleHints(user);
+        UserIdentity user = extractUserSafe(chat);
         handler.onChat(
-            msgId,
-            uniqueId,
-            displayName,
+            resolveMsgId(chat, wrapperMsgId),
+            user.uniqueId(),
+            user.displayName(),
             TikTokEmoteParser.standaloneEmoteText(),
-            takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles.fromBadgeHints(roleHints),
+            user.roles(),
             List.of(emote)
         );
     }
 
-    /** Собирает текстовые подсказки о ролях из protobuf-пользователя TikTok. */
-    private static String collectTikTokUserRoleHints(TikTokProto.ProtoMap user) {
-        StringBuilder hints = new StringBuilder();
-        for (int field : new int[] {9, 11, 22, 46, 61, 102}) {
-            appendIfPresent(hints, user.getString(field));
-            TikTokProto.ProtoMap nested = user.getMessage(field);
-            appendIfPresent(hints, nested.getString(1));
-            appendIfPresent(hints, nested.getString(2));
-            appendIfPresent(hints, nested.getString(3));
-            for (TikTokProto.ProtoMap badge : nested.getRepeatedMessages(1)) {
-                appendIfPresent(hints, badge.getString(1));
-                appendIfPresent(hints, badge.getString(2));
-                appendIfPresent(hints, badge.getString(3));
+    private void handleGift(byte[] payload, long wrapperMsgId) {
+        TikTokProto.ProtoMap gift = TikTokProto.decode(payload);
+        TikTokProto.ProtoMap details = gift.getMessage(15);
+        // Подарки-серии присылаются на каждый тап: показываем только завершённую серию
+        if (details.getVarint(11) == 1L && gift.getVarint(9) == 0L) {
+            return;
+        }
+
+        UserIdentity user = extractUserSafe(gift, 7);
+        handler.onGift(
+            resolveMsgId(gift, wrapperMsgId),
+            user.uniqueId(),
+            user.displayName(),
+            readableText(details.getString(16)),
+            (int) Math.max(1L, gift.getVarint(5))
+        );
+    }
+
+    /** WebcastSocialMessage приходит и на подписку, и на «поделиться» — различаем по displayType. */
+    private void handleSocial(byte[] payload, long wrapperMsgId) {
+        TikTokProto.ProtoMap social = TikTokProto.decode(payload);
+        TikTokProto.ProtoMap eventDetails = social.getMessage(1).getMessage(8);
+        String hint = (eventDetails.getString(1) + ' ' + eventDetails.getString(2))
+            .toLowerCase(java.util.Locale.ROOT);
+        if (!hint.contains("follow")) {
+            return;
+        }
+
+        UserIdentity user = extractUserSafe(social, 2);
+        handler.onFollow(resolveMsgId(social, wrapperMsgId), user.uniqueId(), user.displayName());
+    }
+
+    private static long resolveMsgId(TikTokProto.ProtoMap chat, long wrapperMsgId) {
+        try {
+            return firstNonZero(chat.getMessage(1).getVarint(2), wrapperMsgId);
+        } catch (RuntimeException ignored) {
+            return wrapperMsgId;
+        }
+    }
+
+    private static UserIdentity extractUserSafe(TikTokProto.ProtoMap chat) {
+        return extractUserSafe(chat, 2);
+    }
+
+    private static UserIdentity extractUserSafe(TikTokProto.ProtoMap message, int userField) {
+        try {
+            return extractUser(message.getMessage(userField));
+        } catch (RuntimeException ignored) {
+            return new UserIdentity("Viewer", "Viewer", takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles.NONE);
+        }
+    }
+
+    private static boolean methodEndsWith(String method, String suffix) {
+        return method != null && method.endsWith(suffix);
+    }
+
+    private static long firstNonZero(long... values) {
+        for (long value : values) {
+            if (value != 0L) {
+                return value;
             }
         }
-        return hints.toString();
+        return 0L;
+    }
+
+    /**
+     * Текст комментария: field 3 (content) или вложенный CommentContent (field 29).
+     * Новые клиенты TikTok иногда кладут текст не в строковое поле 3.
+     */
+    private static String extractChatText(TikTokProto.ProtoMap chat) {
+        String direct = readableText(chat.getString(3));
+        if (!direct.isBlank()) {
+            return direct;
+        }
+        String nestedFrom3 = "";
+        try {
+            nestedFrom3 = readableText(chat.getMessage(3).getString(1));
+        } catch (RuntimeException ignored) {
+            // field 3 — обычная строка, не вложенное сообщение
+        }
+        if (!nestedFrom3.isBlank()) {
+            return nestedFrom3;
+        }
+        try {
+            return readableText(chat.getMessage(29).getString(1));
+        } catch (RuntimeException ignored) {
+            return "";
+        }
+    }
+
+    private static String readableText(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        int printable = 0;
+        int length = value.length();
+        for (int i = 0; i < length; ) {
+            int cp = value.codePointAt(i);
+            i += Character.charCount(cp);
+            if (!Character.isISOControl(cp) || cp == '\n' || cp == '\r' || cp == '\t') {
+                printable++;
+            }
+        }
+        if (printable * 4 < length * 3) {
+            return "";
+        }
+        return value.trim();
+    }
+
+    private static UserIdentity extractUser(TikTokProto.ProtoMap user) {
+        String displayName = firstNonBlank(user.getString(3), user.getString(38), "Viewer");
+        String uniqueId = firstNonBlank(user.getString(38), user.getString(3));
+        if (uniqueId.isBlank() && user.getVarint(1) != 0L) {
+            uniqueId = Long.toString(user.getVarint(1));
+        }
+        if (uniqueId.isBlank()) {
+            uniqueId = displayName;
+        }
+        return new UserIdentity(uniqueId, displayName, rolesFromTikTokUser(user));
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private record UserIdentity(
+        String uniqueId,
+        String displayName,
+        takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles roles
+    ) {}
+
+    /**
+     * Фоллов: {@code FollowInfo.follow_status} (0 нет, 1 follows, 2 friends).
+     * Саб LIVE и мод — из текстовых бейджей пользователя.
+     */
+    private static takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles rolesFromTikTokUser(
+        TikTokProto.ProtoMap user
+    ) {
+        boolean follower = tikTokFollowStatus(user) >= 1L;
+        String hints = collectTikTokUserRoleHints(user).toLowerCase(java.util.Locale.ROOT);
+        boolean subscriber = containsAny(hints, "subscriber", "subscribe", "member", "fanclub", "fan_club");
+        boolean moderator = containsAny(hints, "moderator", "admin");
+        boolean broadcaster = containsAny(hints, "anchor", "host", "owner", "streamer");
+        return new takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles(
+            follower,
+            subscriber,
+            false,
+            moderator,
+            broadcaster
+        );
+    }
+
+    private static long tikTokFollowStatus(TikTokProto.ProtoMap user) {
+        long status = user.getMessage(22).getVarint(3);
+        if (status > 0L) {
+            return status;
+        }
+        return user.getMessage(64).getVarint(3);
+    }
+
+    private static boolean containsAny(String haystack, String... needles) {
+        for (String needle : needles) {
+            if (haystack.contains(needle)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Собирает текстовые подсказки о ролях из protobuf-пользователя TikTok. */
+    private static String collectTikTokUserRoleHints(TikTokProto.ProtoMap user) {
+        try {
+            StringBuilder hints = new StringBuilder();
+            for (int field : new int[] {9, 11, 22, 46, 61, 102}) {
+                appendIfPresent(hints, user.getString(field));
+                TikTokProto.ProtoMap nested = user.getMessage(field);
+                appendIfPresent(hints, nested.getString(1));
+                appendIfPresent(hints, nested.getString(2));
+                appendIfPresent(hints, nested.getString(3));
+                for (TikTokProto.ProtoMap badge : nested.getRepeatedMessages(1)) {
+                    appendIfPresent(hints, badge.getString(1));
+                    appendIfPresent(hints, badge.getString(2));
+                    appendIfPresent(hints, badge.getString(3));
+                }
+            }
+            return hints.toString();
+        } catch (RuntimeException e) {
+            return "";
+        }
     }
 
     private static void appendIfPresent(StringBuilder sb, String value) {

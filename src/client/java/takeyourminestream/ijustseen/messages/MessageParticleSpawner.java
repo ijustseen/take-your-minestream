@@ -4,7 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.util.math.Vec3d;
 import takeyourminestream.ijustseen.config.ModConfig;
-import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
+import takeyourminestream.ijustseen.core.MessagePanelColors;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -69,11 +69,11 @@ public class MessageParticleSpawner {
             float rotation = random.nextFloat() * 360f;
             float rotationSpeed = (random.nextFloat() - 0.5f) * 10f;
 
-            MessageParticle.ParticleType type = (i % 2 == 0)
-                ? MessageParticle.ParticleType.TEXT_COLOR
+            MessageParticle.ParticleType type = (i % 4 == 0)
+                ? MessageParticle.ParticleType.BORDER_COLOR
                 : MessageParticle.ParticleType.BACKGROUND_COLOR;
-            Color color = type == MessageParticle.ParticleType.TEXT_COLOR
-                ? getTextColor(message)
+            Color color = type == MessageParticle.ParticleType.BORDER_COLOR
+                ? getBorderColor(message)
                 : getPanelColor(message);
 
             particles.add(new MessageParticle(
@@ -111,16 +111,18 @@ public class MessageParticleSpawner {
         return new Vec3d(x2, y1, z2);
     }
 
-    private static Color getTextColor(Message message) {
-        Integer rgb = message.getAuthorColorRgb();
-        if (rgb != null) {
-            return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
-        }
-        return new Color(255, 255, 255);
+    private static Color getBorderColor(Message message) {
+        int platformRgb = takeyourminestream.ijustseen.integration.chat.ChatPlatform
+            .accentColorForIconKey(message.getPlatformIconKey());
+        int rgb = MessagePanelColors.borderRgb(platformRgb);
+        return rgbToColor(rgb, 220);
     }
 
     private static Color getPanelColor(Message message) {
-        int rgb = ChatPlatform.accentColorForIconKey(message.getPlatformIconKey());
-        return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, 180);
+        return rgbToColor(MessagePanelColors.baseRgb(), 180);
+    }
+
+    private static Color rgbToColor(int rgb, int alpha) {
+        return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, alpha);
     }
 }

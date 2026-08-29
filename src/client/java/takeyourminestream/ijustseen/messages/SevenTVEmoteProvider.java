@@ -81,7 +81,6 @@ public final class SevenTVEmoteProvider {
                 if (json == null) return;
                 JsonArray emotes = json.getAsJsonArray("emotes");
                 if (emotes == null) return;
-                int count = 0;
                 for (JsonElement el : emotes) {
                     JsonObject emoteObj = el.getAsJsonObject();
                     String name = emoteObj.has("name") ? emoteObj.get("name").getAsString() : null;
@@ -89,7 +88,6 @@ public final class SevenTVEmoteProvider {
                     if (name != null && id != null && !name.isBlank()) {
                         GLOBAL_EMOTES.put(name, id);
                         GLOBAL_EMOTES_LOWER.put(name.toLowerCase(), id);
-                        count++;
                     }
                 }
                 GLOBALS_LOADED.set(true);
@@ -131,14 +129,12 @@ public final class SevenTVEmoteProvider {
                 JsonArray emotes = emoteSet.getAsJsonArray("emotes");
                 if (emotes == null) return;
 
-                int count = 0;
                 for (JsonElement el : emotes) {
                     JsonObject emoteObj = el.getAsJsonObject();
                     String name = emoteObj.has("name") ? emoteObj.get("name").getAsString() : null;
                     String id = emoteObj.has("id") ? emoteObj.get("id").getAsString() : null;
                     if (name != null && id != null && !name.isBlank()) {
                         freshChannelEmotes.put(name, id);
-                        count++;
                     }
                 }
 
@@ -195,14 +191,12 @@ public final class SevenTVEmoteProvider {
                 JsonArray emotes = emoteSet.getAsJsonArray("emotes");
                 if (emotes == null) return;
 
-                int count = 0;
                 for (JsonElement el : emotes) {
                     JsonObject emoteObj = el.getAsJsonObject();
                     String name = emoteObj.has("name") ? emoteObj.get("name").getAsString() : null;
                     String id = emoteObj.has("id") ? emoteObj.get("id").getAsString() : null;
                     if (name != null && id != null && !name.isBlank()) {
                         freshChannelEmotes.put(name, id);
-                        count++;
                     }
                 }
 

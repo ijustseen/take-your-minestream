@@ -4,10 +4,9 @@ import net.minecraft.util.Identifier;
 
 /** Общие параметры 9-slice панели сообщений (GUI и 3D). */
 public final class MessagePanelConstants {
+    /** Заливка панели (белая текстура, тонируется {@code panelBaseColorRgb}). */
     public static final Identifier PANEL_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/message_panel.png");
-    /** Фон панели без бортика. */
-    public static final Identifier PANEL_BASE_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/message_panel_base.png");
-    /** Белый бортик панели — тонируется цветом платформы. */
+    /** Бортик панели (белая текстура, тонируется цветом платформы или своим HEX). */
     public static final Identifier PANEL_BORDER_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/message_panel_border.png");
     public static final Identifier PIN_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/pin.png");
 

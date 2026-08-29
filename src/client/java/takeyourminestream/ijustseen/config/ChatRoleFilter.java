@@ -12,7 +12,9 @@ public enum ChatRoleFilter {
     VIP("vip"),
     MODS("mods"),
     SUB_OR_VIP("sub_or_vip"),
-    SUB_OR_MOD("sub_or_mod");
+    SUB_OR_MOD("sub_or_mod"),
+    VIP_OR_MOD("vip_or_mod"),
+    SUB_OR_VIP_OR_MOD("sub_or_vip_or_mod");
 
     private final String key;
 
@@ -62,6 +64,8 @@ public enum ChatRoleFilter {
             case MODS -> isMod;
             case SUB_OR_VIP -> isSub || isVip;
             case SUB_OR_MOD -> isSub || isMod;
+            case VIP_OR_MOD -> isVip || isMod;
+            case SUB_OR_VIP_OR_MOD -> isSub || isVip || isMod;
             default -> true;
         };
     }

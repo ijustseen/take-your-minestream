@@ -2,8 +2,10 @@ package takeyourminestream.ijustseen.integration.tiktok;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.text.Text;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.integration.chat.ChatConnection;
+import takeyourminestream.ijustseen.integration.chat.ChatEventType;
 import takeyourminestream.ijustseen.integration.chat.ChatHttp;
 import takeyourminestream.ijustseen.integration.chat.ChatMessagePipeline;
 import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
@@ -12,7 +14,7 @@ import takeyourminestream.ijustseen.integration.chat.IncomingChatMessage;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,13 +23,15 @@ public class TikTokChatClient implements ChatConnection {
     private static final Pattern ROOM_ID_PATTERN = Pattern.compile("\"roomId\"\\s*:\\s*\"?(\\d+)\"?");
     private static final Pattern ROOM_ID_ALT = Pattern.compile("room_id=(\\d+)");
 
+    private static final int MAX_SEEN_MESSAGE_IDS = 5000;
+
     private final String username;
     private final ChatMessagePipeline pipeline;
     private volatile boolean running;
     private volatile Thread workerThread;
     private volatile TikTokWebSocket webSocket;
     private String roomId;
-    private final Set<Long> seenMessageIds = new HashSet<>();
+    private final Set<Long> seenMessageIds = new LinkedHashSet<>();
 
     public TikTokChatClient(String username, ChatMessagePipeline pipeline) {
         this.username = username.trim().replace("@", "");
@@ -78,7 +82,7 @@ public class TikTokChatClient implements ChatConnection {
             public void onChat(long msgId, String uniqueId, String displayName, String text,
                 takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles roles,
                 java.util.List<takeyourminestream.ijustseen.messages.MessageEmote> emotes) {
-                if (msgId != 0 && !seenMessageIds.add(msgId)) {
+                if (!markSeen(msgId)) {
                     return;
                 }
                 pipeline.process(IncomingChatMessage.builder(ChatPlatform.TIKTOK)
@@ -91,6 +95,39 @@ public class TikTokChatClient implements ChatConnection {
             }
 
             @Override
+            public void onGift(long msgId, String uniqueId, String displayName, String giftName, int repeatCount) {
+                if (!markSeen(msgId)) {
+                    return;
+                }
+                Text text = giftName == null || giftName.isBlank()
+                    ? Text.translatable("takeyourstreamchat.event.tiktok.gift_unknown")
+                    : Text.translatable("takeyourstreamchat.event.tiktok.gift", giftName, repeatCount);
+                submitEvent(uniqueId, displayName, text, ChatEventType.GIFT);
+            }
+
+            @Override
+            public void onFollow(long msgId, String uniqueId, String displayName) {
+                if (!markSeen(msgId)) {
+                    return;
+                }
+                submitEvent(
+                    uniqueId,
+                    displayName,
+                    Text.translatable("takeyourstreamchat.event.tiktok.follow"),
+                    ChatEventType.FOLLOW
+                );
+            }
+
+            private void submitEvent(String uniqueId, String displayName, Text text, ChatEventType eventType) {
+                pipeline.process(IncomingChatMessage.builder(ChatPlatform.TIKTOK)
+                    .authorLogin(uniqueId)
+                    .displayName(displayName)
+                    .text(text.getString())
+                    .eventType(eventType)
+                    .build());
+            }
+
+            @Override
             public void onLiveEnded() {
                 TakeYourMineStreamClient.LOGGER.info("TikTok live ended for @{}", username);
                 roomId = null;
@@ -99,6 +136,22 @@ public class TikTokChatClient implements ChatConnection {
             }
         });
         webSocket.connect();
+    }
+
+    /** Отсекает дубли сообщений и событий по msgId; false — уже видели. */
+    private boolean markSeen(long msgId) {
+        if (msgId != 0 && !seenMessageIds.add(msgId)) {
+            return false;
+        }
+        while (seenMessageIds.size() > MAX_SEEN_MESSAGE_IDS) {
+            var iterator = seenMessageIds.iterator();
+            if (!iterator.hasNext()) {
+                break;
+            }
+            iterator.next();
+            iterator.remove();
+        }
+        return true;
     }
 
     private void disconnectWebSocket() {

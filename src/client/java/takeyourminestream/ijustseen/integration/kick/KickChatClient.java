@@ -1,6 +1,7 @@
 package takeyourminestream.ijustseen.integration.kick;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
@@ -139,6 +140,7 @@ public class KickChatClient implements ChatConnection {
             .authorLogin(username)
             .displayName(displayName)
             .text(message)
+            .emotes(KickEmoteParser.parse(message))
             .roles(roles);
         if (rgb != null) {
             builder.authorColorRgb(rgb);
@@ -146,9 +148,32 @@ public class KickChatClient implements ChatConnection {
         pipeline.process(builder.build());
     }
 
+    /** Kick identity.badges: subscriber / og / vip / moderator. Фолловеров в сообщении нет. */
     private static ChatAuthorRoles rolesFromKickIdentity(JsonObject identity) {
-        String hints = identity.has("badges") ? identity.get("badges").toString() : identity.toString();
-        return ChatAuthorRoles.fromBadgeHints(hints);
+        boolean subscriber = false;
+        boolean vip = false;
+        boolean moderator = false;
+        boolean broadcaster = false;
+        if (!identity.has("badges") || !identity.get("badges").isJsonArray()) {
+            return ChatAuthorRoles.NONE;
+        }
+        for (JsonElement element : identity.getAsJsonArray("badges")) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            JsonObject badge = element.getAsJsonObject();
+            String type = badge.has("type") && !badge.get("type").isJsonNull()
+                ? badge.get("type").getAsString().toLowerCase(java.util.Locale.ROOT)
+                : "";
+            switch (type) {
+                case "subscriber", "og", "founder" -> subscriber = true;
+                case "vip" -> vip = true;
+                case "moderator" -> moderator = true;
+                case "broadcaster", "host" -> broadcaster = true;
+                default -> { }
+            }
+        }
+        return new ChatAuthorRoles(false, subscriber, vip, moderator, broadcaster);
     }
 
     private static long resolveChatroomId(String slug) throws java.io.IOException {

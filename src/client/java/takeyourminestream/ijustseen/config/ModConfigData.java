@@ -39,8 +39,44 @@ public class ModConfigData {
     private int chanceForSpawn = 100;
     private int messageHistoryMaxSize = 100;
     private ChatRoleFilter chatRoleFilter = ChatRoleFilter.ALL;
+    private boolean roleFilterSubscribers = false;
+    private boolean roleFilterVip = false;
+    private boolean roleFilterMods = false;
     private boolean enableUsernameBlocklist = true;
     private UnpinMode unpinMode = UnpinMode.PIN_ICON;
+    private HudAnchor hudAnchor = HudAnchor.TOP_RIGHT;
+    private int hudOffsetX = 0;
+    private int hudOffsetY = 0;
+    // Цвета панели сообщения
+    private int panelBaseColorRgb = 0x000000;
+    private boolean panelBorderFromPlatform = true;
+    private int panelBorderColorRgb = takeyourminestream.ijustseen.core.MessagePanelConstants.DEFAULT_BORDER_RGB;
+    private boolean showRoleBadges = true;
+    // Пер-платформенные настройки: показ сообщений и звук
+    private boolean twitchShowMessages = true;
+    private boolean twitchMessageSound = true;
+    private boolean youtubeShowMessages = true;
+    private boolean youtubeMessageSound = true;
+    private boolean kickShowMessages = true;
+    private boolean kickMessageSound = true;
+    private boolean tiktokShowMessages = true;
+    private boolean tiktokMessageSound = true;
+    // Опциональные события TikTok
+    private boolean tiktokGiftEvents = false;
+    private boolean tiktokFollowEvents = false;
+    /** Фильтры ролей отдельно для каждого источника: ключ «&lt;платформа&gt;.&lt;роль&gt;». */
+    private java.util.Map<String, Boolean> platformRoleFilters = new java.util.LinkedHashMap<>();
+    private boolean platformRoleFiltersMigrated = false;
+    private boolean platformRoleFiltersV2 = false;
+
+    public static final String ROLE_ALL = "all";
+    public static final String ROLE_FOLLOWERS = "followers";
+    public static final String ROLE_SUBSCRIBERS = "subs";
+    public static final String ROLE_VIP = "vip";
+    public static final String ROLE_MODS = "mods";
+
+    /** Ключи платформ (см. {@code ChatPlatform.getIconKey()}). */
+    private static final String[] PLATFORM_KEYS = {"twitch", "youtube", "kick", "tiktok"};
 
     // Геттеры
     public int getChanceForSpawn() { return chanceForSpawn; }
@@ -75,9 +111,29 @@ public class ModConfigData {
     public boolean isEnableMessageSound() { return enableMessageSound; }
     public double getMessageSoundVolume() { return messageSoundVolume; }
     public boolean isAutoConnectIrcOnJoin() { return autoConnectIrcOnJoin; }
-    public ChatRoleFilter getChatRoleFilter() { return chatRoleFilter; }
+    public ChatRoleFilter getChatRoleFilter() { return chatRoleFilter != null ? chatRoleFilter : ChatRoleFilter.ALL; }
+    public boolean isRoleFilterSubscribers() { return roleFilterSubscribers; }
+    public boolean isRoleFilterVip() { return roleFilterVip; }
+    public boolean isRoleFilterMods() { return roleFilterMods; }
     public boolean isEnableUsernameBlocklist() { return enableUsernameBlocklist; }
-    public UnpinMode getUnpinMode() { return unpinMode; }
+    public UnpinMode getUnpinMode() { return unpinMode != null ? unpinMode : UnpinMode.PIN_ICON; }
+    public HudAnchor getHudAnchor() { return hudAnchor != null ? hudAnchor : HudAnchor.TOP_RIGHT; }
+    public int getHudOffsetX() { return hudOffsetX; }
+    public int getHudOffsetY() { return hudOffsetY; }
+    public int getPanelBaseColorRgb() { return panelBaseColorRgb & 0xFFFFFF; }
+    public boolean isPanelBorderFromPlatform() { return panelBorderFromPlatform; }
+    public int getPanelBorderColorRgb() { return panelBorderColorRgb & 0xFFFFFF; }
+    public boolean isShowRoleBadges() { return showRoleBadges; }
+    public boolean isTwitchShowMessages() { return twitchShowMessages; }
+    public boolean isTwitchMessageSound() { return twitchMessageSound; }
+    public boolean isYoutubeShowMessages() { return youtubeShowMessages; }
+    public boolean isYoutubeMessageSound() { return youtubeMessageSound; }
+    public boolean isKickShowMessages() { return kickShowMessages; }
+    public boolean isKickMessageSound() { return kickMessageSound; }
+    public boolean isTiktokShowMessages() { return tiktokShowMessages; }
+    public boolean isTiktokMessageSound() { return tiktokMessageSound; }
+    public boolean isTiktokGiftEvents() { return tiktokGiftEvents; }
+    public boolean isTiktokFollowEvents() { return tiktokFollowEvents; }
 
     // Сеттеры
     public void setChanceForSpawn(int chanceForSpawn) { this.chanceForSpawn = chanceForSpawn; }
@@ -112,9 +168,178 @@ public class ModConfigData {
     public void setEnableMessageSound(boolean enableMessageSound) { this.enableMessageSound = enableMessageSound; }
     public void setMessageSoundVolume(double messageSoundVolume) { this.messageSoundVolume = messageSoundVolume; }
     public void setAutoConnectIrcOnJoin(boolean autoConnectIrcOnJoin) { this.autoConnectIrcOnJoin = autoConnectIrcOnJoin; }
-    public void setChatRoleFilter(ChatRoleFilter chatRoleFilter) { this.chatRoleFilter = chatRoleFilter != null ? chatRoleFilter : ChatRoleFilter.ALL; }
+    public void setChatRoleFilter(ChatRoleFilter chatRoleFilter) {
+        this.chatRoleFilter = chatRoleFilter != null ? chatRoleFilter : ChatRoleFilter.ALL;
+        applyLegacyRoleFilter(this.chatRoleFilter);
+    }
+    public void setRoleFilterSubscribers(boolean roleFilterSubscribers) {
+        this.roleFilterSubscribers = roleFilterSubscribers;
+        syncLegacyRoleFilter();
+    }
+    public void setRoleFilterVip(boolean roleFilterVip) {
+        this.roleFilterVip = roleFilterVip;
+        syncLegacyRoleFilter();
+    }
+    public void setRoleFilterMods(boolean roleFilterMods) {
+        this.roleFilterMods = roleFilterMods;
+        syncLegacyRoleFilter();
+    }
     public void setEnableUsernameBlocklist(boolean enableUsernameBlocklist) { this.enableUsernameBlocklist = enableUsernameBlocklist; }
     public void setUnpinMode(UnpinMode unpinMode) { this.unpinMode = unpinMode != null ? unpinMode : UnpinMode.PIN_ICON; }
+    public void setHudAnchor(HudAnchor hudAnchor) { this.hudAnchor = hudAnchor != null ? hudAnchor : HudAnchor.TOP_RIGHT; }
+    public void setHudOffsetX(int hudOffsetX) { this.hudOffsetX = Math.max(0, Math.min(400, hudOffsetX)); }
+    public void setHudOffsetY(int hudOffsetY) { this.hudOffsetY = Math.max(0, Math.min(400, hudOffsetY)); }
+    public void setPanelBaseColorRgb(int panelBaseColorRgb) { this.panelBaseColorRgb = panelBaseColorRgb & 0xFFFFFF; }
+    public void setPanelBorderFromPlatform(boolean panelBorderFromPlatform) { this.panelBorderFromPlatform = panelBorderFromPlatform; }
+    public void setPanelBorderColorRgb(int panelBorderColorRgb) { this.panelBorderColorRgb = panelBorderColorRgb & 0xFFFFFF; }
+    public void setShowRoleBadges(boolean showRoleBadges) { this.showRoleBadges = showRoleBadges; }
+    public void setTwitchShowMessages(boolean twitchShowMessages) { this.twitchShowMessages = twitchShowMessages; }
+    public void setTwitchMessageSound(boolean twitchMessageSound) { this.twitchMessageSound = twitchMessageSound; }
+    public void setYoutubeShowMessages(boolean youtubeShowMessages) { this.youtubeShowMessages = youtubeShowMessages; }
+    public void setYoutubeMessageSound(boolean youtubeMessageSound) { this.youtubeMessageSound = youtubeMessageSound; }
+    public void setKickShowMessages(boolean kickShowMessages) { this.kickShowMessages = kickShowMessages; }
+    public void setKickMessageSound(boolean kickMessageSound) { this.kickMessageSound = kickMessageSound; }
+    public void setTiktokShowMessages(boolean tiktokShowMessages) { this.tiktokShowMessages = tiktokShowMessages; }
+    public void setTiktokMessageSound(boolean tiktokMessageSound) { this.tiktokMessageSound = tiktokMessageSound; }
+    public void setTiktokGiftEvents(boolean tiktokGiftEvents) { this.tiktokGiftEvents = tiktokGiftEvents; }
+    public void setTiktokFollowEvents(boolean tiktokFollowEvents) { this.tiktokFollowEvents = tiktokFollowEvents; }
+
+    /** Показывать ли роль {@code role} для источника {@code platformKey}. Нет ключа — включено. */
+    public boolean isPlatformRoleFilter(String platformKey, String role) {
+        if (platformRoleFilters == null) {
+            return true;
+        }
+        Boolean value = platformRoleFilters.get(platformRoleKey(platformKey, role));
+        return value == null || value;
+    }
+
+    public void setPlatformRoleFilter(String platformKey, String role, boolean value) {
+        if (platformRoleFilters == null) {
+            platformRoleFilters = new java.util.LinkedHashMap<>();
+        }
+        platformRoleFilters.put(platformRoleKey(platformKey, role), value);
+    }
+
+    private boolean hasPlatformRoleKey(String platformKey, String role) {
+        return platformRoleFilters != null && platformRoleFilters.containsKey(platformRoleKey(platformKey, role));
+    }
+
+    private static String platformRoleKey(String platformKey, String role) {
+        return platformKey + '.' + role;
+    }
+
+    /** Переносит старый одиночный enum в независимые флаги, если флаги ещё не заданы. */
+    public void migrateLegacyRoleFilter() {
+        if (roleFilterSubscribers || roleFilterVip || roleFilterMods) {
+            syncLegacyRoleFilter();
+            migratePlatformRoleFilters();
+            migratePlatformRoleFiltersV2();
+            return;
+        }
+        applyLegacyRoleFilter(chatRoleFilter);
+        syncLegacyRoleFilter();
+        migratePlatformRoleFilters();
+        migratePlatformRoleFiltersV2();
+    }
+
+    /** Один раз копирует общие фильтры ролей в пер-платформенные (фильтры стали настройкой источника). */
+    private void migratePlatformRoleFilters() {
+        if (platformRoleFiltersMigrated) {
+            return;
+        }
+        platformRoleFiltersMigrated = true;
+        if (!roleFilterSubscribers && !roleFilterVip && !roleFilterMods) {
+            return;
+        }
+        for (String platformKey : PLATFORM_KEYS) {
+            setPlatformRoleFilter(platformKey, ROLE_SUBSCRIBERS, roleFilterSubscribers);
+            setPlatformRoleFilter(platformKey, ROLE_VIP, roleFilterVip);
+            setPlatformRoleFilter(platformKey, ROLE_MODS, roleFilterMods);
+        }
+    }
+
+    /**
+     * V2: явный свитч «показывать всех» (по умолчанию вкл) и все роли тоже вкл.
+     * Если в v1 уже был узкий фильтр — «все» выключаем, недостающие роли оставляем выкл.
+     */
+    private void migratePlatformRoleFiltersV2() {
+        if (platformRoleFiltersV2) {
+            return;
+        }
+        platformRoleFiltersV2 = true;
+        for (String platformKey : PLATFORM_KEYS) {
+            boolean hadFilter = hasPlatformRoleKey(platformKey, ROLE_SUBSCRIBERS)
+                || hasPlatformRoleKey(platformKey, ROLE_VIP)
+                || hasPlatformRoleKey(platformKey, ROLE_MODS)
+                || hasPlatformRoleKey(platformKey, ROLE_FOLLOWERS);
+            boolean anyRoleOn = Boolean.TRUE.equals(platformRoleFilters.get(platformRoleKey(platformKey, ROLE_SUBSCRIBERS)))
+                || Boolean.TRUE.equals(platformRoleFilters.get(platformRoleKey(platformKey, ROLE_VIP)))
+                || Boolean.TRUE.equals(platformRoleFilters.get(platformRoleKey(platformKey, ROLE_MODS)))
+                || Boolean.TRUE.equals(platformRoleFilters.get(platformRoleKey(platformKey, ROLE_FOLLOWERS)));
+            if (hadFilter && anyRoleOn) {
+                setPlatformRoleFilter(platformKey, ROLE_ALL, false);
+                if (!hasPlatformRoleKey(platformKey, ROLE_SUBSCRIBERS)) {
+                    setPlatformRoleFilter(platformKey, ROLE_SUBSCRIBERS, false);
+                }
+                if (!hasPlatformRoleKey(platformKey, ROLE_VIP)) {
+                    setPlatformRoleFilter(platformKey, ROLE_VIP, false);
+                }
+                if (!hasPlatformRoleKey(platformKey, ROLE_MODS)) {
+                    setPlatformRoleFilter(platformKey, ROLE_MODS, false);
+                }
+                if (!hasPlatformRoleKey(platformKey, ROLE_FOLLOWERS)) {
+                    setPlatformRoleFilter(platformKey, ROLE_FOLLOWERS, false);
+                }
+            } else {
+                setPlatformRoleFilter(platformKey, ROLE_ALL, true);
+                setPlatformRoleFilter(platformKey, ROLE_FOLLOWERS, true);
+                setPlatformRoleFilter(platformKey, ROLE_SUBSCRIBERS, true);
+                setPlatformRoleFilter(platformKey, ROLE_VIP, true);
+                setPlatformRoleFilter(platformKey, ROLE_MODS, true);
+            }
+        }
+    }
+
+    private void applyLegacyRoleFilter(ChatRoleFilter filter) {
+        roleFilterSubscribers = false;
+        roleFilterVip = false;
+        roleFilterMods = false;
+        if (filter == null || filter == ChatRoleFilter.ALL) {
+            return;
+        }
+        roleFilterSubscribers = filter == ChatRoleFilter.SUBSCRIBERS
+            || filter == ChatRoleFilter.SUB_OR_VIP
+            || filter == ChatRoleFilter.SUB_OR_MOD
+            || filter == ChatRoleFilter.SUB_OR_VIP_OR_MOD;
+        roleFilterVip = filter == ChatRoleFilter.VIP
+            || filter == ChatRoleFilter.SUB_OR_VIP
+            || filter == ChatRoleFilter.VIP_OR_MOD
+            || filter == ChatRoleFilter.SUB_OR_VIP_OR_MOD;
+        roleFilterMods = filter == ChatRoleFilter.MODS
+            || filter == ChatRoleFilter.SUB_OR_MOD
+            || filter == ChatRoleFilter.VIP_OR_MOD
+            || filter == ChatRoleFilter.SUB_OR_VIP_OR_MOD;
+    }
+
+    private void syncLegacyRoleFilter() {
+        if (!roleFilterSubscribers && !roleFilterVip && !roleFilterMods) {
+            chatRoleFilter = ChatRoleFilter.ALL;
+        } else if (roleFilterSubscribers && roleFilterVip && roleFilterMods) {
+            chatRoleFilter = ChatRoleFilter.SUB_OR_VIP_OR_MOD;
+        } else if (roleFilterSubscribers && roleFilterVip) {
+            chatRoleFilter = ChatRoleFilter.SUB_OR_VIP;
+        } else if (roleFilterSubscribers && roleFilterMods) {
+            chatRoleFilter = ChatRoleFilter.SUB_OR_MOD;
+        } else if (roleFilterVip && roleFilterMods) {
+            chatRoleFilter = ChatRoleFilter.VIP_OR_MOD;
+        } else if (roleFilterSubscribers) {
+            chatRoleFilter = ChatRoleFilter.SUBSCRIBERS;
+        } else if (roleFilterVip) {
+            chatRoleFilter = ChatRoleFilter.VIP;
+        } else {
+            chatRoleFilter = ChatRoleFilter.MODS;
+        }
+    }
     
     // Методы для обратной совместимости
     public boolean isMessagesInFrontOfPlayerOnly() { 

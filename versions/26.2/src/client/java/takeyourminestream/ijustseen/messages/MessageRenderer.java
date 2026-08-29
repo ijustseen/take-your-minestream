@@ -126,9 +126,7 @@ public class MessageRenderer {
         poseStack.translate(0f, 0f, 0.1f);
 
         int color = 0xFFFFFFFF;
-        if (platformIconKey != null) {
-            renderPlatformIcon(poseStack, collector, platformIconKey);
-        }
+        renderIconRow(poseStack, collector, message);
         if (hasEmotes) {
             float lineY = 0.0f;
             for (int i = 0; i < emoteLines.size(); i++) {
@@ -187,20 +185,45 @@ public class MessageRenderer {
         );
     }
 
-    private void renderPlatformIcon(PoseStack poseStack, SubmitNodeCollector collector, String iconKey) {
-        Identifier texture = TwitchEmoteTextureCache.getTextureIdentifier("platform", iconKey);
-        if (texture == null) {
-            return;
+    /** Иконка платформы и бейджи ролей перед ником. */
+    private void renderIconRow(PoseStack poseStack, SubmitNodeCollector collector, Message message) {
+        int iconX = 0;
+        String platformIconKey = message.getPlatformIconKey();
+        if (platformIconKey != null) {
+            Identifier texture = TwitchEmoteTextureCache.getTextureIdentifier("platform", platformIconKey);
+            if (texture != null) {
+                submitIconQuad(
+                    poseStack,
+                    collector,
+                    texture,
+                    iconX,
+                    MessagePanelLayout.PLATFORM_ICON_SIZE
+                );
+            }
+            iconX += MessagePanelLayout.PLATFORM_ICON_SIZE + MessagePanelLayout.EMOTE_ICON_SPACING;
         }
+        for (String badgeKey : message.getRoleBadgeKeys()) {
+            submitIconQuad(poseStack, collector, RoleBadges.iconTexture(badgeKey), iconX, RoleBadges.ICON_SIZE);
+            iconX += RoleBadges.ICON_SIZE + RoleBadges.WORLD_SPACING;
+        }
+    }
+
+    private void submitIconQuad(
+        PoseStack poseStack,
+        SubmitNodeCollector collector,
+        Identifier texture,
+        int x,
+        int size
+    ) {
         SubmitGeometryHelper.submitTexturedQuad(
             collector,
             poseStack,
             texture,
             true,
+            x,
             0,
-            0,
-            MessagePanelLayout.PLATFORM_ICON_SIZE,
-            MessagePanelLayout.PLATFORM_ICON_SIZE,
+            x + size,
+            size,
             EMOTE_ICON_Z_OFFSET,
             0f,
             0f,

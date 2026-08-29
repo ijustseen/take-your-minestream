@@ -20,16 +20,21 @@ public class ChatConnectionManager implements IChatConnectionManager {
     private static final Logger LOGGER = Logger.getLogger(ChatConnectionManager.class.getName());
     private static ChatConnectionManager instance;
 
-    private final IConfigManager configManager;
+    private final ConfigManager configManager;
     private final Map<ChatPlatform, ChatConnection> connections = new EnumMap<>(ChatPlatform.class);
     private final Map<ChatPlatform, String> activeChannelIds = new EnumMap<>(ChatPlatform.class);
     private ChatMessagePipeline pipeline;
     private MessageSpawner messageSpawner;
-    /** Пользователь нажал «Отключить чат» — не переподключать автоматически при закрытии настроек. */
-    private boolean manualDisconnect;
+    /**
+     * Парсер чата запущен. Включение источника лишь добавляет его в список того, что парсится:
+     * подключение произойдёт только когда парсер запущен.
+     */
+    private boolean parserEnabled;
 
     private ChatConnectionManager(IConfigManager configManager) {
-        this.configManager = configManager;
+        this.configManager = configManager instanceof ConfigManager cm
+            ? cm
+            : ConfigManager.getInstance();
     }
 
     public static ChatConnectionManager getInstance(IConfigManager configManager) {
@@ -41,13 +46,13 @@ public class ChatConnectionManager implements IChatConnectionManager {
 
     @Override
     public void connect(MessageSpawner spawner) {
-        manualDisconnect = false;
+        parserEnabled = true;
         this.messageSpawner = spawner;
         if (this.pipeline == null) {
             this.pipeline = new ChatMessagePipeline(spawner);
         }
 
-        ModConfigData config = ConfigManager.getInstance().getConfigData();
+        ModConfigData config = configManager.getConfigData();
         int before = connections.size();
 
         connectPlatform(ChatPlatform.TWITCH, config.isTwitchEnabled(), config.getTwitchChannelName(),
@@ -106,7 +111,7 @@ public class ChatConnectionManager implements IChatConnectionManager {
     @Override
     public void disconnect() {
         if (connections.isEmpty()) {
-            manualDisconnect = true;
+            parserEnabled = false;
             ChatStatusNotifier.showTranslatableWarning("takeyourstreamchat.status.not_connected");
             return;
         }
@@ -118,17 +123,18 @@ public class ChatConnectionManager implements IChatConnectionManager {
         }
         connections.clear();
         activeChannelIds.clear();
-        manualDisconnect = true;
+        parserEnabled = false;
         ChatStatusNotifier.showTranslatable("takeyourstreamchat.status.disconnected");
         LOGGER.info("Disconnected from all chat platforms");
     }
 
     @Override
-    public void reconnectChangedPlatforms() {
-        reconnectChangedPlatforms(false);
+    public boolean isParserEnabled() {
+        return parserEnabled;
     }
 
-    public void reconnectChangedPlatforms(boolean forceReconnect) {
+    @Override
+    public void reconnectChangedPlatforms() {
         if (messageSpawner == null) {
             messageSpawner = takeyourminestream.ijustseen.TakeYourMineStreamClient.getStaticMessageSpawner();
         }
@@ -138,23 +144,22 @@ public class ChatConnectionManager implements IChatConnectionManager {
         if (this.pipeline == null) {
             this.pipeline = new ChatMessagePipeline(messageSpawner);
         }
-        ModConfigData config = ConfigManager.getInstance().getConfigData();
+        ModConfigData config = configManager.getConfigData();
         reconnectIfChanged(ChatPlatform.TWITCH, config.isTwitchEnabled(), config.getTwitchChannelName(),
-            () -> new TwitchChatClient(config.getTwitchChannelName(), pipeline), forceReconnect);
+            () -> new TwitchChatClient(config.getTwitchChannelName(), pipeline));
         reconnectIfChanged(ChatPlatform.YOUTUBE, config.isYoutubeEnabled(), config.getYoutubeChannel(),
-            () -> new YouTubeChatClient(config.getYoutubeChannel(), pipeline), forceReconnect);
+            () -> new YouTubeChatClient(config.getYoutubeChannel(), pipeline));
         reconnectIfChanged(ChatPlatform.KICK, config.isKickEnabled(), config.getKickChannel(),
-            () -> new KickChatClient(config.getKickChannel(), pipeline), forceReconnect);
+            () -> new KickChatClient(config.getKickChannel(), pipeline));
         reconnectIfChanged(ChatPlatform.TIKTOK, config.isTiktokEnabled(), config.getTiktokUsername(),
-            () -> new TikTokChatClient(config.getTiktokUsername(), pipeline), forceReconnect);
+            () -> new TikTokChatClient(config.getTiktokUsername(), pipeline));
     }
 
     private void reconnectIfChanged(
         ChatPlatform platform,
         boolean enabled,
         String channel,
-        java.util.function.Supplier<ChatConnection> factory,
-        boolean forceReconnect
+        java.util.function.Supplier<ChatConnection> factory
     ) {
         String normalized = normalizeChannel(channel);
         ChatConnection existing = connections.get(platform);
@@ -166,7 +171,8 @@ public class ChatConnectionManager implements IChatConnectionManager {
             return;
         }
 
-        if (manualDisconnect && !forceReconnect) {
+        // Источник включён, но парсер не запущен — подключимся, когда его запустят
+        if (!parserEnabled) {
             return;
         }
 

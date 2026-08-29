@@ -20,23 +20,25 @@ public final class MessagePanelWorldRenderer {
         float alpha,
         int borderRgb
     ) {
+        int baseRgb = takeyourminestream.ijustseen.core.MessagePanelColors.baseRgb();
         SubmitGeometryHelper.submitPanel(
             collector,
             poseStack,
-            MessagePanelConstants.PANEL_BASE_TEXTURE,
+            MessagePanelConstants.PANEL_TEXTURE,
             x,
             y,
             width,
             height,
             alpha,
-            1.0f,
-            1.0f,
-            1.0f
+            ((baseRgb >> 16) & 0xFF) / 255.0f,
+            ((baseRgb >> 8) & 0xFF) / 255.0f,
+            (baseRgb & 0xFF) / 255.0f
         );
 
-        float red = ((borderRgb >> 16) & 0xFF) / 255.0f;
-        float green = ((borderRgb >> 8) & 0xFF) / 255.0f;
-        float blue = (borderRgb & 0xFF) / 255.0f;
+        int resolvedBorderRgb = takeyourminestream.ijustseen.core.MessagePanelColors.borderRgb(borderRgb);
+        float red = ((resolvedBorderRgb >> 16) & 0xFF) / 255.0f;
+        float green = ((resolvedBorderRgb >> 8) & 0xFF) / 255.0f;
+        float blue = (resolvedBorderRgb & 0xFF) / 255.0f;
         SubmitGeometryHelper.submitPanel(
             collector,
             poseStack,

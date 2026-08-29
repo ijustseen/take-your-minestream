@@ -59,11 +59,13 @@ public class KeyBindingManager {
 
     private void handleChatToggle() {
         try {
-            var messageSpawner = TakeYourMineStreamClient.getStaticMessageSpawner();
-            if (chatConnectionManager.isConnected()) {
+            MessageSpawner spawner = this.messageSpawner != null
+                ? this.messageSpawner
+                : TakeYourMineStreamClient.getStaticMessageSpawner();
+            if (chatConnectionManager.isParserEnabled()) {
                 chatConnectionManager.disconnect();
-            } else if (messageSpawner != null) {
-                chatConnectionManager.connect(messageSpawner);
+            } else if (spawner != null) {
+                chatConnectionManager.connect(spawner);
             }
         } catch (Exception e) {
             TakeYourMineStreamClient.LOGGER.error("Chat connection error: ", e);

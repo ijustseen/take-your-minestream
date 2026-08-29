@@ -1,7 +1,6 @@
 package takeyourminestream.ijustseen.utils;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
 import java.util.logging.Level;
 
 /**

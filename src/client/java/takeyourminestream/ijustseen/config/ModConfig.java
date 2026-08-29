@@ -1,12 +1,8 @@
 package takeyourminestream.ijustseen.config;
 
-import takeyourminestream.ijustseen.config.ModConfigData;
-
 /**
- * Утилитарный класс для доступа к конфигурации
- * @deprecated Используйте ConfigManager.getInstance().getConfigData() вместо этого класса
+ * Статический фасад над {@link ConfigManager#getConfigData()}.
  */
-@Deprecated
 public class ModConfig {
     /**
      * Получает текущую конфигурацию
@@ -237,6 +233,60 @@ public class ModConfig {
         ConfigManager.getInstance().setConfigValue("chatRoleFilter", value);
     }
 
+    public static boolean isROLE_FILTER_SUBSCRIBERS() {
+        Object value = ConfigManager.getInstance().getConfigValue("roleFilterSubscribers");
+        return value instanceof Boolean b && b;
+    }
+
+    public static void setROLE_FILTER_SUBSCRIBERS(boolean value) {
+        ConfigManager.getInstance().setConfigValue("roleFilterSubscribers", value);
+    }
+
+    public static boolean isROLE_FILTER_VIP() {
+        Object value = ConfigManager.getInstance().getConfigValue("roleFilterVip");
+        return value instanceof Boolean b && b;
+    }
+
+    public static void setROLE_FILTER_VIP(boolean value) {
+        ConfigManager.getInstance().setConfigValue("roleFilterVip", value);
+    }
+
+    public static boolean isROLE_FILTER_MODS() {
+        Object value = ConfigManager.getInstance().getConfigValue("roleFilterMods");
+        return value instanceof Boolean b && b;
+    }
+
+    public static void setROLE_FILTER_MODS(boolean value) {
+        ConfigManager.getInstance().setConfigValue("roleFilterMods", value);
+    }
+
+    public static HudAnchor getHUD_ANCHOR() {
+        Object value = ConfigManager.getInstance().getConfigValue("hudAnchor");
+        return value instanceof HudAnchor anchor ? anchor : HudAnchor.TOP_RIGHT;
+    }
+
+    public static void setHUD_ANCHOR(HudAnchor value) {
+        ConfigManager.getInstance().setConfigValue("hudAnchor", value);
+    }
+
+    public static int getHUD_OFFSET_X() {
+        Object value = ConfigManager.getInstance().getConfigValue("hudOffsetX");
+        return value instanceof Number number ? Math.max(0, Math.min(400, number.intValue())) : 0;
+    }
+
+    public static void setHUD_OFFSET_X(int value) {
+        ConfigManager.getInstance().setConfigValue("hudOffsetX", value);
+    }
+
+    public static int getHUD_OFFSET_Y() {
+        Object value = ConfigManager.getInstance().getConfigValue("hudOffsetY");
+        return value instanceof Number number ? Math.max(0, Math.min(400, number.intValue())) : 0;
+    }
+
+    public static void setHUD_OFFSET_Y(int value) {
+        ConfigManager.getInstance().setConfigValue("hudOffsetY", value);
+    }
+
     public static boolean isENABLE_USERNAME_BLOCKLIST() {
         Object value = ConfigManager.getInstance().getConfigValue("enableUsernameBlocklist");
         return value == null || (Boolean) value;
@@ -244,6 +294,154 @@ public class ModConfig {
 
     public static void setENABLE_USERNAME_BLOCKLIST(boolean value) {
         ConfigManager.getInstance().setConfigValue("enableUsernameBlocklist", value);
+    }
+
+    public static int getPANEL_BASE_COLOR_RGB() {
+        Object value = ConfigManager.getInstance().getConfigValue("panelBaseColorRgb");
+        return value instanceof Number number ? number.intValue() & 0xFFFFFF : 0x000000;
+    }
+
+    public static void setPANEL_BASE_COLOR_RGB(int value) {
+        ConfigManager.getInstance().setConfigValue("panelBaseColorRgb", value);
+    }
+
+    public static boolean isPANEL_BORDER_FROM_PLATFORM() {
+        Object value = ConfigManager.getInstance().getConfigValue("panelBorderFromPlatform");
+        return !(value instanceof Boolean b) || b;
+    }
+
+    public static void setPANEL_BORDER_FROM_PLATFORM(boolean value) {
+        ConfigManager.getInstance().setConfigValue("panelBorderFromPlatform", value);
+    }
+
+    public static int getPANEL_BORDER_COLOR_RGB() {
+        Object value = ConfigManager.getInstance().getConfigValue("panelBorderColorRgb");
+        return value instanceof Number number
+            ? number.intValue() & 0xFFFFFF
+            : takeyourminestream.ijustseen.core.MessagePanelConstants.DEFAULT_BORDER_RGB;
+    }
+
+    public static void setPANEL_BORDER_COLOR_RGB(int value) {
+        ConfigManager.getInstance().setConfigValue("panelBorderColorRgb", value);
+    }
+
+    public static boolean isSHOW_ROLE_BADGES() {
+        Object value = ConfigManager.getInstance().getConfigValue("showRoleBadges");
+        return !(value instanceof Boolean b) || b;
+    }
+
+    public static void setSHOW_ROLE_BADGES(boolean value) {
+        ConfigManager.getInstance().setConfigValue("showRoleBadges", value);
+    }
+
+    /** Включена ли платформа ({@code platformKey} — ключ из {@code ChatPlatform.getIconKey()}). */
+    public static boolean isPLATFORM_ENABLED(String platformKey) {
+        Object value = ConfigManager.getInstance().getConfigValue(platformKey + "Enabled");
+        if (value instanceof Boolean b) {
+            return b;
+        }
+        // Twitch включён по умолчанию — исторически это единственная платформа мода
+        return "twitch".equals(platformKey);
+    }
+
+    public static void setPLATFORM_ENABLED(String platformKey, boolean value) {
+        ConfigManager.getInstance().setConfigValue(platformKey + "Enabled", value);
+    }
+
+    /** Фильтры ролей задаются отдельно для каждого источника. */
+    public static boolean isPLATFORM_ROLE(String platformKey, takeyourminestream.ijustseen.integration.chat.PlatformRoleKind kind) {
+        return getCurrentConfig().isPlatformRoleFilter(platformKey, kind.key());
+    }
+
+    public static void setPLATFORM_ROLE(
+        String platformKey,
+        takeyourminestream.ijustseen.integration.chat.PlatformRoleKind kind,
+        boolean value
+    ) {
+        setPlatformRoleFilter(platformKey, kind.key(), value);
+    }
+
+    public static boolean isPLATFORM_ROLE_ALL(String platformKey) {
+        return getCurrentConfig().isPlatformRoleFilter(platformKey, ModConfigData.ROLE_ALL);
+    }
+
+    public static void setPLATFORM_ROLE_ALL(String platformKey, boolean value) {
+        setPlatformRoleFilter(platformKey, ModConfigData.ROLE_ALL, value);
+    }
+
+    public static boolean isPLATFORM_ROLE_FOLLOWERS(String platformKey) {
+        return getCurrentConfig().isPlatformRoleFilter(platformKey, ModConfigData.ROLE_FOLLOWERS);
+    }
+
+    public static void setPLATFORM_ROLE_FOLLOWERS(String platformKey, boolean value) {
+        setPlatformRoleFilter(platformKey, ModConfigData.ROLE_FOLLOWERS, value);
+    }
+
+    public static boolean isPLATFORM_ROLE_SUBSCRIBERS(String platformKey) {
+        return getCurrentConfig().isPlatformRoleFilter(platformKey, ModConfigData.ROLE_SUBSCRIBERS);
+    }
+
+    public static void setPLATFORM_ROLE_SUBSCRIBERS(String platformKey, boolean value) {
+        setPlatformRoleFilter(platformKey, ModConfigData.ROLE_SUBSCRIBERS, value);
+    }
+
+    public static boolean isPLATFORM_ROLE_VIP(String platformKey) {
+        return getCurrentConfig().isPlatformRoleFilter(platformKey, ModConfigData.ROLE_VIP);
+    }
+
+    public static void setPLATFORM_ROLE_VIP(String platformKey, boolean value) {
+        setPlatformRoleFilter(platformKey, ModConfigData.ROLE_VIP, value);
+    }
+
+    public static boolean isPLATFORM_ROLE_MODS(String platformKey) {
+        return getCurrentConfig().isPlatformRoleFilter(platformKey, ModConfigData.ROLE_MODS);
+    }
+
+    public static void setPLATFORM_ROLE_MODS(String platformKey, boolean value) {
+        setPlatformRoleFilter(platformKey, ModConfigData.ROLE_MODS, value);
+    }
+
+    private static void setPlatformRoleFilter(String platformKey, String role, boolean value) {
+        getCurrentConfig().setPlatformRoleFilter(platformKey, role, value);
+        ConfigManager.getInstance().saveConfig();
+    }
+
+    /** Показывать ли сообщения платформы ({@code platformKey} — ключ из {@code ChatPlatform.getIconKey()}). */
+    public static boolean isPLATFORM_SHOW_MESSAGES(String platformKey) {
+        Object value = ConfigManager.getInstance().getConfigValue(platformKey + "ShowMessages");
+        return !(value instanceof Boolean b) || b;
+    }
+
+    public static void setPLATFORM_SHOW_MESSAGES(String platformKey, boolean value) {
+        ConfigManager.getInstance().setConfigValue(platformKey + "ShowMessages", value);
+    }
+
+    /** Проигрывать ли звук для сообщений платформы. */
+    public static boolean isPLATFORM_MESSAGE_SOUND(String platformKey) {
+        Object value = ConfigManager.getInstance().getConfigValue(platformKey + "MessageSound");
+        return !(value instanceof Boolean b) || b;
+    }
+
+    public static void setPLATFORM_MESSAGE_SOUND(String platformKey, boolean value) {
+        ConfigManager.getInstance().setConfigValue(platformKey + "MessageSound", value);
+    }
+
+    public static boolean isTIKTOK_GIFT_EVENTS() {
+        Object value = ConfigManager.getInstance().getConfigValue("tiktokGiftEvents");
+        return value instanceof Boolean b && b;
+    }
+
+    public static void setTIKTOK_GIFT_EVENTS(boolean value) {
+        ConfigManager.getInstance().setConfigValue("tiktokGiftEvents", value);
+    }
+
+    public static boolean isTIKTOK_FOLLOW_EVENTS() {
+        Object value = ConfigManager.getInstance().getConfigValue("tiktokFollowEvents");
+        return value instanceof Boolean b && b;
+    }
+
+    public static void setTIKTOK_FOLLOW_EVENTS(boolean value) {
+        ConfigManager.getInstance().setConfigValue("tiktokFollowEvents", value);
     }
 
     public static takeyourminestream.ijustseen.config.UnpinMode getUNPIN_MODE() {

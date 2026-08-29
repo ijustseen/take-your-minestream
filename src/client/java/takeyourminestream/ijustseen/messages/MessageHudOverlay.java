@@ -1,6 +1,7 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.client.font.TextRenderer;
+import takeyourminestream.ijustseen.config.HudAnchor;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.core.MessagePanelConstants;
 import takeyourminestream.ijustseen.core.text.ChatMessageParser;
@@ -36,11 +37,23 @@ public final class MessageHudOverlay {
         int tickCounter,
         int screenWidth
     ) {
+        return prepare(textRenderer, activeMessages, tickCounter, screenWidth, 0);
+    }
+
+    public static List<PreparedCard> prepare(
+        TextRenderer textRenderer,
+        List<Message> activeMessages,
+        int tickCounter,
+        int screenWidth,
+        int screenHeight
+    ) {
         float hudScale = ModConfig.getMESSAGE_SCALE().getScale();
-        int fixedRightEdge = screenWidth - MARGIN;
+        HudAnchor anchor = ModConfig.getHUD_ANCHOR();
+        int insetX = MARGIN + ModConfig.getHUD_OFFSET_X();
+        int insetY = MARGIN + ModConfig.getHUD_OFFSET_Y();
         int maxCardWidth = Math.max(
             MessagePanelConstants.MESSAGE_WRAP_WIDTH + MessagePanelConstants.PADDING_X * 2,
-            (int) ((screenWidth - MARGIN * 2) / hudScale)
+            (int) ((screenWidth - insetX * 2) / hudScale)
         );
 
         List<Message> candidates = new ArrayList<>();
@@ -56,27 +69,55 @@ public final class MessageHudOverlay {
         int from = Math.max(0, candidates.size() - MAX_DISPLAYED_MESSAGES);
         List<Message> ordered = candidates.subList(from, candidates.size());
 
-        List<PreparedCard> cards = new ArrayList<>();
-        int currentY = MARGIN;
+        record SizedCard(Message message, MessageCardLayout.Layout layout, ChatMessageParser.ParsedMessage parsed,
+                         int scaledWidth, int scaledHeight, float alpha, int slide) {}
 
+        List<SizedCard> sized = new ArrayList<>();
+        int stackHeight = 0;
         for (int i = 0; i < ordered.size(); i++) {
             Message message = ordered.get(i);
             float alpha = computeAlpha(message, tickCounter);
             if (alpha <= 0.01f) {
                 continue;
             }
-
             alpha *= depthFactor(i, ordered.size());
-
             ChatMessageParser.ParsedMessage parsed = ChatMessageParser.parse(message.getText());
             MessageCardLayout.Layout layout = message.getHudLayout(textRenderer, maxCardWidth);
             int scaledWidth = Math.round(layout.width() * hudScale);
             int scaledHeight = Math.round(layout.height() * hudScale);
             int slide = Math.round(computeSlideOffset(message, tickCounter));
-            int panelX = fixedRightEdge - scaledWidth + slide;
+            if (!sized.isEmpty()) {
+                stackHeight += SPACING;
+            }
+            stackHeight += scaledHeight;
+            sized.add(new SizedCard(message, layout, parsed, scaledWidth, scaledHeight, alpha, slide));
+        }
+        if (sized.isEmpty()) {
+            return List.of();
+        }
 
-            cards.add(new PreparedCard(message, layout, parsed, panelX, currentY, scaledWidth, scaledHeight, alpha));
-            currentY += scaledHeight + SPACING;
+        int currentY = anchor.isBottom() && screenHeight > 0
+            ? screenHeight - insetY - stackHeight
+            : insetY;
+        currentY = Math.max(0, currentY);
+
+        List<PreparedCard> cards = new ArrayList<>();
+        for (SizedCard card : sized) {
+            int slide = anchor.isRight() ? card.slide() : -card.slide();
+            int panelX = anchor.isRight()
+                ? screenWidth - insetX - card.scaledWidth() + slide
+                : insetX + slide;
+            cards.add(new PreparedCard(
+                card.message(),
+                card.layout(),
+                card.parsed(),
+                panelX,
+                currentY,
+                card.scaledWidth(),
+                card.scaledHeight(),
+                card.alpha()
+            ));
+            currentY += card.scaledHeight() + SPACING;
         }
 
         return cards;

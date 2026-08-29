@@ -8,9 +8,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.client.font.TextRenderer;
 import org.jetbrains.annotations.Nullable;
-import takeyourminestream.ijustseen.config.MessageScale;
 import takeyourminestream.ijustseen.config.MessageSpawnMode;
-import takeyourminestream.ijustseen.config.ChatRoleFilter;
+import takeyourminestream.ijustseen.config.HudAnchor;
 import takeyourminestream.ijustseen.config.UnpinMode;
 import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.ModConfig;
@@ -26,7 +25,9 @@ import takeyourminestream.ijustseen.ui.widget.MessageSoundVolumeSliderWidget;
 import takeyourminestream.ijustseen.ui.gui.ConfigUiHelper;
 import takeyourminestream.ijustseen.ui.gui.ChatConnectToggleHelper;
 import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
-import takeyourminestream.ijustseen.ui.widget.PlatformChannelRow;
+import takeyourminestream.ijustseen.ui.widget.ColorFieldRow;
+import takeyourminestream.ijustseen.ui.widget.PlatformSettingsCard;
+import takeyourminestream.ijustseen.ui.widget.ToggleWithSettingsRow;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,6 +60,8 @@ public class ModConfigScreen extends Screen {
     
     private static final Identifier ICON_HISTORY =
         Identifier.of("take-your-stream-chat", "textures/gui/icon_history.png");
+    private static final Identifier ICON_SETTINGS =
+        Identifier.of("take-your-stream-chat", "textures/gui/icon_settings.png");
     private static final int BUTTON_ICON_SIZE = 10;
     private static final int BUTTON_ICON_GAP = 3;
 
@@ -68,11 +71,12 @@ public class ModConfigScreen extends Screen {
     private ButtonWidget historyButton;
     private ButtonWidget chatToggleButton;
     private ButtonWidget doneButton;
+    private ButtonWidget resetButton;
+    private boolean resetArmed;
     
     // Параметры интерфейса
     private static final int TITLE_Y = 6;
     private static final int CATEGORY_Y = 24;
-    private static final int HEADER_HEIGHT = 52;
     private static final int MAIN_PANEL_BOTTOM_MARGIN = 12;
     private static final int SCROLL_TO_DESCRIPTION_GAP = 4;
     private static final int DESCRIPTION_TO_BUTTON_GAP = 3;
@@ -87,14 +91,16 @@ public class ModConfigScreen extends Screen {
     private static final int FOOTER_BUTTON_GAP = 8;
     private static final int CATEGORY_TO_CONTENT_GAP = 6;
     private static final int SIDE_MARGIN = 24;
-    private static final int LABEL_WIDTH = 200;
     private static final int CONTROL_WIDTH = 170;
     private static final int TOGGLE_BUTTON_WIDTH = 44;
-    private static final int PLATFORM_FIELD_GAP = 6;
-    private static final int PLATFORM_FIELD_WIDTH = CONTROL_WIDTH - TOGGLE_BUTTON_WIDTH - PLATFORM_FIELD_GAP;
     private static final int CONTROL_HEIGHT = 20;
     private static final int DESCRIPTION_HEIGHT = 20;
-    
+    private static final int CARD_HEIGHT = 32;
+    private static final int CARD_GAP = 6;
+    private static final int CARD_INNER_PADDING = 6;
+    private static final int CARD_SETTINGS_WIDTH = 22;
+    private static final int COLOR_PICKER_SIZE = 20;
+
     private int scrollOffset = 0;
 
     // Класс для представления элемента конфигурации
@@ -104,18 +110,63 @@ public class ModConfigScreen extends Screen {
         public final ConfigEntryType type;
         public final Object widget;
         public final ConfigCategory category;
-        
+        /** Цвет предпросмотра для {@link ConfigEntryType#COLOR_FIELD}. */
+        public final java.util.function.IntSupplier colorPreview;
+        /** Строка показывается только если условие выполнено (зависимая настройка). */
+        private java.util.function.BooleanSupplier visibleWhen;
+        /** Строка активна только если условие выполнено (зависимая настройка). */
+        private java.util.function.BooleanSupplier enabledWhen;
+        /** Позиция строки, посчитанная в {@link #layoutEntries()}. */
+        public int rowX;
+        public int rowY;
+        public int rowWidth;
+
         public ConfigEntry(String labelKey, String descriptionKey, ConfigEntryType type, Object widget, ConfigCategory category) {
+            this(labelKey, descriptionKey, type, widget, category, null);
+        }
+
+        public ConfigEntry(
+            String labelKey,
+            String descriptionKey,
+            ConfigEntryType type,
+            Object widget,
+            ConfigCategory category,
+            java.util.function.IntSupplier colorPreview
+        ) {
             this.labelKey = labelKey;
             this.descriptionKey = descriptionKey;
             this.type = type;
             this.widget = widget;
             this.category = category;
+            this.colorPreview = colorPreview;
+        }
+
+        /** Высота строки: карточки платформ выше обычных строк настроек. */
+        public int rowHeight() {
+            return type == ConfigEntryType.PLATFORM_CARD ? CARD_HEIGHT : ENTRY_HEIGHT;
+        }
+
+        public ConfigEntry visibleWhen(java.util.function.BooleanSupplier condition) {
+            this.visibleWhen = condition;
+            return this;
+        }
+
+        public ConfigEntry enabledWhen(java.util.function.BooleanSupplier condition) {
+            this.enabledWhen = condition;
+            return this;
+        }
+
+        public boolean isVisible() {
+            return visibleWhen == null || visibleWhen.getAsBoolean();
+        }
+
+        public boolean isEnabled() {
+            return enabledWhen == null || enabledWhen.getAsBoolean();
         }
     }
-    
+
     private enum ConfigEntryType {
-        TEXT_FIELD, BUTTON, TOGGLE, SLIDER, PLATFORM_ROW
+        TEXT_FIELD, BUTTON, DANGER_BUTTON, TOGGLE, SLIDER, COLOR_FIELD, PLATFORM_CARD, TOGGLE_WITH_SETTINGS
     }
 
     public ModConfigScreen() {
@@ -157,6 +208,9 @@ public class ModConfigScreen extends Screen {
             ButtonWidget button = ButtonWidget.builder(
                 category.getText(),
                 btn -> {
+                    if (currentCategory != category) {
+                        disarmResetButton();
+                    }
                     currentCategory = category;
                     updateCategoryVisibility();
                     updateCategoryButtons();
@@ -187,43 +241,11 @@ public class ModConfigScreen extends Screen {
         configEntries.clear();
         TextRenderer textRenderer = this.textRenderer;
 
-        // Подключения к платформам: поле + вкл/выкл справа
-        addPlatformRow(
-            "takeyourstreamchat.config.channel_name",
-            "takeyourstreamchat.config.channel_name.desc",
-            ModConfig.getTWITCH_CHANNEL_NAME(),
-            "twitchChannelName",
-            ModConfig::isTWITCH_ENABLED,
-            ModConfig::setTWITCH_ENABLED,
-            "twitch"
-        );
-        addPlatformRow(
-            "takeyourstreamchat.config.youtube_channel",
-            "takeyourstreamchat.config.youtube_channel.desc",
-            ModConfig.getYOUTUBE_CHANNEL(),
-            "youtubeChannel",
-            ModConfig::isYOUTUBE_ENABLED,
-            ModConfig::setYOUTUBE_ENABLED,
-            "youtube"
-        );
-        addPlatformRow(
-            "takeyourstreamchat.config.kick_channel",
-            "takeyourstreamchat.config.kick_channel.desc",
-            ModConfig.getKICK_CHANNEL(),
-            "kickChannel",
-            ModConfig::isKICK_ENABLED,
-            ModConfig::setKICK_ENABLED,
-            "kick"
-        );
-        addPlatformRow(
-            "takeyourstreamchat.config.tiktok_username",
-            "takeyourstreamchat.config.tiktok_username.desc",
-            ModConfig.getTIKTOK_USERNAME(),
-            "tiktokUsername",
-            ModConfig::isTIKTOK_ENABLED,
-            ModConfig::setTIKTOK_ENABLED,
-            "tiktok"
-        );
+        // Платформы: по две карточки в ряд, детальные настройки — на отдельной странице
+        for (takeyourminestream.ijustseen.integration.chat.ChatPlatform platform
+            : takeyourminestream.ijustseen.integration.chat.ChatPlatform.values()) {
+            addPlatformCard(platform);
+        }
 
         addToggleEntry(
             "takeyourstreamchat.config.auto_connect_irc",
@@ -237,31 +259,21 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(chanceForSpawnSlider);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.chance_for_spawn", "takeyourstreamchat.config.chance_for_spawn.desc", ConfigEntryType.SLIDER, chanceForSpawnSlider, ConfigCategory.GENERAL));
 
-        ButtonWidget roleFilterButton = ButtonWidget.builder(
-            getRoleFilterButtonText(),
-            btn -> {
-                ChatRoleFilter nextFilter = ModConfig.getCHAT_ROLE_FILTER().next();
-                ModConfig.setCHAT_ROLE_FILTER(nextFilter);
-                btn.setMessage(getRoleFilterButtonText());
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(roleFilterButton);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.role_filter", "takeyourstreamchat.config.role_filter.desc", ConfigEntryType.BUTTON, roleFilterButton, ConfigCategory.GENERAL));
-
-        addToggleEntry(
+        addToggleWithSettingsEntry(
             "takeyourstreamchat.config.automoderation",
             "takeyourstreamchat.config.automoderation.desc",
             ModConfig::isENABLE_AUTOMODERATION,
             ModConfig::setENABLE_AUTOMODERATION,
-            ConfigCategory.GENERAL
+            () -> ScreenNavigationCompat.open(this.client, new BanwordConfigScreen(this))
         );
 
-        ButtonWidget banwordsButton = ButtonWidget.builder(
-            Text.translatable("takeyourstreamchat.config.banwords_config"),
-            btn -> ScreenNavigationCompat.open(this.client, new BanwordConfigScreen(this))
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(banwordsButton);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.banwords", "takeyourstreamchat.config.banwords.desc", ConfigEntryType.BUTTON, banwordsButton, ConfigCategory.GENERAL));
+        addToggleWithSettingsEntry(
+            "takeyourstreamchat.config.username_blocklist",
+            "takeyourstreamchat.config.username_blocklist.desc",
+            ModConfig::isENABLE_USERNAME_BLOCKLIST,
+            ModConfig::setENABLE_USERNAME_BLOCKLIST,
+            () -> ScreenNavigationCompat.open(this.client, new BlockedUsernameConfigScreen(this))
+        );
 
         ButtonWidget regexpButton = ButtonWidget.builder(
             Text.translatable("takeyourstreamchat.config.regexps_config"),
@@ -270,20 +282,19 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(regexpButton);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.regexps", "takeyourstreamchat.config.regexps.desc", ConfigEntryType.BUTTON, regexpButton, ConfigCategory.GENERAL));
 
-        addToggleEntry(
-            "takeyourstreamchat.config.username_blocklist",
-            "takeyourstreamchat.config.username_blocklist.desc",
-            ModConfig::isENABLE_USERNAME_BLOCKLIST,
-            ModConfig::setENABLE_USERNAME_BLOCKLIST,
-            ConfigCategory.GENERAL
-        );
-
-        ButtonWidget blockedUsersButton = ButtonWidget.builder(
-            Text.translatable("takeyourstreamchat.config.blocked_users_config"),
-            btn -> ScreenNavigationCompat.open(this.client, new BlockedUsernameConfigScreen(this))
+        resetArmed = false;
+        resetButton = ButtonWidget.builder(
+            Text.translatable("takeyourstreamchat.config.reset_defaults.button"),
+            btn -> onResetDefaultsClicked()
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(blockedUsersButton);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.blocked_users", "takeyourstreamchat.config.blocked_users.desc", ConfigEntryType.BUTTON, blockedUsersButton, ConfigCategory.GENERAL));
+        this.addDrawableChild(resetButton);
+        configEntries.add(new ConfigEntry(
+            "takeyourstreamchat.config.reset_defaults",
+            "takeyourstreamchat.config.reset_defaults.desc",
+            ConfigEntryType.DANGER_BUTTON,
+            resetButton,
+            ConfigCategory.GENERAL
+        ));
 
         // Сообщения: вид, время жизни, звук
         ButtonWidget spawnModeButton = ButtonWidget.builder(
@@ -298,6 +309,48 @@ public class ModConfigScreen extends Screen {
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(spawnModeButton);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.spawn_mode_label", "takeyourstreamchat.config.spawn_mode.desc", ConfigEntryType.BUTTON, spawnModeButton, ConfigCategory.MESSAGES));
+
+        ButtonWidget hudAnchorButton = ButtonWidget.builder(
+            getHudAnchorButtonText(),
+            btn -> {
+                HudAnchor nextAnchor = ModConfig.getHUD_ANCHOR().next();
+                ModConfig.setHUD_ANCHOR(nextAnchor);
+                btn.setMessage(getHudAnchorButtonText());
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(hudAnchorButton);
+        addEntry(new ConfigEntry("takeyourstreamchat.config.hud_anchor", "takeyourstreamchat.config.hud_anchor.desc", ConfigEntryType.BUTTON, hudAnchorButton, ConfigCategory.MESSAGES))
+            .visibleWhen(ModConfigScreen::isHudWidgetMode);
+
+        ConfigIntTextFieldWidget hudOffsetXField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourstreamchat.config.hud_offset_x"),
+            "hudOffsetX",
+            0,
+            400
+        );
+        this.addDrawableChild(hudOffsetXField);
+        addEntry(new ConfigEntry("takeyourstreamchat.config.hud_offset_x", "takeyourstreamchat.config.hud_offset_x.desc", ConfigEntryType.TEXT_FIELD, hudOffsetXField, ConfigCategory.MESSAGES))
+            .visibleWhen(ModConfigScreen::isHudWidgetMode);
+
+        ConfigIntTextFieldWidget hudOffsetYField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourstreamchat.config.hud_offset_y"),
+            "hudOffsetY",
+            0,
+            400
+        );
+        this.addDrawableChild(hudOffsetYField);
+        addEntry(new ConfigEntry("takeyourstreamchat.config.hud_offset_y", "takeyourstreamchat.config.hud_offset_y.desc", ConfigEntryType.TEXT_FIELD, hudOffsetYField, ConfigCategory.MESSAGES))
+            .visibleWhen(ModConfigScreen::isHudWidgetMode);
 
         MessageScaleSliderWidget messageScaleSlider = new MessageScaleSliderWidget(0, 0, CONTROL_WIDTH, 20);
         this.addDrawableChild(messageScaleSlider);
@@ -321,6 +374,36 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(showBgButton);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.show_message_bg", "takeyourstreamchat.config.show_message_bg.desc", ConfigEntryType.TOGGLE, showBgButton, ConfigCategory.MESSAGES));
 
+        addColorEntry(
+            "takeyourstreamchat.config.panel_base_color",
+            "takeyourstreamchat.config.panel_base_color.desc",
+            ModConfig::getPANEL_BASE_COLOR_RGB,
+            ModConfig::setPANEL_BASE_COLOR_RGB
+        ).enabledWhen(ModConfig::isSHOW_MESSAGE_BACKGROUND);
+
+        addToggleEntry(
+            "takeyourstreamchat.config.panel_border_from_platform",
+            "takeyourstreamchat.config.panel_border_from_platform.desc",
+            ModConfig::isPANEL_BORDER_FROM_PLATFORM,
+            ModConfig::setPANEL_BORDER_FROM_PLATFORM,
+            ConfigCategory.MESSAGES
+        ).enabledWhen(ModConfig::isSHOW_MESSAGE_BACKGROUND);
+
+        addColorEntry(
+            "takeyourstreamchat.config.panel_border_color",
+            "takeyourstreamchat.config.panel_border_color.desc",
+            ModConfig::getPANEL_BORDER_COLOR_RGB,
+            ModConfig::setPANEL_BORDER_COLOR_RGB
+        ).enabledWhen(() -> ModConfig.isSHOW_MESSAGE_BACKGROUND() && !ModConfig.isPANEL_BORDER_FROM_PLATFORM());
+
+        addToggleEntry(
+            "takeyourstreamchat.config.show_role_badges",
+            "takeyourstreamchat.config.show_role_badges.desc",
+            ModConfig::isSHOW_ROLE_BADGES,
+            ModConfig::setSHOW_ROLE_BADGES,
+            ConfigCategory.MESSAGES
+        );
+
         ButtonWidget colorEmojiButton = createToggleButton(ModConfig::isENABLE_COLOR_EMOJIS, ModConfig::setENABLE_COLOR_EMOJIS);
         this.addDrawableChild(colorEmojiButton);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.color_emojis", "takeyourstreamchat.config.color_emojis.desc", ConfigEntryType.TOGGLE, colorEmojiButton, ConfigCategory.MESSAGES));
@@ -331,7 +414,8 @@ public class ModConfigScreen extends Screen {
 
         MessageSoundVolumeSliderWidget messageSoundVolumeSlider = new MessageSoundVolumeSliderWidget(0, 0, CONTROL_WIDTH, 20);
         this.addDrawableChild(messageSoundVolumeSlider);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.message_sound_volume", "takeyourstreamchat.config.message_sound_volume.desc", ConfigEntryType.SLIDER, messageSoundVolumeSlider, ConfigCategory.MESSAGES));
+        addEntry(new ConfigEntry("takeyourstreamchat.config.message_sound_volume", "takeyourstreamchat.config.message_sound_volume.desc", ConfigEntryType.SLIDER, messageSoundVolumeSlider, ConfigCategory.MESSAGES))
+            .enabledWhen(ModConfig::isENABLE_MESSAGE_SOUND);
 
         ConfigIntTextFieldWidget messageHistoryMaxField = new ConfigIntTextFieldWidget(
             textRenderer,
@@ -392,7 +476,8 @@ public class ModConfigScreen extends Screen {
             128
         );
         this.addDrawableChild(maxFreezeDistanceField);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.max_freeze_distance", "takeyourstreamchat.config.max_freeze_distance.desc", ConfigEntryType.TEXT_FIELD, maxFreezeDistanceField, ConfigCategory.BEHAVIOR));
+        addEntry(new ConfigEntry("takeyourstreamchat.config.max_freeze_distance", "takeyourstreamchat.config.max_freeze_distance.desc", ConfigEntryType.TEXT_FIELD, maxFreezeDistanceField, ConfigCategory.BEHAVIOR))
+            .enabledWhen(ModConfig::isENABLE_FREEZING_ON_VIEW);
 
         ButtonWidget followPlayerButton = createToggleButton(ModConfig::isFOLLOW_PLAYER, ModConfig::setFOLLOW_PLAYER);
         this.addDrawableChild(followPlayerButton);
@@ -427,7 +512,16 @@ public class ModConfigScreen extends Screen {
         ).dimensions(0, 0, CONTROL_WIDTH, CONTROL_HEIGHT).build();
     }
 
-    private void addToggleEntry(
+    private ConfigEntry addEntry(ConfigEntry entry) {
+        configEntries.add(entry);
+        return entry;
+    }
+
+    private static boolean isHudWidgetMode() {
+        return ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET;
+    }
+
+    private ConfigEntry addToggleEntry(
         String labelKey,
         String descriptionKey,
         java.util.function.BooleanSupplier getter,
@@ -436,101 +530,243 @@ public class ModConfigScreen extends Screen {
     ) {
         ButtonWidget button = createToggleButton(getter, setter);
         this.addDrawableChild(button);
-        configEntries.add(new ConfigEntry(labelKey, descriptionKey, ConfigEntryType.TOGGLE, button, category));
+        return addEntry(new ConfigEntry(labelKey, descriptionKey, ConfigEntryType.TOGGLE, button, category));
     }
 
-    private void addPlatformRow(
+    /** Строка с тумблером включения функции и кнопкой её подробных настроек. */
+    private ConfigEntry addToggleWithSettingsEntry(
         String labelKey,
         String descriptionKey,
-        String initialValue,
-        String configKey,
-        java.util.function.BooleanSupplier enabledGetter,
-        java.util.function.Consumer<Boolean> enabledSetter,
-        String platformIconKey
+        java.util.function.BooleanSupplier getter,
+        java.util.function.Consumer<Boolean> setter,
+        Runnable openSettings
+    ) {
+        ButtonWidget toggle = ButtonWidget.builder(
+            ConfigUiHelper.onOffText(getter.getAsBoolean()),
+            btn -> {
+                setter.accept(!getter.getAsBoolean());
+                btn.setMessage(ConfigUiHelper.onOffText(getter.getAsBoolean()));
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH - CARD_SETTINGS_WIDTH - CARD_GAP, CONTROL_HEIGHT).build();
+        this.addDrawableChild(toggle);
+
+        ButtonWidget settings = ButtonWidget.builder(
+            Text.empty(),
+            btn -> openSettings.run()
+        ).dimensions(0, 0, CARD_SETTINGS_WIDTH, CONTROL_HEIGHT).build();
+        this.addDrawableChild(settings);
+
+        return addEntry(new ConfigEntry(
+            labelKey,
+            descriptionKey,
+            ConfigEntryType.TOGGLE_WITH_SETTINGS,
+            new ToggleWithSettingsRow(toggle, settings),
+            ConfigCategory.GENERAL
+        ));
+    }
+
+    /** Поле HEX-цвета и кнопка, открывающая HSV color picker. */
+    private ConfigEntry addColorEntry(
+        String labelKey,
+        String descriptionKey,
+        java.util.function.IntSupplier getter,
+        java.util.function.IntConsumer setter
     ) {
         TextFieldWidget field = new TextFieldWidget(
             this.textRenderer,
             0,
             0,
-            PLATFORM_FIELD_WIDTH,
+            CONTROL_WIDTH - COLOR_PICKER_SIZE - CARD_GAP,
             CONTROL_HEIGHT,
             Text.translatable(labelKey)
         );
-        field.setText(initialValue);
+        field.setMaxLength(7);
+        field.setText(String.format("%06X", getter.getAsInt() & 0xFFFFFF));
+        field.setChangedListener(value -> {
+            String hex = value.startsWith("#") ? value.substring(1) : value;
+            if (hex.matches("(?i)[0-9a-f]{6}")) {
+                setter.accept(Integer.parseInt(hex, 16));
+            }
+        });
         this.addDrawableChild(field);
 
+        ButtonWidget picker = ButtonWidget.builder(
+            Text.empty(),
+            btn -> ScreenNavigationCompat.open(
+                this.client,
+                new ColorPickerScreen(
+                    this,
+                    Text.translatable("takeyourstreamchat.config.color_picker.title"),
+                    getter.getAsInt(),
+                    chosen -> {
+                        setter.accept(chosen);
+                        field.setText(String.format("%06X", chosen & 0xFFFFFF));
+                    }
+                )
+            )
+        ).dimensions(0, 0, COLOR_PICKER_SIZE, CONTROL_HEIGHT).build();
+        this.addDrawableChild(picker);
+
+        return addEntry(new ConfigEntry(
+            labelKey,
+            descriptionKey,
+            ConfigEntryType.COLOR_FIELD,
+            new ColorFieldRow(field, picker),
+            ConfigCategory.MESSAGES,
+            getter
+        ));
+    }
+
+    private void addPlatformCard(takeyourminestream.ijustseen.integration.chat.ChatPlatform platform) {
+        String platformKey = platform.getIconKey();
+        boolean hasChannel = !platformChannelValue(platform).trim().isEmpty();
+        if (!hasChannel && ModConfig.isPLATFORM_ENABLED(platformKey)) {
+            ModConfig.setPLATFORM_ENABLED(platformKey, false);
+        }
+
         ButtonWidget toggle = ButtonWidget.builder(
-            ConfigUiHelper.onOffText(enabledGetter.getAsBoolean()),
+            ConfigUiHelper.onOffText(ModConfig.isPLATFORM_ENABLED(platformKey)),
             btn -> {
-                boolean enabled = !enabledGetter.getAsBoolean();
-                enabledSetter.accept(enabled);
+                boolean enabled = !ModConfig.isPLATFORM_ENABLED(platformKey);
+                ModConfig.setPLATFORM_ENABLED(platformKey, enabled);
                 btn.setMessage(ConfigUiHelper.onOffText(enabled));
-                applyConnectionSettingsFromConfig(enabled);
+                applyConnectionSettingsFromConfig();
             }
         ).dimensions(0, 0, TOGGLE_BUTTON_WIDTH, CONTROL_HEIGHT).build();
+        // Платформу нельзя включить с пустым ником: канал задаётся на её странице настроек
+        toggle.active = hasChannel;
         this.addDrawableChild(toggle);
 
-        // Платформу нельзя включить с пустым ником: выключаем и блокируем тумблер
-        Runnable syncToggleAvailability = () -> {
-            boolean hasText = !field.getText().trim().isEmpty();
-            if (!hasText && enabledGetter.getAsBoolean()) {
-                enabledSetter.accept(false);
-            }
-            toggle.active = hasText;
-            toggle.setMessage(ConfigUiHelper.onOffText(enabledGetter.getAsBoolean()));
-        };
-        field.setChangedListener(value -> {
-            ConfigManager.getInstance().setConfigValue(configKey, value);
-            syncToggleAvailability.run();
-        });
-        syncToggleAvailability.run();
+        ButtonWidget settings = ButtonWidget.builder(
+            Text.empty(),
+            btn -> ScreenNavigationCompat.open(this.client, new PlatformConfigScreen(this, platform))
+        ).dimensions(0, 0, CARD_SETTINGS_WIDTH, CONTROL_HEIGHT).build();
+        this.addDrawableChild(settings);
 
-        PlatformChannelRow row = new PlatformChannelRow(field, toggle, platformIconKey);
-        configEntries.add(new ConfigEntry(labelKey, descriptionKey, ConfigEntryType.PLATFORM_ROW, row, ConfigCategory.GENERAL));
+        PlatformSettingsCard card = new PlatformSettingsCard(platform, toggle, settings);
+        configEntries.add(new ConfigEntry(
+            "takeyourstreamchat.config.platform_card",
+            "takeyourstreamchat.config.platform_card.desc",
+            ConfigEntryType.PLATFORM_CARD,
+            card,
+            ConfigCategory.GENERAL
+        ));
+    }
+
+    private static String platformChannelValue(takeyourminestream.ijustseen.integration.chat.ChatPlatform platform) {
+        Object value = ConfigManager.getInstance()
+            .getConfigValue(PlatformConfigScreen.channelConfigKey(platform));
+        return value instanceof String s ? s : "";
     }
     
     private void updateCategoryVisibility() {
         clampScrollOffset();
         for (ConfigEntry entry : configEntries) {
-            setWidgetVisible(entry.widget, entry.category == currentCategory);
+            setWidgetVisible(entry.widget, isEntryShown(entry));
         }
         updateEntryPositions();
     }
+
+    /** Строка текущей категории, зависимые условия которой выполнены. */
+    private boolean isEntryShown(ConfigEntry entry) {
+        return entry.category == currentCategory && entry.isVisible();
+    }
     
+    /**
+     * Считает позиции строк текущей категории: карточки платформ идут по две в ряд,
+     * остальные настройки — во всю ширину. Возвращает полную высоту содержимого.
+     */
+    private int layoutEntries() {
+        int rowLeft = CONTENT_PADDING + 4;
+        int rowRight = this.width - CONTENT_PADDING - 4;
+        int fullWidth = rowRight - rowLeft;
+        int halfWidth = (fullWidth - CARD_GAP) / 2;
+        int startY = getMainPanelTop() + CONTENT_PADDING - scrollOffset;
+        int y = startY;
+        int column = 0;
+
+        for (ConfigEntry entry : configEntries) {
+            if (!isEntryShown(entry)) {
+                continue;
+            }
+
+            if (entry.type == ConfigEntryType.PLATFORM_CARD) {
+                entry.rowX = rowLeft + column * (halfWidth + CARD_GAP);
+                entry.rowY = y;
+                entry.rowWidth = halfWidth;
+                column++;
+                if (column == 2) {
+                    column = 0;
+                    y += CARD_HEIGHT + ENTRY_SPACING;
+                }
+                continue;
+            }
+
+            if (column != 0) {
+                column = 0;
+                y += CARD_HEIGHT + ENTRY_SPACING;
+            }
+            entry.rowX = rowLeft;
+            entry.rowY = y;
+            entry.rowWidth = fullWidth;
+            y += ENTRY_HEIGHT + ENTRY_SPACING;
+        }
+        if (column != 0) {
+            y += CARD_HEIGHT + ENTRY_SPACING;
+        }
+        if (y == startY) {
+            return CONTENT_PADDING * 2;
+        }
+        return y - startY - ENTRY_SPACING + CONTENT_PADDING * 2;
+    }
+
     private void updateEntryPositions() {
+        clampScrollOffset();
+        layoutEntries();
         int contentTop = getMainPanelTop();
         int contentBottom = getScrollBottom();
-        int y = contentTop + CONTENT_PADDING - scrollOffset;
         int rightX = this.width - SIDE_MARGIN - CONTROL_WIDTH;
-        
+
         for (ConfigEntry entry : configEntries) {
-            if (entry.category != currentCategory) {
+            if (!isEntryShown(entry)) {
                 setWidgetVisible(entry.widget, false);
                 continue;
             }
 
-            if (entry.type == ConfigEntryType.PLATFORM_ROW && entry.widget instanceof PlatformChannelRow row) {
-                positionPlatformRow(row, rightX, y);
-                boolean visibleInViewport = isElementVisible(y, contentTop, contentBottom);
-                setWidgetVisible(row.field, visibleInViewport);
-                setWidgetVisible(row.toggle, visibleInViewport);
+            if (entry.widget instanceof PlatformSettingsCard card) {
+                positionPlatformCard(card, entry);
+            } else if (entry.widget instanceof ToggleWithSettingsRow row) {
+                positionToggleWithSettingsRow(row, rightX, entry.rowY);
+            } else if (entry.widget instanceof ColorFieldRow row) {
+                positionColorFieldRow(row, rightX, entry.rowY);
             } else {
-                setWidgetPosition(entry.widget, rightX, y);
-                boolean visibleInViewport = isElementVisible(y, contentTop, contentBottom);
-                setWidgetVisible(entry.widget, visibleInViewport);
+                setWidgetPosition(entry.widget, rightX, entry.rowY);
             }
-            
-            y += ENTRY_HEIGHT + ENTRY_SPACING;
+            setWidgetVisible(entry.widget, isElementVisible(entry.rowY, entry.rowHeight(), contentTop, contentBottom));
+            setWidgetEnabled(entry.widget, entry.isEnabled());
         }
     }
 
-    private void positionPlatformRow(PlatformChannelRow row, int rightX, int y) {
-        int centeredY = y + (ENTRY_HEIGHT - CONTROL_HEIGHT) / 2;
-        int toggleX = rightX + CONTROL_WIDTH - TOGGLE_BUTTON_WIDTH;
-        row.field.setPosition(rightX, centeredY);
-        row.field.setDimensions(PLATFORM_FIELD_WIDTH, CONTROL_HEIGHT);
-        row.toggle.setPosition(toggleX, centeredY);
-        row.toggle.setDimensions(TOGGLE_BUTTON_WIDTH, CONTROL_HEIGHT);
+    private void positionToggleWithSettingsRow(ToggleWithSettingsRow row, int rightX, int rowY) {
+        int controlsY = rowY + (ENTRY_HEIGHT - CONTROL_HEIGHT) / 2;
+        row.toggle.setPosition(rightX, controlsY);
+        row.settings.setPosition(rightX + CONTROL_WIDTH - CARD_SETTINGS_WIDTH, controlsY);
+    }
+
+    private void positionColorFieldRow(ColorFieldRow row, int rightX, int rowY) {
+        int controlsY = rowY + (ENTRY_HEIGHT - CONTROL_HEIGHT) / 2;
+        row.field.setPosition(rightX, controlsY);
+        row.picker.setPosition(rightX + CONTROL_WIDTH - COLOR_PICKER_SIZE, controlsY);
+    }
+
+    private void positionPlatformCard(PlatformSettingsCard card, ConfigEntry entry) {
+        int controlsY = entry.rowY + (CARD_HEIGHT - CONTROL_HEIGHT) / 2;
+        int settingsX = entry.rowX + entry.rowWidth - CARD_INNER_PADDING - CARD_SETTINGS_WIDTH;
+        int toggleX = settingsX - CARD_GAP - TOGGLE_BUTTON_WIDTH;
+        card.toggle.setPosition(toggleX, controlsY);
+        card.toggle.setDimensions(TOGGLE_BUTTON_WIDTH, CONTROL_HEIGHT);
+        card.settings.setPosition(settingsX, controlsY);
+        card.settings.setDimensions(CARD_SETTINGS_WIDTH, CONTROL_HEIGHT);
     }
     
 
@@ -592,14 +828,12 @@ public class ModConfigScreen extends Screen {
     }
 
 
-    private Text getRoleFilterButtonText() {
-        return switch (ModConfig.getCHAT_ROLE_FILTER()) {
-            case SUBSCRIBERS -> Text.translatable("takeyourstreamchat.config.role_filter.subscribers");
-            case VIP -> Text.translatable("takeyourstreamchat.config.role_filter.vip");
-            case MODS -> Text.translatable("takeyourstreamchat.config.role_filter.mods");
-            case SUB_OR_VIP -> Text.translatable("takeyourstreamchat.config.role_filter.sub_or_vip");
-            case SUB_OR_MOD -> Text.translatable("takeyourstreamchat.config.role_filter.sub_or_mod");
-            default -> Text.translatable("takeyourstreamchat.config.role_filter.all");
+    private Text getHudAnchorButtonText() {
+        return switch (ModConfig.getHUD_ANCHOR()) {
+            case TOP_LEFT -> Text.translatable("takeyourstreamchat.config.hud_anchor.top_left");
+            case BOTTOM_RIGHT -> Text.translatable("takeyourstreamchat.config.hud_anchor.bottom_right");
+            case BOTTOM_LEFT -> Text.translatable("takeyourstreamchat.config.hud_anchor.bottom_left");
+            default -> Text.translatable("takeyourstreamchat.config.hud_anchor.top_right");
         };
     }
 
@@ -633,17 +867,15 @@ public class ModConfigScreen extends Screen {
         java.util.Set<ButtonWidget> hiddenButtons = ScreenUiHelper.hideButtons(this);
         List<Object> temporarilyHidden = new ArrayList<>();
         for (ConfigEntry entry : configEntries) {
-            if (entry.category != currentCategory) {
+            if (!isEntryShown(entry)) {
                 continue;
             }
             if (entry.widget instanceof TextFieldWidget w && w.visible) {
                 w.visible = false;
                 temporarilyHidden.add(w);
-            } else if (entry.widget instanceof PlatformChannelRow row) {
-                if (row.field.visible) {
-                    row.field.visible = false;
-                    temporarilyHidden.add(row.field);
-                }
+            } else if (entry.widget instanceof ColorFieldRow row && row.field.visible) {
+                row.field.visible = false;
+                temporarilyHidden.add(row);
             } else if (entry.widget instanceof ChanceForSpawnSliderWidget w && w.visible) {
                 w.visible = false;
                 temporarilyHidden.add(w);
@@ -722,7 +954,7 @@ public class ModConfigScreen extends Screen {
                 false
             );
             if (chatToggleButton != null) {
-                boolean chatConnected = ChatConnectionManager.getInstance(ConfigManager.getInstance()).isConnected();
+                boolean chatConnected = ChatConnectionManager.getInstance(ConfigManager.getInstance()).isParserEnabled();
                 ModUiTheme.drawConnectionToggleButton(
                     context,
                     this.textRenderer,
@@ -808,7 +1040,7 @@ public class ModConfigScreen extends Screen {
 
     private void renderConfigWidgets(DrawContext context, int mouseX, int mouseY, float delta, int contentTop, int contentBottom) {
         for (ConfigEntry entry : configEntries) {
-            if (entry.category != currentCategory) {
+            if (!isEntryShown(entry)) {
                 continue;
             }
 
@@ -822,55 +1054,60 @@ public class ModConfigScreen extends Screen {
                         widget.getWidth(),
                         widget.getHeight()
                     );
-                    ModUiTheme.drawButton(
-                        context,
-                        this.textRenderer,
-                        widget.getX(),
-                        widget.getY(),
-                        widget.getWidth(),
-                        widget.getHeight(),
-                        widget.getMessage(),
-                        hovered,
-                        widget.active,
-                        false,
-                        true
-                    );
+                    if (entry.type == ConfigEntryType.DANGER_BUTTON) {
+                        ModUiTheme.drawCompactButton(
+                            context,
+                            this.textRenderer,
+                            widget.getX(),
+                            widget.getY(),
+                            widget.getWidth(),
+                            widget.getHeight(),
+                            widget.getMessage(),
+                            hovered,
+                            ModUiTheme.ButtonVariant.DANGER
+                        );
+                    } else {
+                        ModUiTheme.drawButton(
+                            context,
+                            this.textRenderer,
+                            widget.getX(),
+                            widget.getY(),
+                            widget.getWidth(),
+                            widget.getHeight(),
+                            widget.getMessage(),
+                            hovered,
+                            widget.active,
+                            false,
+                            true
+                        );
+                    }
                 }
-            } else if (entry.widget instanceof PlatformChannelRow row) {
-                if (row.field.visible && isElementVisible(row.field.getY(), contentTop, contentBottom)) {
-                    ModUiTheme.drawInputFrame(
-                        context,
-                        row.field.getX(),
-                        row.field.getY(),
-                        row.field.getWidth(),
-                        row.field.getHeight(),
-                        row.field.isFocused()
-                    );
-                    row.field.render(context, mouseX, mouseY, delta);
+            } else if (entry.widget instanceof PlatformSettingsCard card) {
+                if (!card.toggle.visible || !isElementVisible(entry.rowY, CARD_HEIGHT, contentTop, contentBottom)) {
+                    continue;
                 }
-                if (row.toggle.visible && isElementVisible(row.toggle.getY(), contentTop, contentBottom)) {
-                    boolean hovered = ModUiTheme.isHovered(
-                        mouseX,
-                        mouseY,
-                        row.toggle.getX(),
-                        row.toggle.getY(),
-                        row.toggle.getWidth(),
-                        row.toggle.getHeight()
-                    );
-                    ModUiTheme.drawButton(
-                        context,
-                        this.textRenderer,
-                        row.toggle.getX(),
-                        row.toggle.getY(),
-                        row.toggle.getWidth(),
-                        row.toggle.getHeight(),
-                        row.toggle.getMessage(),
-                        hovered,
-                        row.toggle.active,
-                        false,
-                        true
-                    );
+                drawCardButton(context, card.toggle, mouseX, mouseY, card.toggle.getMessage(), null);
+                drawCardButton(context, card.settings, mouseX, mouseY, Text.empty(), ICON_SETTINGS);
+            } else if (entry.widget instanceof ToggleWithSettingsRow row) {
+                if (!row.toggle.visible || !isElementVisible(entry.rowY, ENTRY_HEIGHT, contentTop, contentBottom)) {
+                    continue;
                 }
+                drawCardButton(context, row.toggle, mouseX, mouseY, row.toggle.getMessage(), null);
+                drawCardButton(context, row.settings, mouseX, mouseY, Text.empty(), ICON_SETTINGS);
+            } else if (entry.widget instanceof ColorFieldRow row) {
+                if (!row.field.visible || !isElementVisible(entry.rowY, ENTRY_HEIGHT, contentTop, contentBottom)) {
+                    continue;
+                }
+                ModUiTheme.drawInputFrame(
+                    context,
+                    row.field.getX(),
+                    row.field.getY(),
+                    row.field.getWidth(),
+                    row.field.getHeight(),
+                    row.field.isFocused()
+                );
+                row.field.render(context, mouseX, mouseY, delta);
+                drawColorPickerButton(context, row.picker, entry.colorPreview == null ? 0xFFFFFF : entry.colorPreview.getAsInt(), mouseX, mouseY);
             } else if (entry.widget instanceof TextFieldWidget widget) {
                 if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
                     ModUiTheme.drawInputFrame(
@@ -903,109 +1140,152 @@ public class ModConfigScreen extends Screen {
     }
     
     private void renderLabels(DrawContext context, int mouseX, int mouseY, int contentTop, int contentBottom) {
-        int labelColor = ModUiTheme.TEXT_PRIMARY;
         int fontHeight = this.textRenderer.fontHeight;
-        
-        int labelX = CONTENT_PADDING + 10;
-        int rowLeft = CONTENT_PADDING + 4;
-        int rowRight = this.width - CONTENT_PADDING - 4;
-        
-        int baseY = contentTop + CONTENT_PADDING - scrollOffset;
-        int currentY = baseY;
-        
+
         for (ConfigEntry entry : configEntries) {
-            if (entry.category != currentCategory) continue;
-            
-            if (isElementVisible(currentY, contentTop, contentBottom)) {
-                boolean rowHovered = mouseX >= rowLeft && mouseX <= rowRight && mouseY >= currentY && mouseY <= currentY + ENTRY_HEIGHT;
-                ModUiTheme.drawListRow(context, rowLeft, currentY, rowRight, currentY + ENTRY_HEIGHT, rowHovered);
+            if (!isEntryShown(entry)) continue;
 
-                int textX = labelX;
-                if (entry.widget instanceof PlatformChannelRow row && row.platformIconKey != null) {
-                    // Цветная полоска и пиксельная иконка платформы
-                    int accent = 0xFF000000
-                        | takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(row.platformIconKey);
-                    context.fill(rowLeft, currentY, rowLeft + 2, currentY + ENTRY_HEIGHT, accent);
-                    textX = takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer.drawPlatformIcon(
-                        context,
-                        row.platformIconKey,
-                        labelX,
-                        currentY + (20 - takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer.PLATFORM_ICON_SIZE) / 2
-                    );
-                }
-
-                context.drawTextWithShadow(this.textRenderer, Text.translatable(entry.labelKey),
-                    textX, currentY + (20 - fontHeight) / 2, labelColor);
-
-                if (rowHovered) {
-                    hoveredDescriptionKey = entry.descriptionKey;
-                }
+            int rowHeight = entry.rowHeight();
+            if (!isElementVisible(entry.rowY, rowHeight, contentTop, contentBottom)) {
+                continue;
             }
-            currentY += ENTRY_HEIGHT + ENTRY_SPACING;
+
+            boolean rowHovered = mouseX >= entry.rowX && mouseX <= entry.rowX + entry.rowWidth
+                && mouseY >= entry.rowY && mouseY <= entry.rowY + rowHeight;
+
+            if (entry.widget instanceof PlatformSettingsCard card) {
+                drawPlatformCard(context, card, entry, rowHovered);
+            } else {
+                ModUiTheme.drawListRow(
+                    context,
+                    entry.rowX,
+                    entry.rowY,
+                    entry.rowX + entry.rowWidth,
+                    entry.rowY + rowHeight,
+                    rowHovered
+                );
+                context.drawTextWithShadow(
+                    this.textRenderer,
+                    Text.translatable(entry.labelKey),
+                    entry.rowX + 6,
+                    entry.rowY + (rowHeight - fontHeight) / 2,
+                    entry.isEnabled() ? ModUiTheme.TEXT_PRIMARY : ModUiTheme.TEXT_HINT
+                );
+            }
+
+            if (rowHovered) {
+                hoveredDescriptionKey = entry.descriptionKey;
+            }
         }
     }
-    
-    private int getMaxLabelWidth() {
-        int maxWidth = 0;
-        
-        // Проверяем все лейблы и находим максимальную ширину
-        for (ConfigEntry entry : configEntries) {
-            if (entry.category == currentCategory) {
-                String labelText = Text.translatable(entry.labelKey).getString();
-                int width = this.textRenderer.getWidth(labelText);
-                maxWidth = Math.max(maxWidth, width);
-            }
+
+    /** Карточка платформы: тот же баннер, что и в шапке страницы источника. */
+    private void drawPlatformCard(DrawContext context, PlatformSettingsCard card, ConfigEntry entry, boolean hovered) {
+        takeyourminestream.ijustseen.ui.gui.PlatformBanner.draw(
+            context,
+            this.textRenderer,
+            card.platform,
+            entry.rowX,
+            entry.rowY,
+            entry.rowWidth,
+            CARD_HEIGHT,
+            hovered
+        );
+    }
+
+    /** Кнопка внутри карточки платформы: подпись либо центрированная иконка. */
+    private void drawCardButton(
+        DrawContext context,
+        ButtonWidget button,
+        int mouseX,
+        int mouseY,
+        Text label,
+        @Nullable Identifier icon
+    ) {
+        boolean hovered = isButtonHovered(button, mouseX, mouseY);
+        ModUiTheme.drawButton(
+            context,
+            this.textRenderer,
+            button.getX(),
+            button.getY(),
+            button.getWidth(),
+            button.getHeight(),
+            label,
+            hovered,
+            button.active,
+            false,
+            true
+        );
+        if (icon != null) {
+            takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer.drawGuiIcon(
+                context,
+                icon,
+                button.getX() + (button.getWidth() - BUTTON_ICON_SIZE) / 2,
+                button.getY() + (button.getHeight() - BUTTON_ICON_SIZE) / 2,
+                BUTTON_ICON_SIZE
+            );
         }
-        
-        return maxWidth;
+    }
+
+    /** Кнопка color picker: заливка выбранным цветом. */
+    private void drawColorPickerButton(DrawContext context, ButtonWidget button, int rgb, int mouseX, int mouseY) {
+        boolean hovered = isButtonHovered(button, mouseX, mouseY);
+        ModUiTheme.drawButton(
+            context,
+            this.textRenderer,
+            button.getX(),
+            button.getY(),
+            button.getWidth(),
+            button.getHeight(),
+            Text.empty(),
+            hovered,
+            button.active,
+            false,
+            true
+        );
+        int inset = 3;
+        int left = button.getX() + inset;
+        int top = button.getY() + inset;
+        int right = button.getX() + button.getWidth() - inset;
+        int bottom = button.getY() + button.getHeight() - inset;
+        int fill = button.active ? (0xFF000000 | (rgb & 0xFFFFFF)) : 0xFF555555;
+        context.fill(left, top, right, bottom, fill);
+        context.fill(left, top, right, top + 1, ModUiTheme.PANEL_BORDER);
+        context.fill(left, bottom - 1, right, bottom, ModUiTheme.PANEL_BORDER);
+        context.fill(left, top, left + 1, bottom, ModUiTheme.PANEL_BORDER);
+        context.fill(right - 1, top, right, bottom, ModUiTheme.PANEL_BORDER);
+    }
+
+    private void onResetDefaultsClicked() {
+        if (!resetArmed) {
+            resetArmed = true;
+            if (resetButton != null) {
+                resetButton.setMessage(Text.translatable("takeyourstreamchat.config.reset_confirm"));
+            }
+            return;
+        }
+        ConfigManager.getInstance().resetToDefaults();
+        applyConnectionSettingsFromConfig();
+        ScreenNavigationCompat.open(this.client, new ModConfigScreen(this.parent));
+    }
+
+    private void disarmResetButton() {
+        resetArmed = false;
+        if (resetButton != null) {
+            resetButton.setMessage(Text.translatable("takeyourstreamchat.config.reset_defaults.button"));
+        }
     }
     
     private boolean isElementVisible(int elementY, int contentTop, int contentBottom) {
-        return elementY + ENTRY_HEIGHT > contentTop && elementY < contentBottom;
+        return isElementVisible(elementY, ENTRY_HEIGHT, contentTop, contentBottom);
     }
 
-    private List<String> wrapText(String text, int maxWidth) {
-        List<String> lines = new ArrayList<>();
-        if (this.textRenderer.getWidth(text) <= maxWidth) {
-            lines.add(text);
-            return lines;
-        }
-        
-        String[] words = text.split(" ");
-        StringBuilder currentLine = new StringBuilder();
-        
-        for (String word : words) {
-            String testLine = currentLine.length() == 0 ? word : currentLine + " " + word;
-            if (this.textRenderer.getWidth(testLine) <= maxWidth) {
-                currentLine = new StringBuilder(testLine);
-            } else {
-                if (currentLine.length() > 0) {
-                    lines.add(currentLine.toString());
-                    currentLine = new StringBuilder(word);
-                } else {
-                    lines.add(word);
-                }
-            }
-        }
-        
-        if (currentLine.length() > 0) {
-            lines.add(currentLine.toString());
-        }
-        
-        return lines;
+    private boolean isElementVisible(int elementY, int elementHeight, int contentTop, int contentBottom) {
+        return elementY + elementHeight > contentTop && elementY < contentBottom;
     }
-    
+
     private int getTotalContentHeight() {
-        int count = 0;
-        for (ConfigEntry entry : configEntries) {
-            if (entry.category == currentCategory) {
-                count++;
-            }
-        }
-        if (count == 0) {
-            return CONTENT_PADDING * 2;
-        }
-        return count * ENTRY_HEIGHT + (count - 1) * ENTRY_SPACING + CONTENT_PADDING * 2;
+        return layoutEntries();
     }
     
     private void renderScrollbar(DrawContext context, int contentTop, int contentBottom) {
@@ -1067,9 +1347,15 @@ public class ModConfigScreen extends Screen {
     }
 
     private void setWidgetVisible(Object widget, boolean visible) {
-        if (widget instanceof PlatformChannelRow row) {
-            row.field.visible = visible;
+        if (widget instanceof PlatformSettingsCard card) {
+            card.toggle.visible = visible;
+            card.settings.visible = visible;
+        } else if (widget instanceof ToggleWithSettingsRow row) {
             row.toggle.visible = visible;
+            row.settings.visible = visible;
+        } else if (widget instanceof ColorFieldRow row) {
+            row.field.visible = visible;
+            row.picker.visible = visible;
         } else if (widget instanceof ButtonWidget) {
             ((ButtonWidget) widget).visible = visible;
         } else if (widget instanceof TextFieldWidget) {
@@ -1080,6 +1366,29 @@ public class ModConfigScreen extends Screen {
             ((MessageScaleSliderWidget) widget).visible = visible;
         } else if (widget instanceof MessageSoundVolumeSliderWidget) {
             ((MessageSoundVolumeSliderWidget) widget).visible = visible;
+        }
+    }
+
+    /** Зависимая настройка недоступна, пока не выполнено условие, от которого она зависит. */
+    private void setWidgetEnabled(Object widget, boolean enabled) {
+        if (widget instanceof PlatformSettingsCard) {
+            return;
+        } else if (widget instanceof ToggleWithSettingsRow row) {
+            row.toggle.active = enabled;
+            row.settings.active = enabled;
+        } else if (widget instanceof ColorFieldRow row) {
+            row.field.setEditable(enabled);
+            row.picker.active = enabled;
+        } else if (widget instanceof ButtonWidget button) {
+            button.active = enabled;
+        } else if (widget instanceof TextFieldWidget field) {
+            field.setEditable(enabled);
+        } else if (widget instanceof ChanceForSpawnSliderWidget slider) {
+            slider.active = enabled;
+        } else if (widget instanceof MessageScaleSliderWidget slider) {
+            slider.active = enabled;
+        } else if (widget instanceof MessageSoundVolumeSliderWidget slider) {
+            slider.active = enabled;
         }
     }
 
@@ -1100,8 +1409,7 @@ public class ModConfigScreen extends Screen {
 
     @Override
     public void close() {
-        syncPlatformFieldsToConfig();
-        applyConnectionSettingsFromConfig(false);
+        applyConnectionSettingsFromConfig();
         ConfigManager.getInstance().saveConfig();
         if (this.parent != null) {
             ScreenNavigationCompat.open(this.client, this.parent);
@@ -1110,27 +1418,8 @@ public class ModConfigScreen extends Screen {
         }
     }
 
-    /** Сохраняет ники/каналы из полей платформ перед закрытием экрана. */
-    private void syncPlatformFieldsToConfig() {
-        for (ConfigEntry entry : configEntries) {
-            if (entry.type != ConfigEntryType.PLATFORM_ROW || !(entry.widget instanceof PlatformChannelRow row)) {
-                continue;
-            }
-            String configKey = switch (row.platformIconKey) {
-                case "twitch" -> "twitchChannelName";
-                case "youtube" -> "youtubeChannel";
-                case "kick" -> "kickChannel";
-                case "tiktok" -> "tiktokUsername";
-                default -> null;
-            };
-            if (configKey != null) {
-                ConfigManager.getInstance().setConfigValue(configKey, row.field.getText());
-            }
-        }
-    }
-
-    /** Отключает выключенные платформы; переподключает изменённые каналы. */
-    private static void applyConnectionSettingsFromConfig(boolean forceReconnect) {
-        ChatConnectionManager.getInstance(ConfigManager.getInstance()).reconnectChangedPlatforms(forceReconnect);
+    /** Отключает выключенные источники; подключает новые, если парсер уже запущен. */
+    private static void applyConnectionSettingsFromConfig() {
+        ChatConnectionManager.getInstance(ConfigManager.getInstance()).reconnectChangedPlatforms();
     }
 } 
