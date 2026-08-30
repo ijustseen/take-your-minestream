@@ -506,10 +506,6 @@ public final class TwitchEmoteTextureCache {
     }
 
     private static NativeImageBackedTexture createBackedTexture(String debugName, NativeImage image) {
-        //? if >=1.21.8 {
-        return new NativeImageBackedTexture(() -> debugName, image);
-        //?} else {
-        return new NativeImageBackedTexture(image);
-        //?}
+        return EmoteTextureFactory.create(debugName, image);
     }
 }

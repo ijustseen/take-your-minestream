@@ -38,7 +38,7 @@ contributed by **Adi**.
 ### Technical
 
 - `EmoteImageCodec` — off-thread decode / GIF frames / downscale; `TwitchEmoteTextureCache` queues uploads and tracks failed loads
-- Shared `TwitchEmoteTextureCache` for all MC versions; Stonecutter picks the `NativeImageBackedTexture` / `DynamicTexture` constructor (`//? if >=1.21.8`)
+- Shared `TwitchEmoteTextureCache` for all MC versions; `EmoteTextureFactory` supplies the 1.21.8+ named texture constructor (older versions override it)
 - Message queue holds a texture deadline; spawn drains GPU uploads before polling ready messages
 
 ## [2.0.1] - 2026-07-12
