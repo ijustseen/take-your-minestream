@@ -39,7 +39,7 @@ public class ModConfigScreen extends Screen {
     private enum ConfigCategory {
         GENERAL("takeyourstreamchat.config.category.general", "icon_tab_general"),
         MESSAGES("takeyourstreamchat.config.category.messages", "icon_tab_messages"),
-        BEHAVIOR("takeyourstreamchat.config.category.behavior", "icon_tab_world");
+        LAYOUT("takeyourstreamchat.config.category.layout", "icon_tab_world");
         
         private final String translationKey;
         private final Identifier icon;
@@ -68,6 +68,10 @@ public class ModConfigScreen extends Screen {
     private ConfigCategory currentCategory = ConfigCategory.GENERAL;
     private List<ButtonWidget> categoryButtons = new ArrayList<>();
     private List<ConfigEntry> configEntries = new ArrayList<>();
+    /** Последний 3D-режим, чтобы возврат из HUD не сбрасывал Around / In front. */
+    private static MessageSpawnMode lastWorldSpawnMode = MessageSpawnMode.FRONT_OF_PLAYER;
+    private ButtonWidget displayModeButton;
+    private ButtonWidget worldPlacementButton;
     private ButtonWidget historyButton;
     private ButtonWidget chatToggleButton;
     private ButtonWidget doneButton;
@@ -213,32 +217,17 @@ public class ModConfigScreen extends Screen {
                     }
                     currentCategory = category;
                     updateCategoryVisibility();
-                    updateCategoryButtons();
                 }
             ).dimensions(startX + i * (buttonWidth + buttonSpacing), y, buttonWidth, CATEGORY_BUTTON_HEIGHT).build();
             
             categoryButtons.add(button);
             this.addDrawableChild(button);
         }
-        
-        updateCategoryButtons();
-    }
-    
-    private void updateCategoryButtons() {
-        // В HUD-режиме настройки "В мире" не применимы — вкладка недоступна
-        boolean hudMode = ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET;
-        for (int i = 0; i < categoryButtons.size(); i++) {
-            ConfigCategory category = ConfigCategory.values()[i];
-            categoryButtons.get(i).active = category != ConfigCategory.BEHAVIOR || !hudMode;
-        }
-        if (hudMode && currentCategory == ConfigCategory.BEHAVIOR) {
-            currentCategory = ConfigCategory.GENERAL;
-            updateCategoryVisibility();
-        }
     }
     
     private void createConfigEntries() {
         configEntries.clear();
+        rememberWorldModeIfNeeded();
         TextRenderer textRenderer = this.textRenderer;
 
         // Платформы: по две карточки в ряд, детальные настройки — на отдельной странице
@@ -296,61 +285,19 @@ public class ModConfigScreen extends Screen {
             ConfigCategory.GENERAL
         ));
 
-        // Сообщения: вид, время жизни, звук
-        ButtonWidget spawnModeButton = ButtonWidget.builder(
-            getSpawnModeButtonText(),
-            btn -> {
-                var currentMode = ModConfig.getMESSAGE_SPAWN_MODE();
-                var nextMode = currentMode.next();
-                ModConfig.setMESSAGE_SPAWN_MODE(nextMode);
-                btn.setMessage(getSpawnModeButtonText());
-                updateCategoryButtons();
-            }
+        // Вид: сначала мир / HUD, дальше общий внешний вид пузыря
+        displayModeButton = ButtonWidget.builder(
+            getDisplayModeButtonText(),
+            btn -> toggleDisplayKind()
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(spawnModeButton);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.spawn_mode_label", "takeyourstreamchat.config.spawn_mode.desc", ConfigEntryType.BUTTON, spawnModeButton, ConfigCategory.MESSAGES));
-
-        ButtonWidget hudAnchorButton = ButtonWidget.builder(
-            getHudAnchorButtonText(),
-            btn -> {
-                HudAnchor nextAnchor = ModConfig.getHUD_ANCHOR().next();
-                ModConfig.setHUD_ANCHOR(nextAnchor);
-                btn.setMessage(getHudAnchorButtonText());
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
-        this.addDrawableChild(hudAnchorButton);
-        addEntry(new ConfigEntry("takeyourstreamchat.config.hud_anchor", "takeyourstreamchat.config.hud_anchor.desc", ConfigEntryType.BUTTON, hudAnchorButton, ConfigCategory.MESSAGES))
-            .visibleWhen(ModConfigScreen::isHudWidgetMode);
-
-        ConfigIntTextFieldWidget hudOffsetXField = new ConfigIntTextFieldWidget(
-            textRenderer,
-            0,
-            0,
-            CONTROL_WIDTH,
-            20,
-            Text.translatable("takeyourstreamchat.config.hud_offset_x"),
-            "hudOffsetX",
-            0,
-            400
-        );
-        this.addDrawableChild(hudOffsetXField);
-        addEntry(new ConfigEntry("takeyourstreamchat.config.hud_offset_x", "takeyourstreamchat.config.hud_offset_x.desc", ConfigEntryType.TEXT_FIELD, hudOffsetXField, ConfigCategory.MESSAGES))
-            .visibleWhen(ModConfigScreen::isHudWidgetMode);
-
-        ConfigIntTextFieldWidget hudOffsetYField = new ConfigIntTextFieldWidget(
-            textRenderer,
-            0,
-            0,
-            CONTROL_WIDTH,
-            20,
-            Text.translatable("takeyourstreamchat.config.hud_offset_y"),
-            "hudOffsetY",
-            0,
-            400
-        );
-        this.addDrawableChild(hudOffsetYField);
-        addEntry(new ConfigEntry("takeyourstreamchat.config.hud_offset_y", "takeyourstreamchat.config.hud_offset_y.desc", ConfigEntryType.TEXT_FIELD, hudOffsetYField, ConfigCategory.MESSAGES))
-            .visibleWhen(ModConfigScreen::isHudWidgetMode);
+        this.addDrawableChild(displayModeButton);
+        configEntries.add(new ConfigEntry(
+            "takeyourstreamchat.config.display_mode",
+            "takeyourstreamchat.config.display_mode.desc",
+            ConfigEntryType.BUTTON,
+            displayModeButton,
+            ConfigCategory.MESSAGES
+        ));
 
         MessageScaleSliderWidget messageScaleSlider = new MessageScaleSliderWidget(0, 0, CONTROL_WIDTH, 20);
         this.addDrawableChild(messageScaleSlider);
@@ -431,7 +378,77 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(messageHistoryMaxField);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.message_history_max", "takeyourstreamchat.config.message_history_max.desc", ConfigEntryType.TEXT_FIELD, messageHistoryMaxField, ConfigCategory.MESSAGES));
 
-        // Поведение в мире
+        // Расположение: HUD-оверлей или 3D в мире — по текущему режиму отображения
+        worldPlacementButton = ButtonWidget.builder(
+            getWorldPlacementButtonText(),
+            btn -> toggleWorldPlacement()
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(worldPlacementButton);
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.world_placement",
+            "takeyourstreamchat.config.world_placement.desc",
+            ConfigEntryType.BUTTON,
+            worldPlacementButton,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode);
+
+        ButtonWidget hudAnchorButton = ButtonWidget.builder(
+            getHudAnchorButtonText(),
+            btn -> {
+                HudAnchor nextAnchor = ModConfig.getHUD_ANCHOR().next();
+                ModConfig.setHUD_ANCHOR(nextAnchor);
+                btn.setMessage(getHudAnchorButtonText());
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(hudAnchorButton);
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.hud_anchor",
+            "takeyourstreamchat.config.hud_anchor.desc",
+            ConfigEntryType.BUTTON,
+            hudAnchorButton,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isHudWidgetMode);
+
+        ConfigIntTextFieldWidget hudOffsetXField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourstreamchat.config.hud_offset_x"),
+            "hudOffsetX",
+            0,
+            400
+        );
+        this.addDrawableChild(hudOffsetXField);
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.hud_offset_x",
+            "takeyourstreamchat.config.hud_offset_x.desc",
+            ConfigEntryType.TEXT_FIELD,
+            hudOffsetXField,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isHudWidgetMode);
+
+        ConfigIntTextFieldWidget hudOffsetYField = new ConfigIntTextFieldWidget(
+            textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            20,
+            Text.translatable("takeyourstreamchat.config.hud_offset_y"),
+            "hudOffsetY",
+            0,
+            400
+        );
+        this.addDrawableChild(hudOffsetYField);
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.hud_offset_y",
+            "takeyourstreamchat.config.hud_offset_y.desc",
+            ConfigEntryType.TEXT_FIELD,
+            hudOffsetYField,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isHudWidgetMode);
+
         ConfigIntTextFieldWidget spawnMinDistanceField = new ConfigIntTextFieldWidget(
             textRenderer,
             0,
@@ -444,7 +461,13 @@ public class ModConfigScreen extends Screen {
             64
         );
         this.addDrawableChild(spawnMinDistanceField);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.spawn_min_distance", "takeyourstreamchat.config.spawn_min_distance.desc", ConfigEntryType.TEXT_FIELD, spawnMinDistanceField, ConfigCategory.BEHAVIOR));
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.spawn_min_distance",
+            "takeyourstreamchat.config.spawn_min_distance.desc",
+            ConfigEntryType.TEXT_FIELD,
+            spawnMinDistanceField,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode);
 
         ConfigIntTextFieldWidget spawnMaxDistanceField = new ConfigIntTextFieldWidget(
             textRenderer,
@@ -458,11 +481,23 @@ public class ModConfigScreen extends Screen {
             64
         );
         this.addDrawableChild(spawnMaxDistanceField);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.spawn_max_distance", "takeyourstreamchat.config.spawn_max_distance.desc", ConfigEntryType.TEXT_FIELD, spawnMaxDistanceField, ConfigCategory.BEHAVIOR));
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.spawn_max_distance",
+            "takeyourstreamchat.config.spawn_max_distance.desc",
+            ConfigEntryType.TEXT_FIELD,
+            spawnMaxDistanceField,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode);
 
         ButtonWidget freezingButton = createToggleButton(ModConfig::isENABLE_FREEZING_ON_VIEW, ModConfig::setENABLE_FREEZING_ON_VIEW);
         this.addDrawableChild(freezingButton);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.freezing_on_view", "takeyourstreamchat.config.freezing_on_view.desc", ConfigEntryType.TOGGLE, freezingButton, ConfigCategory.BEHAVIOR));
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.freezing_on_view",
+            "takeyourstreamchat.config.freezing_on_view.desc",
+            ConfigEntryType.TOGGLE,
+            freezingButton,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode);
 
         ConfigIntTextFieldWidget maxFreezeDistanceField = new ConfigIntTextFieldWidget(
             textRenderer,
@@ -476,16 +511,33 @@ public class ModConfigScreen extends Screen {
             128
         );
         this.addDrawableChild(maxFreezeDistanceField);
-        addEntry(new ConfigEntry("takeyourstreamchat.config.max_freeze_distance", "takeyourstreamchat.config.max_freeze_distance.desc", ConfigEntryType.TEXT_FIELD, maxFreezeDistanceField, ConfigCategory.BEHAVIOR))
-            .enabledWhen(ModConfig::isENABLE_FREEZING_ON_VIEW);
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.max_freeze_distance",
+            "takeyourstreamchat.config.max_freeze_distance.desc",
+            ConfigEntryType.TEXT_FIELD,
+            maxFreezeDistanceField,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode).enabledWhen(ModConfig::isENABLE_FREEZING_ON_VIEW);
 
         ButtonWidget followPlayerButton = createToggleButton(ModConfig::isFOLLOW_PLAYER, ModConfig::setFOLLOW_PLAYER);
         this.addDrawableChild(followPlayerButton);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.follow_player", "takeyourstreamchat.config.follow_player.desc", ConfigEntryType.TOGGLE, followPlayerButton, ConfigCategory.BEHAVIOR));
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.follow_player",
+            "takeyourstreamchat.config.follow_player.desc",
+            ConfigEntryType.TOGGLE,
+            followPlayerButton,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode);
 
         ButtonWidget clickToRemoveButton = createToggleButton(ModConfig::isENABLE_CLICK_TO_REMOVE, ModConfig::setENABLE_CLICK_TO_REMOVE);
         this.addDrawableChild(clickToRemoveButton);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.click_to_remove", "takeyourstreamchat.config.click_to_remove.desc", ConfigEntryType.TOGGLE, clickToRemoveButton, ConfigCategory.BEHAVIOR));
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.click_to_remove",
+            "takeyourstreamchat.config.click_to_remove.desc",
+            ConfigEntryType.TOGGLE,
+            clickToRemoveButton,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode);
 
         ButtonWidget unpinModeButton = ButtonWidget.builder(
             getUnpinModeButtonText(),
@@ -496,7 +548,13 @@ public class ModConfigScreen extends Screen {
             }
         ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
         this.addDrawableChild(unpinModeButton);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.unpin_mode", "takeyourstreamchat.config.unpin_mode.desc", ConfigEntryType.BUTTON, unpinModeButton, ConfigCategory.BEHAVIOR));
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.unpin_mode",
+            "takeyourstreamchat.config.unpin_mode.desc",
+            ConfigEntryType.BUTTON,
+            unpinModeButton,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode);
     }
 
     private ButtonWidget createToggleButton(
@@ -518,7 +576,53 @@ public class ModConfigScreen extends Screen {
     }
 
     private static boolean isHudWidgetMode() {
-        return ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET;
+        MessageSpawnMode mode = ModConfig.getMESSAGE_SPAWN_MODE();
+        return mode != null && mode.isHud();
+    }
+
+    private static boolean isWorldMode() {
+        return !isHudWidgetMode();
+    }
+
+    private static void rememberWorldModeIfNeeded() {
+        MessageSpawnMode current = ModConfig.getMESSAGE_SPAWN_MODE();
+        if (current != null && !current.isHud()) {
+            lastWorldSpawnMode = current;
+        }
+    }
+
+    private void toggleDisplayKind() {
+        MessageSpawnMode current = ModConfig.getMESSAGE_SPAWN_MODE();
+        if (current.isHud()) {
+            MessageSpawnMode restored = lastWorldSpawnMode != null && !lastWorldSpawnMode.isHud()
+                ? lastWorldSpawnMode
+                : MessageSpawnMode.FRONT_OF_PLAYER;
+            ModConfig.setMESSAGE_SPAWN_MODE(restored);
+        } else {
+            lastWorldSpawnMode = current;
+            ModConfig.setMESSAGE_SPAWN_MODE(MessageSpawnMode.HUD_WIDGET);
+        }
+        refreshModeButtons();
+        updateCategoryVisibility();
+    }
+
+    private void toggleWorldPlacement() {
+        MessageSpawnMode current = ModConfig.getMESSAGE_SPAWN_MODE();
+        if (current.isHud()) {
+            return;
+        }
+        lastWorldSpawnMode = current.nextWorldPlacement();
+        ModConfig.setMESSAGE_SPAWN_MODE(lastWorldSpawnMode);
+        refreshModeButtons();
+    }
+
+    private void refreshModeButtons() {
+        if (displayModeButton != null) {
+            displayModeButton.setMessage(getDisplayModeButtonText());
+        }
+        if (worldPlacementButton != null) {
+            worldPlacementButton.setMessage(getWorldPlacementButtonText());
+        }
     }
 
     private ConfigEntry addToggleEntry(
@@ -837,18 +941,16 @@ public class ModConfigScreen extends Screen {
         };
     }
 
-    private Text getSpawnModeButtonText() {
-        var mode = ModConfig.getMESSAGE_SPAWN_MODE();
-        switch (mode) {
-            case AROUND_PLAYER:
-                return Text.translatable("takeyourstreamchat.config.around_player");
-            case FRONT_OF_PLAYER:
-                return Text.translatable("takeyourstreamchat.config.fop_only");
-            case HUD_WIDGET:
-                return Text.translatable("takeyourstreamchat.config.hud_widget");
-            default:
-                return Text.translatable("takeyourstreamchat.config.around_player");
-        }
+    private Text getDisplayModeButtonText() {
+        return isHudWidgetMode()
+            ? Text.translatable("takeyourstreamchat.config.display_mode.hud")
+            : Text.translatable("takeyourstreamchat.config.display_mode.world");
+    }
+
+    private Text getWorldPlacementButtonText() {
+        return ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.AROUND_PLAYER
+            ? Text.translatable("takeyourstreamchat.config.around_player")
+            : Text.translatable("takeyourstreamchat.config.fop_only");
     }
 
     private Text getUnpinModeButtonText() {

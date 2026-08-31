@@ -29,11 +29,13 @@ contributed by **Adi**.
 - **Enabling a source no longer starts the parser** — a source switch only adds it to the parsed list; connections open when the chat parser is started (Chat ON) and new sources join a running parser
 - **Main settings screen** — platforms are now banner cards, two per row (same look as the platform page header): icon, name, on/off switch and a gear button that opens the platform page
 - **Automoderation and username blocklist** — each is a single row now: on/off switch plus a gear button that opens the banwords / blocked usernames list
-- **Dependent settings** — HUD position and offsets appear only in HUD widget mode; panel colors are greyed out without the message background, border color while the border follows the platform, notification volume without the sound, and freeze distance without freezing
+- **Dependent settings** — HUD position and offsets appear only in HUD overlay mode; panel colors are greyed out without the message background, border color while the border follows the platform, notification volume without the sound, and freeze distance without freezing
+- **Settings tabs** — Appearance vs Placement instead of mixing HUD and 3D modes in one cycle. World/HUD is on Appearance; Around/In front, distances and 3D behavior stay on Placement (always available). Switching back from HUD restores the last 3D mode
 - **Message shatter particles** — most shards use the panel fill color; the rest use the panel border color (platform accent or the custom border), not the author nick color
 - **Emotes, stickers and color emoji no longer hitch the game** — download, AWT rasterization and GIF decode run on background loader threads; GPU upload is capped at a few textures per tick. Large stickers are downscaled to 128 px. The emoji font is warmed up at client init
 - **Messages wait for pictures** — a bubble is shown only after its emotes/stickers/emoji textures are ready (or after 8 s if a CDN never answers), so codes no longer flash as raw text
 - **26.2 missing panel border** — fill and border were submitted on the same plane; `COLLECT_SUBMITS` sometimes drew the fill on top. The border is now offset slightly toward the camera
+- **26.x keybind category name** — 1.21.9+ looks up `key.category.<modid>.<path>` instead of the old `key.categories.*` string; the missing translation was showing the raw key
 
 ### Technical
 

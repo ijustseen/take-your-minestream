@@ -49,4 +49,27 @@ public enum MessageSpawnMode {
         int nextIndex = (this.ordinal() + 1) % values.length;
         return values[nextIndex];
     }
+
+    public boolean isHud() {
+        return this == HUD_WIDGET;
+    }
+
+    /** World ↔ HUD; при возврате в мир берём последний 3D-режим. */
+    public MessageSpawnMode toggleDisplayKind(MessageSpawnMode lastWorldMode) {
+        if (isHud()) {
+            return lastWorldMode != null && !lastWorldMode.isHud() ? lastWorldMode : FRONT_OF_PLAYER;
+        }
+        return HUD_WIDGET;
+    }
+
+    /** Around ↔ in front. Для HUD не меняет режим. */
+    public MessageSpawnMode nextWorldPlacement() {
+        if (this == AROUND_PLAYER) {
+            return FRONT_OF_PLAYER;
+        }
+        if (this == FRONT_OF_PLAYER) {
+            return AROUND_PLAYER;
+        }
+        return this;
+    }
 }
