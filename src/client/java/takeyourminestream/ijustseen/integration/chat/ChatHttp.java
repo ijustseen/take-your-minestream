@@ -24,9 +24,14 @@ public final class ChatHttp {
     private static final String USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
     private static final Duration TIMEOUT = Duration.ofSeconds(15);
-    private static final String TTWID_REGISTER_URL = "https://ttwid.bytedance.com/ttwid/union/register/";
+    /**
+     * Хост {@code ttwid.bytedance.com} отвечает 200 и {@code parse params fail} без Set-Cookie.
+     * Тот же union register на {@code www.tiktok.com} выставляет {@code ttwid}.
+     */
+    private static final String TTWID_REGISTER_URL = "https://www.tiktok.com/ttwid/union/register/";
     private static final String TTWID_REGISTER_BODY =
-        "{\"aid\":1988,\"service\":\"www.tiktok.com\",\"union\":true,\"needFid\":false}";
+        "{\"region\":\"us\",\"aid\":1988,\"needFid\":false,\"service\":\"www.tiktok.com\","
+            + "\"migrate_info\":{\"ticket\":\"\",\"source\":\"node\"},\"cbUrlProtocol\":\"https\",\"union\":true}";
 
     private static final CookieManager COOKIE_MANAGER = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
 
@@ -98,7 +103,7 @@ public final class ChatHttp {
     /**
      * Получает {@code ttwid} для TikTok WebSocket.
      * Сначала прогревает сессию через страницу TikTok (с cookie jar на редиректах),
-     * затем при необходимости запрашивает cookie через ByteDance register API.
+     * затем при необходимости запрашивает cookie через union register на www.tiktok.com.
      */
     public static String fetchTtwidCookie(String tiktokUsername) throws IOException {
         warmUpTikTokSession("https://www.tiktok.com/");
@@ -176,6 +181,11 @@ public final class ChatHttp {
         if (response.statusCode() >= 400) {
             TakeYourMineStreamClient.LOGGER.debug("TikTok ttwid register HTTP {}", response.statusCode());
             return null;
+        }
+
+        String body = response.body();
+        if (body != null && body.contains("\"status_code\"") && !body.contains("\"status_code\":0")) {
+            TakeYourMineStreamClient.LOGGER.debug("TikTok ttwid register rejected: {}", body);
         }
 
         for (String header : response.headers().allValues("set-cookie")) {

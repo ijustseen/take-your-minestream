@@ -1,11 +1,11 @@
 # Сборка и запуск
 
-Проект использует [Stonecutter](https://stonecutter.kikugie.dev/): один исходный код, версии Minecraft — **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**.
+Проект использует [Stonecutter](https://stonecutter.kikugie.dev/): один исходный код, версии Minecraft — **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3**.
 
 Требования:
 - **1.21.x** — JDK 21
-- **26.1** — JDK 25 (Gradle toolchain подтянет автоматически, если установлен)
-- Gradle 9.4+ (`./gradlew`)
+- **26.1 / 26.2 / 26.3** — JDK 25 (Gradle toolchain подтянет автоматически, если установлен)
+- Gradle 9.6+ (`./gradlew`; Loom 1.17 для 26.3)
 
 ## Активная версия
 
@@ -46,6 +46,8 @@
 ./gradlew :1.21.4:build :1.21.4:buildAndCollect
 ./gradlew :1.21.8:build :1.21.8:buildAndCollect
 ./gradlew :26.1:build :26.1:buildAndCollect
+./gradlew :26.2:build :26.2:buildAndCollect
+./gradlew :26.3:build :26.3:buildAndCollect
 ```
 
 Имена артефактов: `tysc-<mod.version>+<minecraft>.jar` (например `tysc-2.0.0+1.21.11.jar`, `tysc-2.0.0+26.1.jar`).
@@ -84,6 +86,8 @@
 ./gradlew :1.21.10:runClient
 ./gradlew :1.21.8:runClient
 ./gradlew :26.1:runClient
+./gradlew :26.2:runClient
+./gradlew :26.3:runClient
 ```
 
 ## Структура версий
@@ -97,6 +101,8 @@
 | 1.21.10   | `versions/1.21.10/gradle.properties` | `build-obfuscated.gradle.kts`, общий `src/` |
 | 1.21.11   | `versions/1.21.11/gradle.properties` | `build-obfuscated.gradle.kts`, активная по умолчанию |
 | 26.1      | `versions/26.1/gradle.properties` | `build-unobfuscated.gradle.kts`, JAR для 26.1–26.1.2 |
+| 26.2      | `versions/26.2/gradle.properties` | `build-unobfuscated.gradle.kts`, submit-рендер |
+| 26.3      | `versions/26.3/gradle.properties` | `build-26.3.gradle.kts`, Loom 1.17, SDL (`InputConstants`) |
 
 Общие настройки мода: `gradle.properties` (`mod.version`, `mod.archives_name` и т.д.).
 

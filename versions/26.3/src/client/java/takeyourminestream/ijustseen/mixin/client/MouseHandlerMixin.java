@@ -1,0 +1,100 @@
+package takeyourminestream.ijustseen.mixin.client;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.MouseHandler;
+import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.item.component.SwingAnimation;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.config.MessageSpawnMode;
+import takeyourminestream.ijustseen.config.ModConfig;
+import takeyourminestream.ijustseen.messages.Message;
+import takeyourminestream.ijustseen.messages.MessageClickHandler;
+import takeyourminestream.ijustseen.messages.PinnedMessageStore;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
+
+import java.util.ArrayList;
+
+/** Mixin для обработки кликов по 3D-сообщениям (Minecraft 26.x). */
+@Mixin(MouseHandler.class)
+public class MouseHandlerMixin {
+    @Shadow @Final private Minecraft minecraft;
+
+    @Inject(method = "onButton", at = @At("HEAD"), cancellable = true)
+    private void onButton(long window, MouseButtonInfo input, int action, CallbackInfo ci) {
+        int button = input.button();
+
+        if (minecraft.player == null || minecraft.level == null || ScreenNavigationCompat.current(minecraft) != null) {
+            return;
+        }
+
+        if (ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET) {
+            return;
+        }
+
+        var messageSpawner = TakeYourMineStreamClient.getStaticMessageSpawner();
+        if (messageSpawner == null) {
+            return;
+        }
+
+        var lifecycleManager = messageSpawner.getLifecycleManager();
+        if (lifecycleManager == null) {
+            return;
+        }
+
+        if (button == InputConstants.MOUSE_BUTTON_RIGHT) {
+            var interactionManager = messageSpawner.getPinnedInteractionManager();
+            if (interactionManager == null) {
+                return;
+            }
+
+            if (action == 1) {
+                if (!minecraft.player.getMainHandItem().isEmpty()) {
+                    return;
+                }
+                if (interactionManager.onRightMousePressed(minecraft)) {
+                    ci.cancel();
+                }
+                return;
+            }
+
+            if (action == 0) {
+                interactionManager.onRightMouseReleased();
+            }
+            return;
+        }
+
+        if (!ModConfig.isENABLE_CLICK_TO_REMOVE() || button != InputConstants.MOUSE_BUTTON_LEFT || action != 1) {
+            return;
+        }
+
+        if (!minecraft.player.getMainHandItem().isEmpty()) {
+            return;
+        }
+
+        for (Message message : new ArrayList<>(lifecycleManager.getActiveMessages())) {
+            if (!PinnedMessageStore.belongsToCurrentWorld(message, minecraft)) {
+                continue;
+            }
+            if (message.isPinned()) {
+                continue;
+            }
+            if (MessageClickHandler.isClickOnMessage(minecraft, message, lifecycleManager.getTickCounter())) {
+                lifecycleManager.removeMessageWithParticles(message, minecraft);
+                LocalPlayer player = Minecraft.getInstance().player;
+                player.swing(player.getUsedItemHand(), SwingAnimation.DEFAULT, false);
+                player.playSound(SoundEvents.PLAYER_ATTACK_CRIT, 0.5f, 1.5f);
+                ci.cancel();
+                return;
+            }
+        }
+    }
+}

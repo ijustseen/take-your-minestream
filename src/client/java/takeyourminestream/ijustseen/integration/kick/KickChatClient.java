@@ -51,6 +51,9 @@ public class KickChatClient implements ChatConnection {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
+                if (!running || Thread.currentThread().isInterrupted() || isInterruption(e)) {
+                    break;
+                }
                 TakeYourMineStreamClient.LOGGER.warn("Kick chat error for {}: {}", channelSlug, e.getMessage());
                 takeyourminestream.ijustseen.integration.chat.ChatErrorReporter.report(ChatPlatform.KICK, e);
             }
@@ -216,6 +219,16 @@ public class KickChatClient implements ChatConnection {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    /** Смена канала прерывает HTTP-запрос и заворачивает это в IOException. Это остановка, не ошибка. */
+    private static boolean isInterruption(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current instanceof InterruptedException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void sleepQuietly(long ms) {

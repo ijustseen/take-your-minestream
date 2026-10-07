@@ -65,6 +65,9 @@ public class TikTokChatClient implements ChatConnection {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
+                if (!running || Thread.currentThread().isInterrupted() || isInterruption(e)) {
+                    break;
+                }
                 TakeYourMineStreamClient.LOGGER.warn("TikTok chat error for @{}: {}", username, e.getMessage());
                 takeyourminestream.ijustseen.integration.chat.ChatErrorReporter.report(ChatPlatform.TIKTOK, e);
                 disconnectWebSocket();
@@ -220,6 +223,16 @@ public class TikTokChatClient implements ChatConnection {
     private static String firstMatch(Pattern pattern, String text) {
         Matcher matcher = pattern.matcher(text);
         return matcher.find() ? matcher.group(1) : null;
+    }
+
+    /** Смена ника прерывает HTTP-запрос и заворачивает это в IOException. Это остановка, не ошибка. */
+    private static boolean isInterruption(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current instanceof InterruptedException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void sleepQuietly(long ms) {

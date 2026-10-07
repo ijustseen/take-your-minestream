@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.1.1] - 2026-10-07
+
+Release after **2.1.0**. Adds Minecraft 26.3 and fixes TikTok connect errors reported by players.
+
+### Fixed
+
+- **TikTok `ttwid`** — union register на `ttwid.bytedance.com` отвечает без cookie (`parse params fail`). Запрос идёт на `www.tiktok.com/ttwid/union/register/`, иначе чат крутит «ttwid cookie missing»
+- **Смена ника TikTok или канала Kick** во время запроса комнаты больше не пишется в чат как ошибка подключения: поток просто останавливается
+
+### Added
+
+- **Minecraft 26.3** support (`tysc-2.1.1+26.3.jar`, Fabric API 0.161.0+, Fabric Loader 0.19.2+, Mod Menu 21, Java 25, Loom 1.17, Gradle 9.6)
+
+### Changed
+
+- **26.3 input** — GLFW is gone (SDL). Default keybinds and Escape use `InputConstants`; left/right mouse buttons follow the new ids (`MOUSE_BUTTON_LEFT` / `MOUSE_BUTTON_RIGHT`)
+- **26.3 world rendering** — panel and shatter particles rotate via `PoseStack.rotateDegrees` (`mulPose(Quaternionf)` was removed)
+- **26.3 click swing** — `LivingEntity.swing` now takes `SwingAnimation`
+
 ## [2.1.0] - 2026-08-29
 
 Release after **2.0.1**. Fixes player-reported YouTube/TikTok issues, reworks platform settings into

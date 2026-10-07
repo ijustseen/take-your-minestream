@@ -262,5 +262,15 @@ stonecutter parameters {
             replace("client.screen", "client.gui.screen()")
             replace("minecraft.screen", "minecraft.gui.screen()")
         }
+        string(eval(current.version, ">= 26.3")) {
+            // 26.3 dropped GLFW for SDL. Key codes live on InputConstants.
+            replace("import org.lwjgl.glfw.GLFW;", "import com.mojang.blaze3d.platform.InputConstants;")
+            replace("GLFW.GLFW_KEY_ESCAPE", "InputConstants.KEY_ESCAPE")
+            replace("GLFW.GLFW_KEY_RIGHT_BRACKET", "InputConstants.KEY_RBRACKET")
+            replace("GLFW.GLFW_KEY_LEFT_BRACKET", "InputConstants.KEY_LBRACKET")
+            // SDL mouse buttons: left is 1, not GLFW's 0.
+            replace("click.button() == 0", "click.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT")
+            replace("if (button != 0)", "if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)")
+        }
     }
 }
