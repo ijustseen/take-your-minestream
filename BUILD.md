@@ -1,8 +1,9 @@
 # Сборка и запуск
 
-Проект использует [Stonecutter](https://stonecutter.kikugie.dev/): один исходный код, версии Minecraft — **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3**.
+Проект использует [Stonecutter](https://stonecutter.kikugie.dev/): один исходный код, версии Minecraft — **1.20.1**, **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3**.
 
 Требования:
+- **1.20.1** — байткод Java 17 (собирается тем же JDK 21 через `--release 17`)
 - **1.21.x** — JDK 21
 - **26.1 / 26.2 / 26.3** — JDK 25 (Gradle toolchain подтянет автоматически, если установлен)
 - Gradle 9.6+ (`./gradlew`; Loom 1.17 для 26.3)
@@ -41,6 +42,7 @@
 # Конкретная версия
 ./gradlew :1.21.11:build :1.21.11:buildAndCollect
 ./gradlew :1.21.10:build :1.21.10:buildAndCollect
+./gradlew :1.20.1:build :1.20.1:buildAndCollect
 ./gradlew :1.21:build :1.21:buildAndCollect
 ./gradlew :1.21.1:build :1.21.1:buildAndCollect
 ./gradlew :1.21.4:build :1.21.4:buildAndCollect
@@ -82,6 +84,7 @@
 ./gradlew runActive
 
 # Конкретная версия
+./gradlew :1.20.1:runClient
 ./gradlew :1.21.11:runClient
 ./gradlew :1.21.10:runClient
 ./gradlew :1.21.8:runClient
@@ -94,6 +97,7 @@
 
 | Версия MC | Зависимости | Особенности |
 |-----------|-------------|-------------|
+| 1.20.1    | `versions/1.20.1/gradle.properties` | `build-1.20.1.gradle.kts`, Java 17, Yarn, Mod Menu 7 |
 | 1.21      | `versions/1.21/gradle.properties` | legacy GUI/HUD render + overrides из 1.21.8 |
 | 1.21.1    | `versions/1.21.1/gradle.properties` | то же |
 | 1.21.4    | `versions/1.21.4/gradle.properties` | RenderLayer GUI + overrides из 1.21.8 |

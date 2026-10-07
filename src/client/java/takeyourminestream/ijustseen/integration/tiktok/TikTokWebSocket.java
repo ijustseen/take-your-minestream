@@ -405,6 +405,14 @@ final class TikTokWebSocket {
         return "";
     }
 
+    /** Обычный поток вместо виртуального: сборки 1.20.1 работают на Java 17. */
+    private Thread daemon(String name, Runnable task) {
+        Thread thread = new Thread(task, name);
+        thread.setDaemon(true);
+        thread.start();
+        return thread;
+    }
+
     private record UserIdentity(
         String uniqueId,
         String displayName,

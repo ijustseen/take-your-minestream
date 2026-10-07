@@ -21,13 +21,15 @@ stonecutter {
                     "build-26.3.gradle.kts"
                 } else if (sc.eval(version, ">= 26.1")) {
                     "build-unobfuscated.gradle.kts"
+                } else if (sc.eval(version, "< 1.21")) {
+                    "build-1.20.1.gradle.kts"
                 } else {
                     "build-obfuscated.gradle.kts"
                 }
                 version(version, version).buildscript(buildscript)
             }
         }
-        mc("1.21", "1.21.1", "1.21.4", "1.21.8", "1.21.10", "1.21.11", "26.1", "26.2", "26.3")
+        mc("1.20.1", "1.21", "1.21.1", "1.21.4", "1.21.8", "1.21.10", "1.21.11", "26.1", "26.2", "26.3")
         vcsVersion = "1.21.8"
     }
     create(rootProject)

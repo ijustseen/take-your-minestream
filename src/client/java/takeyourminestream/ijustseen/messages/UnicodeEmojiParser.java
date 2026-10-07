@@ -129,6 +129,20 @@ public final class UnicodeEmojiParser {
         return Character.isExtendedPictographic(codePoint);
     }
 
+    /** Java 17 не знает {@code Character.isExtendedPictographic} (Java 19+). Диапазоны Extended_Pictographic. */
+    private static boolean isExtendedPictographic(int codePoint) {
+        return (codePoint >= 0x00A9 && codePoint <= 0x00AE && (codePoint == 0x00A9 || codePoint == 0x00AE))
+            || (codePoint >= 0x203C && codePoint <= 0x2049)
+            || (codePoint >= 0x2122 && codePoint <= 0x21AA)
+            || (codePoint >= 0x231A && codePoint <= 0x23FA)
+            || (codePoint >= 0x24C2 && codePoint <= 0x25FF)
+            || (codePoint >= 0x2600 && codePoint <= 0x27BF)
+            || (codePoint >= 0x2934 && codePoint <= 0x2B55)
+            || (codePoint >= 0x3030 && codePoint <= 0x303D)
+            || (codePoint >= 0x3297 && codePoint <= 0x3299)
+            || (codePoint >= 0x1F000 && codePoint <= 0x1FAFF);
+    }
+
     private static boolean isRegionalIndicator(int codePoint) {
         return codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF;
     }

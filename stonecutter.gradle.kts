@@ -252,6 +252,41 @@ stonecutter parameters {
             replace("btn -> close()", "btn -> onClose()")
             replace("@Override\n    public void close()", "@Override\n    public void onClose()")
         }
+        string(eval(current.version, "< 1.21")) {
+            replace("Identifier.of(", "new Identifier(")
+            replace(
+                "Thread.ofVirtual().name(\"TikTokWss-\" + roomId).start(",
+                "daemon(\"TikTokWss-\" + roomId, "
+            )
+            replace(
+                "RenderLayer.getEntityTranslucent(texture, false)",
+                "RenderLayer.getEntityTranslucent(texture)"
+            )
+            replace(
+                "public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount)",
+                "public boolean mouseScrolled(double mouseX, double mouseY, double verticalAmount)"
+            )
+            replace(
+                "super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)",
+                "super.mouseScrolled(mouseX, mouseY, verticalAmount)"
+            )
+            replace(
+                "return Character.isExtendedPictographic(codePoint);",
+                "return isExtendedPictographic(codePoint);"
+            )
+        }
+        // One-way: a reverse swap would keep the longer 1.20.1 form and hide
+        // the 26.x `.setNormal(` / `setSize(` replacements.
+        if (eval(current.version, "< 1.21")) {
+            string(true) {
+                replace(".normal(0, 0, -1);", ".normal(0, 0, -1).next();")
+                replace("card.toggle.setDimensions(TOGGLE_BUTTON_WIDTH, CONTROL_HEIGHT);", "card.toggle.setWidth(TOGGLE_BUTTON_WIDTH);")
+                replace("card.settings.setDimensions(CARD_SETTINGS_WIDTH, CONTROL_HEIGHT);", "card.settings.setWidth(CARD_SETTINGS_WIDTH);")
+                replace("historyButton.setDimensions(historyW, FOOTER_BUTTON_HEIGHT);", "historyButton.setWidth(historyW);")
+                replace("chatToggleButton.setDimensions(chatW, FOOTER_BUTTON_HEIGHT);", "chatToggleButton.setWidth(chatW);")
+                replace("doneButton.setDimensions(doneW, FOOTER_BUTTON_HEIGHT);", "doneButton.setWidth(doneW);")
+            }
+        }
         string(eval(current.version, ">= 26.2")) {
             replace("getMainCamera()", "mainCamera()")
             replace("client.inGameHud.setOverlayMessage", "client.gui.hud.setOverlayMessage")

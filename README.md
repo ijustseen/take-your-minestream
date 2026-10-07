@@ -13,7 +13,7 @@ Live chat from **Twitch, YouTube, Kick & TikTok** in Minecraft — as 3D billboa
 
 ## Compatibility
 
-Minecraft **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3** (Fabric) — one jar per game version.
+Minecraft **1.20.1**, **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3** (Fabric) — one jar per game version. The 1.20.1 jar needs Java 17.
 
 Requires Fabric Loader ≥0.16.14 and Fabric API. Mod Menu optional.
 

@@ -87,7 +87,7 @@ You probably won’t need these — settings cover the same things. Main command
 
 ## Versions
 
-Minecraft **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3**. One jar per game version — pick yours on this page.
+Minecraft **1.20.1**, **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3**. One jar per game version — pick yours on this page. The 1.20.1 jar needs Java 17.
 
 Needs Fabric Loader and **Fabric API**.
 

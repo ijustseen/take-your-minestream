@@ -202,7 +202,7 @@ public final class TikTokProto {
             if (values == null || values.isEmpty()) {
                 return 0;
             }
-            Object first = values.getFirst();
+            Object first = values.get(0);
             return first instanceof Long l ? l : 0;
         }
 
@@ -219,7 +219,7 @@ public final class TikTokProto {
             if (values == null || values.isEmpty()) {
                 return new byte[0];
             }
-            Object first = values.getFirst();
+            Object first = values.get(0);
             return first instanceof byte[] b ? b : new byte[0];
         }
 

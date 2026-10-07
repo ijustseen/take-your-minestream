@@ -12,6 +12,7 @@ Release after **2.1.0**. Adds Minecraft 26.3 and fixes TikTok connect errors rep
 ### Added
 
 - **Minecraft 26.3** support (`tysc-2.1.1+26.3.jar`, Fabric API 0.161.0+, Fabric Loader 0.19.2+, Mod Menu 21, Java 25, Loom 1.17, Gradle 9.6)
+- **Minecraft 1.20.1** support (`tysc-2.1.1+1.20.1.jar`, Fabric API 0.92.12+, Mod Menu 7.2.2, Java 17) for modpacks
 
 ### Changed
 

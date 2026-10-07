@@ -102,7 +102,7 @@ public final class ChatStatusNotifier {
         int maxWidth = Math.max(120, client.getWindow().getScaledWidth() - 24);
 
         if (entries.size() == 1) {
-            return fitSingleOfflineOverlay(textRenderer, maxWidth, entries.getFirst());
+            return fitSingleOfflineOverlay(textRenderer, maxWidth, entries.get(0));
         }
 
         String platformList = joinPlatformNames(entries);
