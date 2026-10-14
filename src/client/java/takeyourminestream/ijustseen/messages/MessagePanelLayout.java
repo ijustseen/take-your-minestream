@@ -47,7 +47,7 @@ public final class MessagePanelLayout {
                 message.getText(),
                 message.getEmotes(),
                 EMOTE_ICON_SIZE + EMOTE_ICON_SPACING,
-                MessagePanelConstants.MESSAGE_WRAP_WIDTH,
+                wrapWidth(),
                 iconOffset
             );
             totalTextHeight = 0.0f;
@@ -62,7 +62,7 @@ public final class MessagePanelLayout {
         } else {
             List<OrderedText> wrappedText = textRenderer.wrapLines(
                 Text.of(message.getText()),
-                MessagePanelConstants.MESSAGE_WRAP_WIDTH
+                wrapWidth()
             );
             totalTextHeight = wrappedText.size() * textRenderer.fontHeight;
             maxTextWidth = 0;
@@ -90,7 +90,12 @@ public final class MessagePanelLayout {
     }
 
     public static float worldScale() {
-        return BASE_WORLD_SCALE * ModConfig.getMESSAGE_SCALE().getScale();
+        return BASE_WORLD_SCALE * ModConfig.getMESSAGE_SCALE_FACTOR();
+    }
+
+    /** Ширина строки до переноса для мира и HUD (история чата держит {@link MessagePanelConstants#MESSAGE_WRAP_WIDTH}). */
+    public static int wrapWidth() {
+        return ModConfig.getMESSAGE_WRAP_WIDTH();
     }
 
     /** Координаты textSpace: (0,0) — левый верх текста, как в {@code MessageRenderer}. */

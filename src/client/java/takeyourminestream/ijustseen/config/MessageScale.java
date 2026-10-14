@@ -1,7 +1,7 @@
 package takeyourminestream.ijustseen.config;
 
 /**
- * Размеры/масштабы сообщений
+ * Пресеты размера сообщений до 2.2.0. Сейчас нужны только для миграции в {@code messageSizePercent}.
  */
 public enum MessageScale {
     /**
@@ -43,6 +43,13 @@ public enum MessageScale {
     
     public float getScale() {
         return scale;
+    }
+
+    /** Процент относительно {@link #NORMAL}, округлённый до шага ползунка. */
+    public int toSizePercent() {
+        int percent = Math.round(scale / NORMAL.scale * 100f);
+        int step = ModConfigData.SIZE_PERCENT_STEP;
+        return Math.round(percent / (float) step) * step;
     }
     
     /**

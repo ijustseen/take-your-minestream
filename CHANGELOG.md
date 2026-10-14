@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.0] - Unreleased
+
+### Changed
+
+- **Message size is now a slider in percent** (25–300%, step 5%) instead of five presets. 100% is the former “Normal”; existing configs are migrated once (Tiny → 45%, Small → 75%, Large → 135%, Huge → 165%)
+- **Separate HUD widget size** — HUD cards have their own size slider (shown in HUD mode), world messages keep theirs (shown in world mode)
+
+### Fixed
+
+- **Message collision fix** - fix an error of killing the wrong message caused by wrong counting order
+
+### Added
+
+- **Message width** — line width before wrapping (60–400 px, default 120) for world messages and the HUD widget. Chat history keeps its fixed width
+
 ## [2.1.1] - 2026-10-07
 
 Release after **2.1.0**. Adds Minecraft 26.3 and fixes TikTok connect errors reported by players.

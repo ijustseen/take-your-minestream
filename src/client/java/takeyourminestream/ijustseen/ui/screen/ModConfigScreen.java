@@ -13,6 +13,7 @@ import takeyourminestream.ijustseen.config.HudAnchor;
 import takeyourminestream.ijustseen.config.UnpinMode;
 import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.ModConfig;
+import takeyourminestream.ijustseen.config.ModConfigData;
 import takeyourminestream.ijustseen.integration.chat.ChatConnectionManager;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
@@ -20,7 +21,7 @@ import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 import takeyourminestream.ijustseen.ui.widget.ChanceForSpawnSliderWidget;
 import takeyourminestream.ijustseen.ui.widget.ConfigIntTextFieldWidget;
-import takeyourminestream.ijustseen.ui.widget.MessageScaleSliderWidget;
+import takeyourminestream.ijustseen.ui.widget.ConfigIntSliderWidget;
 import takeyourminestream.ijustseen.ui.widget.MessageSoundVolumeSliderWidget;
 import takeyourminestream.ijustseen.ui.gui.ConfigUiHelper;
 import takeyourminestream.ijustseen.ui.gui.ChatConnectToggleHelper;
@@ -299,9 +300,26 @@ public class ModConfigScreen extends Screen {
             ConfigCategory.MESSAGES
         ));
 
-        MessageScaleSliderWidget messageScaleSlider = new MessageScaleSliderWidget(0, 0, CONTROL_WIDTH, 20);
-        this.addDrawableChild(messageScaleSlider);
-        configEntries.add(new ConfigEntry("takeyourstreamchat.config.message_scale", "takeyourstreamchat.config.message_scale.desc", ConfigEntryType.SLIDER, messageScaleSlider, ConfigCategory.MESSAGES));
+        ConfigIntSliderWidget messageSizeSlider = createIntSlider(
+            "messageSizePercent", ModConfigData.MIN_SIZE_PERCENT, ModConfigData.MAX_SIZE_PERCENT,
+            ModConfigData.SIZE_PERCENT_STEP, 100, value -> Text.literal(value + "%")
+        );
+        addEntry(new ConfigEntry("takeyourstreamchat.config.message_scale", "takeyourstreamchat.config.message_scale.desc", ConfigEntryType.SLIDER, messageSizeSlider, ConfigCategory.MESSAGES))
+            .visibleWhen(ModConfigScreen::isWorldMode);
+
+        ConfigIntSliderWidget hudSizeSlider = createIntSlider(
+            "hudSizePercent", ModConfigData.MIN_SIZE_PERCENT, ModConfigData.MAX_SIZE_PERCENT,
+            ModConfigData.SIZE_PERCENT_STEP, 100, value -> Text.literal(value + "%")
+        );
+        addEntry(new ConfigEntry("takeyourstreamchat.config.hud_scale", "takeyourstreamchat.config.hud_scale.desc", ConfigEntryType.SLIDER, hudSizeSlider, ConfigCategory.MESSAGES))
+            .visibleWhen(ModConfigScreen::isHudWidgetMode);
+
+        ConfigIntSliderWidget wrapWidthSlider = createIntSlider(
+            "messageWrapWidth", ModConfigData.MIN_WRAP_WIDTH, ModConfigData.MAX_WRAP_WIDTH,
+            ModConfigData.WRAP_WIDTH_STEP, ModConfigData.DEFAULT_WRAP_WIDTH,
+            value -> Text.translatable("takeyourstreamchat.config.message_wrap_width.value", value)
+        );
+        addEntry(new ConfigEntry("takeyourstreamchat.config.message_wrap_width", "takeyourstreamchat.config.message_wrap_width.desc", ConfigEntryType.SLIDER, wrapWidthSlider, ConfigCategory.MESSAGES));
 
         ConfigIntTextFieldWidget messageLifetimeField = new ConfigIntTextFieldWidget(
             textRenderer,
@@ -573,6 +591,15 @@ public class ModConfigScreen extends Screen {
     private ConfigEntry addEntry(ConfigEntry entry) {
         configEntries.add(entry);
         return entry;
+    }
+
+    private ConfigIntSliderWidget createIntSlider(
+        String configKey, int min, int max, int step, int fallback,
+        java.util.function.IntFunction<Text> label
+    ) {
+        ConfigIntSliderWidget slider = new ConfigIntSliderWidget(0, 0, CONTROL_WIDTH, CONTROL_HEIGHT, configKey, min, max, step, fallback, label);
+        this.addDrawableChild(slider);
+        return slider;
     }
 
     private static boolean isHudWidgetMode() {
@@ -981,7 +1008,7 @@ public class ModConfigScreen extends Screen {
             } else if (entry.widget instanceof ChanceForSpawnSliderWidget w && w.visible) {
                 w.visible = false;
                 temporarilyHidden.add(w);
-            } else if (entry.widget instanceof MessageScaleSliderWidget w && w.visible) {
+            } else if (entry.widget instanceof ConfigIntSliderWidget w && w.visible) {
                 w.visible = false;
                 temporarilyHidden.add(w);
             } else if (entry.widget instanceof MessageSoundVolumeSliderWidget w && w.visible) {
@@ -1227,7 +1254,7 @@ public class ModConfigScreen extends Screen {
                     ModUiTheme.drawInputFrame(context, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), false);
                     widget.render(context, mouseX, mouseY, delta);
                 }
-            } else if (entry.widget instanceof MessageScaleSliderWidget widget) {
+            } else if (entry.widget instanceof ConfigIntSliderWidget widget) {
                 if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
                     ModUiTheme.drawInputFrame(context, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), false);
                     widget.render(context, mouseX, mouseY, delta);
@@ -1464,8 +1491,8 @@ public class ModConfigScreen extends Screen {
             ((TextFieldWidget) widget).visible = visible;
         } else if (widget instanceof ChanceForSpawnSliderWidget) {
             ((ChanceForSpawnSliderWidget) widget).visible = visible;
-        } else if (widget instanceof MessageScaleSliderWidget) {
-            ((MessageScaleSliderWidget) widget).visible = visible;
+        } else if (widget instanceof ConfigIntSliderWidget) {
+            ((ConfigIntSliderWidget) widget).visible = visible;
         } else if (widget instanceof MessageSoundVolumeSliderWidget) {
             ((MessageSoundVolumeSliderWidget) widget).visible = visible;
         }
@@ -1487,7 +1514,7 @@ public class ModConfigScreen extends Screen {
             field.setEditable(enabled);
         } else if (widget instanceof ChanceForSpawnSliderWidget slider) {
             slider.active = enabled;
-        } else if (widget instanceof MessageScaleSliderWidget slider) {
+        } else if (widget instanceof ConfigIntSliderWidget slider) {
             slider.active = enabled;
         } else if (widget instanceof MessageSoundVolumeSliderWidget slider) {
             slider.active = enabled;
@@ -1502,8 +1529,8 @@ public class ModConfigScreen extends Screen {
             ((TextFieldWidget) widget).setPosition(x, centeredY);
         } else if (widget instanceof ChanceForSpawnSliderWidget) {
             ((ChanceForSpawnSliderWidget) widget).setPosition(x, centeredY);
-        } else if (widget instanceof MessageScaleSliderWidget) {
-            ((MessageScaleSliderWidget) widget).setPosition(x, centeredY);
+        } else if (widget instanceof ConfigIntSliderWidget) {
+            ((ConfigIntSliderWidget) widget).setPosition(x, centeredY);
         } else if (widget instanceof MessageSoundVolumeSliderWidget) {
             ((MessageSoundVolumeSliderWidget) widget).setPosition(x, centeredY);
         }

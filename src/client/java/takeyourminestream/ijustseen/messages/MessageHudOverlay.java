@@ -47,12 +47,12 @@ public final class MessageHudOverlay {
         int screenWidth,
         int screenHeight
     ) {
-        float hudScale = ModConfig.getMESSAGE_SCALE().getScale();
+        float hudScale = ModConfig.getHUD_SCALE_FACTOR();
         HudAnchor anchor = ModConfig.getHUD_ANCHOR();
         int insetX = MARGIN + ModConfig.getHUD_OFFSET_X();
         int insetY = MARGIN + ModConfig.getHUD_OFFSET_Y();
         int maxCardWidth = Math.max(
-            MessagePanelConstants.MESSAGE_WRAP_WIDTH + MessagePanelConstants.PADDING_X * 2,
+            MessagePanelLayout.wrapWidth() + MessagePanelConstants.PADDING_X * 2,
             (int) ((screenWidth - insetX * 2) / hudScale)
         );
 

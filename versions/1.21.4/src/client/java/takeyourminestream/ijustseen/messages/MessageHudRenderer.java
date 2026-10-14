@@ -35,7 +35,7 @@ public class MessageHudRenderer {
         TextRenderer textRenderer = client.textRenderer;
         int screenWidth = client.getWindow().getScaledWidth();
         int screenHeight = client.getWindow().getScaledHeight();
-        float hudScale = ModConfig.getMESSAGE_SCALE().getScale();
+        float hudScale = ModConfig.getHUD_SCALE_FACTOR();
         List<MessageHudOverlay.PreparedCard> cards = MessageHudOverlay.prepare(
             textRenderer,
             lifecycleManager.getActiveMessages(),

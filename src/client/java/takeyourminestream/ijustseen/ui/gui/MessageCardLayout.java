@@ -8,6 +8,7 @@ import takeyourminestream.ijustseen.core.text.ChatMessageParser;
 import takeyourminestream.ijustseen.messages.EmoteTextLayout;
 import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageEmote;
+import takeyourminestream.ijustseen.messages.MessagePanelLayout;
 import takeyourminestream.ijustseen.messages.RoleBadges;
 
 import java.util.List;
@@ -19,8 +20,12 @@ public final class MessageCardLayout {
     private MessageCardLayout() {}
 
     public static int getWrapWidth(int maxAvailableWidth) {
+        return getWrapWidth(maxAvailableWidth, MessagePanelConstants.MESSAGE_WRAP_WIDTH);
+    }
+
+    private static int getWrapWidth(int maxAvailableWidth, int preferredWrapWidth) {
         return Math.min(
-            MessagePanelConstants.MESSAGE_WRAP_WIDTH,
+            preferredWrapWidth,
             Math.max(40, maxAvailableWidth - MessagePanelConstants.PADDING_X * 2)
         );
     }
@@ -40,10 +45,14 @@ public final class MessageCardLayout {
     }
 
     public static Layout compute(TextRenderer textRenderer, Message message, int maxAvailableWidth) {
+        return compute(textRenderer, message, maxAvailableWidth, MessagePanelConstants.MESSAGE_WRAP_WIDTH);
+    }
+
+    private static Layout compute(TextRenderer textRenderer, Message message, int maxAvailableWidth, int preferredWrapWidth) {
         if (message.hasInlineEmotes()) {
-            return computeWithEmotes(textRenderer, message, maxAvailableWidth);
+            return computeWithEmotes(textRenderer, message, maxAvailableWidth, preferredWrapWidth);
         }
-        return compute(textRenderer, message.getText(), maxAvailableWidth, usernameIconOffset(message));
+        return compute(textRenderer, message.getText(), maxAvailableWidth, usernameIconOffset(message), preferredWrapWidth);
     }
 
     private static int usernameIconOffset(Message message) {
@@ -54,16 +63,16 @@ public final class MessageCardLayout {
     }
 
     public static Layout computeHud(TextRenderer textRenderer, Message message, int maxAvailableWidth) {
-        return compute(textRenderer, message, maxAvailableWidth);
+        return compute(textRenderer, message, maxAvailableWidth, MessagePanelLayout.wrapWidth());
     }
 
-    private static Layout computeWithEmotes(TextRenderer textRenderer, Message message, int maxAvailableWidth) {
+    private static Layout computeWithEmotes(TextRenderer textRenderer, Message message, int maxAvailableWidth, int preferredWrapWidth) {
         String rawMessageText = message.getText();
         ChatMessageParser.ParsedMessage parsed = ChatMessageParser.parse(rawMessageText);
         String bodyText = MessageEmoteGuiRenderer.getBodyText(rawMessageText);
         List<MessageEmote> bodyEmotes = MessageEmoteGuiRenderer.remapEmotesToBody(rawMessageText, message.getEmotes());
 
-        int wrapWidth = getWrapWidth(maxAvailableWidth);
+        int wrapWidth = getWrapWidth(maxAvailableWidth, preferredWrapWidth);
         List<EmoteTextLayout.LineContent> bodyLines = EmoteTextLayout.wrap(
             s -> textRenderer.getWidth(s.isBlank() ? s : ChatMessageParser.stripFormatting(s)),
             bodyText,
@@ -111,17 +120,18 @@ public final class MessageCardLayout {
         String rawMessageText,
         int maxAvailableWidth
     ) {
-        return compute(textRenderer, rawMessageText, maxAvailableWidth, 0);
+        return compute(textRenderer, rawMessageText, maxAvailableWidth, 0, MessagePanelConstants.MESSAGE_WRAP_WIDTH);
     }
 
     private static Layout compute(
         TextRenderer textRenderer,
         String rawMessageText,
         int maxAvailableWidth,
-        int usernameIconOffset
+        int usernameIconOffset,
+        int preferredWrapWidth
     ) {
         ChatMessageParser.ParsedMessage parsed = ChatMessageParser.parse(rawMessageText);
-        int wrapWidth = getWrapWidth(maxAvailableWidth);
+        int wrapWidth = getWrapWidth(maxAvailableWidth, preferredWrapWidth);
 
         List<OrderedText> bodyLines = parsed.bodyPlain().isBlank()
             ? List.of()

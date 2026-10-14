@@ -68,6 +68,7 @@ public class ConfigManager implements IConfigManager {
                 if (loadedData != null) {
                     this.configData = loadedData;
                     this.configData.migrateLegacyRoleFilter();
+                    this.configData.migrateLegacyMessageScale();
                     updateConfigCache();
                     LOGGER.info("Configuration loaded");
                 }
@@ -85,6 +86,7 @@ public class ConfigManager implements IConfigManager {
     public void resetToDefaults() {
         this.configData = new ModConfigData();
         this.configData.migrateLegacyRoleFilter();
+        this.configData.migrateLegacyMessageScale();
         saveConfig();
         LOGGER.info("Configuration reset to defaults");
     }
@@ -177,8 +179,14 @@ public class ConfigManager implements IConfigManager {
             case "enableAutomoderation":
                 configData.setEnableAutomoderation((Boolean) value);
                 break;
-            case "messageScale":
-                configData.setMessageScale((takeyourminestream.ijustseen.config.MessageScale) value);
+            case "messageSizePercent":
+                configData.setMessageSizePercent(((Number) value).intValue());
+                break;
+            case "hudSizePercent":
+                configData.setHudSizePercent(((Number) value).intValue());
+                break;
+            case "messageWrapWidth":
+                configData.setMessageWrapWidth(((Number) value).intValue());
                 break;
             case "showMessageBackground":
                 configData.setShowMessageBackground((Boolean) value);
@@ -305,7 +313,9 @@ public class ConfigManager implements IConfigManager {
         configCache.put("particleMaxCount", configData.getParticleMaxCount());
         configCache.put("particleLifetimeTicks", configData.getParticleLifetimeTicks());
         configCache.put("nickColors", configData.getNickColors());
-        configCache.put("messageScale", configData.getMessageScale());
+        configCache.put("messageSizePercent", configData.getMessageSizePercent());
+        configCache.put("hudSizePercent", configData.getHudSizePercent());
+        configCache.put("messageWrapWidth", configData.getMessageWrapWidth());
         configCache.put("showMessageBackground", configData.isShowMessageBackground());
         configCache.put("followPlayer", configData.isFollowPlayer());
         configCache.put("enableClickToRemove", configData.isEnableClickToRemove());

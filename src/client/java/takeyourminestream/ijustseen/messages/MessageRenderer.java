@@ -117,7 +117,7 @@ public class MessageRenderer {
             : java.util.Collections.emptyList();
         List<OrderedText> wrappedText = hasEmotes
             ? java.util.Collections.emptyList()
-            : textRenderer.wrapLines(LegacySectionText.parse(message.getText()), MessagePanelConstants.MESSAGE_WRAP_WIDTH);
+            : textRenderer.wrapLines(LegacySectionText.parse(message.getText()), MessagePanelLayout.wrapWidth());
         // Центрируем текст и панель + применяем падение
         matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
         // Рендерим панель (по флагу)

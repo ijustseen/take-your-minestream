@@ -108,7 +108,7 @@ public class MessageRenderer {
             : java.util.Collections.emptyList();
         List<FormattedCharSequence> wrappedText = hasEmotes
             ? java.util.Collections.emptyList()
-            : textRenderer.split(LegacySectionText.parse(message.getText()), MessagePanelConstants.MESSAGE_WRAP_WIDTH);
+            : textRenderer.split(LegacySectionText.parse(message.getText()), MessagePanelLayout.wrapWidth());
 
         poseStack.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {

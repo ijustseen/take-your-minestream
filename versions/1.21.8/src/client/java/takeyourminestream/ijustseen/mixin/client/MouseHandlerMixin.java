@@ -73,18 +73,25 @@ public class MouseHandlerMixin {
             return;
         }
 
-        for (Message message : new ArrayList<>(lifecycleManager.getActiveMessages())) {
+        var candidates = new ArrayList<Message>();
+        for (Message message : lifecycleManager.getActiveMessages()) {
             if (message.isPinned()) {
                 continue;
             }
-            if (MessageClickHandler.isClickOnMessage(client, message, lifecycleManager.getTickCounter())) {
-                lifecycleManager.removeMessageWithParticles(message, client);
-                ClientPlayerEntity player = MinecraftClient.getInstance().player;
-                player.swingHand(player.getActiveHand());
-                player.playSound(SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, 0.5f, 1.5f);
-                ci.cancel();
-                return;
-            }
+            candidates.add(message);
+        }
+
+        MessageClickHandler.MessageHit hit = MessageClickHandler.findClosestMessageHit(
+            client,
+            candidates,
+            lifecycleManager.getTickCounter()
+        );
+        if (hit != null) {
+            lifecycleManager.removeMessageWithParticles(hit.getMessage(), client);
+            ClientPlayerEntity player = MinecraftClient.getInstance().player;
+            player.swingHand(player.getActiveHand());
+            player.playSound(SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, 0.5f, 1.5f);
+            ci.cancel();
         }
     }
 }

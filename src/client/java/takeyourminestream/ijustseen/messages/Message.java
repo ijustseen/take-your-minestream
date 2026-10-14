@@ -40,6 +40,7 @@ public class Message {
     private volatile List<EmoteTextLayout.LineContent> cachedEmoteLines;
     private volatile MessageCardLayout.Layout cachedHudLayout;
     private volatile int cachedHudMaxWidth = -1;
+    private volatile int cachedWrapWidth = -1;
     
     public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch) {
         this(text, position, spawnTick, yaw, pitch, null, Vec3d.ZERO, java.util.Collections.emptyList());
@@ -167,6 +168,7 @@ public class Message {
     }
 
     public MessagePanelLayout.Dimensions getWorldLayout(TextRenderer textRenderer) {
+        invalidateLayoutIfWrapChanged();
         MessagePanelLayout.Dimensions cached = cachedWorldLayout;
         if (cached == null) {
             cached = MessagePanelLayout.compute(textRenderer, this);
@@ -179,6 +181,7 @@ public class Message {
         if (!hasInlineEmotes()) {
             return List.of();
         }
+        invalidateLayoutIfWrapChanged();
         List<EmoteTextLayout.LineContent> cached = cachedEmoteLines;
         if (cached == null) {
             cached = EmoteTextLayout.wrap(
@@ -186,7 +189,7 @@ public class Message {
                 getText(),
                 getEmotes(),
                 MessagePanelLayout.EMOTE_ICON_SIZE + MessagePanelLayout.EMOTE_ICON_SPACING,
-                MessagePanelConstants.MESSAGE_WRAP_WIDTH,
+                MessagePanelLayout.wrapWidth(),
                 getWorldLayout(textRenderer).firstLineIconOffset()
             );
             cachedEmoteLines = cached;
@@ -195,6 +198,7 @@ public class Message {
     }
 
     public MessageCardLayout.Layout getHudLayout(TextRenderer textRenderer, int maxAvailableWidth) {
+        invalidateLayoutIfWrapChanged();
         if (cachedHudLayout != null && cachedHudMaxWidth == maxAvailableWidth) {
             return cachedHudLayout;
         }
@@ -202,5 +206,15 @@ public class Message {
         cachedHudLayout = layout;
         cachedHudMaxWidth = maxAvailableWidth;
         return layout;
+    }
+
+    private void invalidateLayoutIfWrapChanged() {
+        int wrapWidth = MessagePanelLayout.wrapWidth();
+        if (cachedWrapWidth != wrapWidth) {
+            cachedWorldLayout = null;
+            cachedEmoteLines = null;
+            cachedHudLayout = null;
+            cachedWrapWidth = wrapWidth;
+        }
     }
 }

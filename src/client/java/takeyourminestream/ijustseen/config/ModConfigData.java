@@ -28,7 +28,12 @@ public class ModConfigData {
     private int particleMaxCount = 20;
     private int particleLifetimeTicks = 20;
     private String[] nickColors = {"§c", "§9", "§a", "§5"};
+    /** Устаревший пресет размера; читается один раз для миграции в {@link #messageSizePercent}. */
     private MessageScale messageScale = MessageScale.NORMAL;
+    private int messageSizePercent = 100;
+    private int hudSizePercent = 100;
+    private int messageWrapWidth = DEFAULT_WRAP_WIDTH;
+    private boolean messageSizeMigrated = false;
     private boolean showMessageBackground = true;
     private boolean enableColorEmojis = true;
     private boolean followPlayer = false;
@@ -75,6 +80,16 @@ public class ModConfigData {
     public static final String ROLE_VIP = "vip";
     public static final String ROLE_MODS = "mods";
 
+    /** 100% — прежний пресет «Обычные». */
+    public static final int MIN_SIZE_PERCENT = 25;
+    public static final int MAX_SIZE_PERCENT = 300;
+    public static final int SIZE_PERCENT_STEP = 5;
+    /** Ширина строки до переноса, в пикселях шрифта. */
+    public static final int DEFAULT_WRAP_WIDTH = 120;
+    public static final int MIN_WRAP_WIDTH = 60;
+    public static final int MAX_WRAP_WIDTH = 400;
+    public static final int WRAP_WIDTH_STEP = 10;
+
     /** Ключи платформ (см. {@code ChatPlatform.getIconKey()}). */
     private static final String[] PLATFORM_KEYS = {"twitch", "youtube", "kick", "tiktok"};
 
@@ -103,7 +118,9 @@ public class ModConfigData {
     public int getParticleMaxCount() { return particleMaxCount; }
     public int getParticleLifetimeTicks() { return particleLifetimeTicks; }
     public String[] getNickColors() { return nickColors; }
-    public MessageScale getMessageScale() { return messageScale; }
+    public int getMessageSizePercent() { return clampSizePercent(messageSizePercent); }
+    public int getHudSizePercent() { return clampSizePercent(hudSizePercent); }
+    public int getMessageWrapWidth() { return clampWrapWidth(messageWrapWidth); }
     public boolean isShowMessageBackground() { return showMessageBackground; }
     public boolean isEnableColorEmojis() { return enableColorEmojis; }
     public boolean isFollowPlayer() { return followPlayer; }
@@ -160,7 +177,9 @@ public class ModConfigData {
     public void setParticleMaxCount(int particleMaxCount) { this.particleMaxCount = particleMaxCount; }
     public void setParticleLifetimeTicks(int particleLifetimeTicks) { this.particleLifetimeTicks = particleLifetimeTicks; }
     public void setNickColors(String[] nickColors) { this.nickColors = nickColors; }
-    public void setMessageScale(MessageScale messageScale) { this.messageScale = messageScale; }
+    public void setMessageSizePercent(int messageSizePercent) { this.messageSizePercent = clampSizePercent(messageSizePercent); }
+    public void setHudSizePercent(int hudSizePercent) { this.hudSizePercent = clampSizePercent(hudSizePercent); }
+    public void setMessageWrapWidth(int messageWrapWidth) { this.messageWrapWidth = clampWrapWidth(messageWrapWidth); }
     public void setShowMessageBackground(boolean showMessageBackground) { this.showMessageBackground = showMessageBackground; }
     public void setEnableColorEmojis(boolean enableColorEmojis) { this.enableColorEmojis = enableColorEmojis; }
     public void setFollowPlayer(boolean followPlayer) { this.followPlayer = followPlayer; }
@@ -240,6 +259,25 @@ public class ModConfigData {
         syncLegacyRoleFilter();
         migratePlatformRoleFilters();
         migratePlatformRoleFiltersV2();
+    }
+
+    /** Один раз переносит пресет {@link MessageScale} в проценты (мир и HUD раньше делили один размер). */
+    public void migrateLegacyMessageScale() {
+        if (messageSizeMigrated) {
+            return;
+        }
+        messageSizeMigrated = true;
+        int percent = (messageScale != null ? messageScale : MessageScale.NORMAL).toSizePercent();
+        messageSizePercent = clampSizePercent(percent);
+        hudSizePercent = messageSizePercent;
+    }
+
+    private static int clampSizePercent(int percent) {
+        return Math.max(MIN_SIZE_PERCENT, Math.min(MAX_SIZE_PERCENT, percent));
+    }
+
+    private static int clampWrapWidth(int width) {
+        return Math.max(MIN_WRAP_WIDTH, Math.min(MAX_WRAP_WIDTH, width));
     }
 
     /** Один раз копирует общие фильтры ролей в пер-платформенные (фильтры стали настройкой источника). */

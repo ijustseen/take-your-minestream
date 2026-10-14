@@ -107,7 +107,7 @@ public class MessageRenderer {
         
         // Применяем масштаб из конфигурации
         float baseScale = 0.025f;
-        float configScale = takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SCALE().getScale();
+        float configScale = takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SCALE_FACTOR();
         float finalScale = baseScale * configScale;
         matrices.scale(finalScale, -finalScale, finalScale);
 
@@ -120,12 +120,12 @@ public class MessageRenderer {
                 message.getText(),
                 message.getEmotes(),
                 EMOTE_ICON_SIZE + EMOTE_ICON_SPACING,
-                MessagePanelConstants.MESSAGE_WRAP_WIDTH,
+                MessagePanelLayout.wrapWidth(),
                 iconOffset)
             : java.util.Collections.emptyList();
         List<OrderedText> wrappedText = hasEmotes
             ? java.util.Collections.emptyList()
-            : textRenderer.wrapLines(Text.of(message.getText()), MessagePanelConstants.MESSAGE_WRAP_WIDTH);
+            : textRenderer.wrapLines(Text.of(message.getText()), MessagePanelLayout.wrapWidth());
         float totalTextHeight = 0.0f;
         int maxTextWidth = 0;
         if (hasEmotes) {

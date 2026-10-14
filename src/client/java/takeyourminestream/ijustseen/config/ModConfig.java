@@ -155,12 +155,41 @@ public class ModConfig {
         ConfigManager.getInstance().setConfigValue("messageSpawnMode", value);
     }
     
-    public static takeyourminestream.ijustseen.config.MessageScale getMESSAGE_SCALE() {
-        return (takeyourminestream.ijustseen.config.MessageScale) ConfigManager.getInstance().getConfigValue("messageScale");
+    public static int getMESSAGE_SIZE_PERCENT() {
+        Object value = ConfigManager.getInstance().getConfigValue("messageSizePercent");
+        return value instanceof Number number ? number.intValue() : 100;
     }
-    
-    public static void setMESSAGE_SCALE(takeyourminestream.ijustseen.config.MessageScale value) {
-        ConfigManager.getInstance().setConfigValue("messageScale", value);
+
+    public static void setMESSAGE_SIZE_PERCENT(int value) {
+        ConfigManager.getInstance().setConfigValue("messageSizePercent", value);
+    }
+
+    public static int getHUD_SIZE_PERCENT() {
+        Object value = ConfigManager.getInstance().getConfigValue("hudSizePercent");
+        return value instanceof Number number ? number.intValue() : 100;
+    }
+
+    public static void setHUD_SIZE_PERCENT(int value) {
+        ConfigManager.getInstance().setConfigValue("hudSizePercent", value);
+    }
+
+    /** Множитель размера 3D-сообщений в мире (100% = прежний пресет «Обычные»). */
+    public static float getMESSAGE_SCALE_FACTOR() {
+        return MessageScale.NORMAL.getScale() * getMESSAGE_SIZE_PERCENT() / 100f;
+    }
+
+    /** Множитель размера карточек HUD-виджета. */
+    public static float getHUD_SCALE_FACTOR() {
+        return MessageScale.NORMAL.getScale() * getHUD_SIZE_PERCENT() / 100f;
+    }
+
+    public static int getMESSAGE_WRAP_WIDTH() {
+        Object value = ConfigManager.getInstance().getConfigValue("messageWrapWidth");
+        return value instanceof Number number ? number.intValue() : ModConfigData.DEFAULT_WRAP_WIDTH;
+    }
+
+    public static void setMESSAGE_WRAP_WIDTH(int value) {
+        ConfigManager.getInstance().setConfigValue("messageWrapWidth", value);
     }
 
     public static boolean isSHOW_MESSAGE_BACKGROUND() {
