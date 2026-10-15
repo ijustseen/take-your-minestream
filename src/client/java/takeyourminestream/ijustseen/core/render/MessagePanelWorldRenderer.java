@@ -66,6 +66,21 @@ public final class MessagePanelWorldRenderer {
         matrices.pop();
     }
 
+    /** Полупрозрачный куб 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
+    public static void drawBlockCube(Matrix4f matrix, net.minecraft.client.render.VertexConsumerProvider consumers) {
+        VertexConsumer consumer = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_TEXTURE);
+        int light = 0xF000F0;
+        int overlay = OverlayTexture.DEFAULT_UV;
+        for (BlockCubeGeometry.Quad quad : BlockCubeGeometry.quads()) {
+            float alpha = quad.edge() ? BlockCubeGeometry.EDGE_ALPHA : BlockCubeGeometry.FACE_ALPHA;
+            float[] p = quad.xyz();
+            for (int i = 0; i < 4; i++) {
+                consumer.vertex(matrix, p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+                    .color(1f, 1f, 1f, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+            }
+        }
+    }
+
     private static void drawQuad(
         VertexConsumer consumer,
         Matrix4f matrix,

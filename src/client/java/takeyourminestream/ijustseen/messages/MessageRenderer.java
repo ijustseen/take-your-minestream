@@ -28,6 +28,8 @@ public class MessageRenderer {
     private final MessageLifecycleManager lifecycleManager;
     private final MessageParticleManager particleManager;
     private final java.util.WeakHashMap<Message, MessageRenderSmoothing> smoothing = new java.util.WeakHashMap<>();
+    /** Куб редактора рисуется после всех сообщений: иначе его стенки перекрывают по глубине ещё не нарисованный текст. */
+    private org.joml.Matrix4f pendingBlockCube;
 
     private static final float PIN_ICON_Z_OFFSET = -0.02f;
     private static final int EMOTE_ICON_SIZE = 12;
@@ -62,6 +64,10 @@ public class MessageRenderer {
             // Рендер партиклов
             if (particleManager != null) {
                 particleManager.render(client, matrices, consumers);
+            }
+            if (pendingBlockCube != null) {
+                MessagePanelWorldRenderer.drawBlockCube(pendingBlockCube, consumers);
+                pendingBlockCube = null;
             }
         });
     }
@@ -98,6 +104,9 @@ public class MessageRenderer {
         );
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-state.yaw()));
         matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(state.pitch()));
+        if (message.isPreview() && message.hasBlockCube()) {
+            pendingBlockCube = new org.joml.Matrix4f(matrices.peek().getPositionMatrix());
+        }
         
         // Применяем масштаб из конфигурации
         float finalScale = MessagePanelLayout.worldScale();

@@ -116,7 +116,7 @@ public final class PinnedMessageStore {
         Path file = getStorageFileForDimension(client, dimensionKey);
         String worldKey = resolveBaseWorldKey(client) + "|dimension:" + dimensionKey;
 
-        List<PinnedMessageEntry> entries = lifecycleManager.getActiveMessages().stream()
+        List<PinnedMessageEntry> entries = lifecycleManager.getLiveMessages().stream()
             .filter(Message::isPinned)
             .filter(message -> dimensionKey.equals(message.getDimensionKey()))
             .sorted(Comparator.comparing(Message::getText))
@@ -160,7 +160,7 @@ public final class PinnedMessageStore {
     }
 
     private static void removeAllPinnedInMemory(MessageLifecycleManager lifecycleManager) {
-        List<Message> activeMessages = new ArrayList<>(lifecycleManager.getActiveMessages());
+        List<Message> activeMessages = new ArrayList<>(lifecycleManager.getLiveMessages());
         for (Message message : activeMessages) {
             if (message.isPinned()) {
                 lifecycleManager.removeMessageWithoutParticles(message);

@@ -18,6 +18,9 @@ import java.util.Set;
 public class MessageLifecycleManager {
     private final List<Message> activeMessages = new ArrayList<>();
     private final List<Message> messageHistory = new ArrayList<>();
+    /** Сообщения визуального редактора; пока он открыт, рендер видит только их. */
+    private final List<Message> previewMessages = new ArrayList<>();
+    private boolean previewActive = false;
     private int tickCounter = 0;
     private final MessageParticleManager particleManager;
     private final Set<Message> spawnedParticlesForMessages = new HashSet<>();
@@ -258,11 +261,34 @@ public class MessageLifecycleManager {
     }
     
     /**
-     * Возвращает список активных сообщений
-     * @return список активных сообщений
+     * Сообщения для отображения: во время предпросмотра редактора — только пробные.
+     * Для сохранения и изменения реальных сообщений используйте {@link #getLiveMessages()}.
      */
     public List<Message> getActiveMessages() {
+        return previewActive ? previewMessages : activeMessages;
+    }
+
+    /** Реальные сообщения чата, независимо от предпросмотра редактора. */
+    public List<Message> getLiveMessages() {
         return activeMessages;
+    }
+
+    public void startPreview(List<Message> messages) {
+        previewMessages.clear();
+        for (Message message : messages) {
+            message.setPreview(true);
+            previewMessages.add(message);
+        }
+        previewActive = true;
+    }
+
+    public void stopPreview() {
+        previewActive = false;
+        previewMessages.clear();
+    }
+
+    public boolean isPreviewActive() {
+        return previewActive;
     }
     
     /**

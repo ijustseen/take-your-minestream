@@ -61,4 +61,11 @@ public final class MessagePanelWorldRenderer {
             blue
         );
     }
+
+    /** Полупрозрачный куб 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
+    public static void drawBlockCube(org.joml.Matrix4f matrix, SubmitNodeCollector collector) {
+        PoseStack poseStack = new PoseStack();
+        poseStack.mulPose(matrix);
+        SubmitGeometryHelper.submitBlockCube(collector, poseStack, MessagePanelConstants.PANEL_TEXTURE);
+    }
 }

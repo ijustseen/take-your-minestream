@@ -6,6 +6,7 @@
 
 - **Message size is now a slider in percent** (25–300%, step 5%) instead of five presets. 100% is the former “Normal”; existing configs are migrated once (Tiny → 45%, Small → 75%, Large → 135%, Huge → 165%)
 - **Separate HUD widget size** — HUD cards have their own size slider (shown in HUD mode), world messages keep theirs (shown in world mode)
+- **Reset to defaults keeps channel names** — Twitch / YouTube / Kick channels and the TikTok username survive a reset; everything else (including which platforms are enabled) goes back to defaults
 
 ### Fixed
 
@@ -14,6 +15,7 @@
 ### Added
 
 - **Message width** — line width before wrapping (60–400 px, default 120) for world messages and the HUD widget. Chat history keeps its fixed width
+- **Visual message editor** — opened from the highlighted card at the top of the Appearance tab while in a world. A settings panel over the live game shows sample messages from every platform, rendered exactly as real ones, and updates instantly when size, width, colors, background, borders or role badges change. Two views: **Message only** (one sample in front of the camera — drag to rotate, scroll to move the camera, right-click to reset; the sample sits inside a translucent 1×1×1 block cube, so its real size stays clear while zooming) and **Around the player** (third-person camera you can orbit; samples spawn at the real positions for the current placement and min/max distance). In HUD mode the preview appears in the chosen HUD corner. Real chat messages are hidden while the editor is open and come back afterwards; camera perspective and view direction are restored on close
 
 ## [2.1.1] - 2026-10-07
 

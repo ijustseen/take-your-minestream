@@ -7,7 +7,7 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 
 /**
  * Когда показывать HUD-сообщения поверх экрана.
- * Инвентарь и контейнеры — да; ESC-меню, чат, настройки — нет.
+ * Инвентарь, контейнеры и визуальный редактор — да; ESC-меню, чат, настройки — нет.
  */
 public final class MessageHudVisibility {
     private MessageHudVisibility() {}
@@ -20,6 +20,7 @@ public final class MessageHudVisibility {
         if (screen == null) {
             return true;
         }
-        return screen instanceof HandledScreen;
+        return screen instanceof HandledScreen
+            || screen instanceof takeyourminestream.ijustseen.ui.screen.MessageEditorScreen;
     }
 }

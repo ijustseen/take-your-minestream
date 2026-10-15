@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
+import takeyourminestream.ijustseen.core.render.BlockCubeGeometry;
 import takeyourminestream.ijustseen.core.render.MessagePanel9Slice;
 import takeyourminestream.ijustseen.core.text.LegacySectionText;
 
@@ -122,6 +123,18 @@ public final class SubmitGeometryHelper {
             RenderTypes.entityTranslucent(texture),
             (pose, consumer) -> writePanelSlices(consumer, pose, x, y, width, height, z, alpha, red, green, blue)
         );
+    }
+
+    public static void submitBlockCube(SubmitNodeCollector collector, PoseStack poseStack, Identifier texture) {
+        collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(texture), (pose, consumer) -> {
+            for (BlockCubeGeometry.Quad quad : BlockCubeGeometry.quads()) {
+                float alpha = quad.edge() ? BlockCubeGeometry.EDGE_ALPHA : BlockCubeGeometry.FACE_ALPHA;
+                float[] p = quad.xyz();
+                for (int i = 0; i < 4; i++) {
+                    addVertex(consumer, pose, p[i * 3], p[i * 3 + 1], p[i * 3 + 2], 0.5f, 0.5f, 1f, 1f, 1f, alpha);
+                }
+            }
+        });
     }
 
     private static void writePanelSlices(

@@ -82,9 +82,19 @@ public class ConfigManager implements IConfigManager {
         }
     }
 
-    /** Сбрасывает JSON-конфиг к значениям {@link ModConfigData} по умолчанию. Списки банвордов/ников/regexp не трогает. */
+    /**
+     * Сбрасывает JSON-конфиг к значениям {@link ModConfigData} по умолчанию.
+     * Имена каналов платформ и списки банвордов/ников/regexp не трогает.
+     */
     public void resetToDefaults() {
+        ModConfigData previous = this.configData;
         this.configData = new ModConfigData();
+        if (previous != null) {
+            this.configData.setTwitchChannelName(previous.getTwitchChannelName());
+            this.configData.setYoutubeChannel(previous.getYoutubeChannel());
+            this.configData.setKickChannel(previous.getKickChannel());
+            this.configData.setTiktokUsername(previous.getTiktokUsername());
+        }
         this.configData.migrateLegacyRoleFilter();
         this.configData.migrateLegacyMessageScale();
         saveConfig();

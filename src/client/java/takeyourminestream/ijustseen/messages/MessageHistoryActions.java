@@ -25,7 +25,7 @@ public final class MessageHistoryActions {
             return PinToggleResult.UNPINNED;
         }
 
-        if (lifecycleManager.getActiveMessages().contains(historySource)) {
+        if (lifecycleManager.getLiveMessages().contains(historySource)) {
             if (historySource.isPinned()) {
                 if (historySource.getHistorySourceId() != null) {
                     lifecycleManager.removeMessageWithoutParticles(historySource);

@@ -4,6 +4,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.client.font.TextRenderer;
@@ -101,6 +102,8 @@ public class ModConfigScreen extends Screen {
     private static final int CONTROL_HEIGHT = 20;
     private static final int DESCRIPTION_HEIGHT = 20;
     private static final int CARD_HEIGHT = 32;
+    private static final int FEATURE_HEIGHT = 46;
+    private static final int FEATURE_BUTTON_HEIGHT = 24;
     private static final int CARD_GAP = 6;
     private static final int CARD_INNER_PADDING = 6;
     private static final int CARD_SETTINGS_WIDTH = 22;
@@ -148,6 +151,9 @@ public class ModConfigScreen extends Screen {
 
         /** Высота строки: карточки платформ выше обычных строк настроек. */
         public int rowHeight() {
+            if (type == ConfigEntryType.FEATURE) {
+                return FEATURE_HEIGHT;
+            }
             return type == ConfigEntryType.PLATFORM_CARD ? CARD_HEIGHT : ENTRY_HEIGHT;
         }
 
@@ -171,7 +177,7 @@ public class ModConfigScreen extends Screen {
     }
 
     private enum ConfigEntryType {
-        TEXT_FIELD, BUTTON, DANGER_BUTTON, TOGGLE, SLIDER, COLOR_FIELD, PLATFORM_CARD, TOGGLE_WITH_SETTINGS
+        TEXT_FIELD, BUTTON, DANGER_BUTTON, TOGGLE, SLIDER, COLOR_FIELD, PLATFORM_CARD, TOGGLE_WITH_SETTINGS, FEATURE
     }
 
     public ModConfigScreen() {
@@ -284,6 +290,25 @@ public class ModConfigScreen extends Screen {
             ConfigEntryType.DANGER_BUTTON,
             resetButton,
             ConfigCategory.GENERAL
+        ));
+
+        // Главное на вкладке — визуальный редактор, дальше точечные настройки
+        var client = this.client;
+        boolean hasWorld = client != null && client.world != null;
+        ButtonWidget editorButton = ButtonWidget.builder(
+            Text.translatable("takeyourstreamchat.editor.open"),
+            btn -> ScreenNavigationCompat.open(this.client, new MessageEditorScreen(this))
+        ).dimensions(0, 0, CONTROL_WIDTH, FEATURE_BUTTON_HEIGHT).build();
+        editorButton.active = hasWorld;
+        this.addDrawableChild(editorButton);
+        configEntries.add(new ConfigEntry(
+            "takeyourstreamchat.editor.title",
+            hasWorld
+                ? "takeyourstreamchat.editor.desc"
+                : "takeyourstreamchat.editor.desc_no_world",
+            ConfigEntryType.FEATURE,
+            editorButton,
+            ConfigCategory.MESSAGES
         ));
 
         // Вид: сначала мир / HUD, дальше общий внешний вид пузыря
@@ -840,7 +865,7 @@ public class ModConfigScreen extends Screen {
             entry.rowX = rowLeft;
             entry.rowY = y;
             entry.rowWidth = fullWidth;
-            y += ENTRY_HEIGHT + ENTRY_SPACING;
+            y += entry.rowHeight() + ENTRY_SPACING;
         }
         if (column != 0) {
             y += CARD_HEIGHT + ENTRY_SPACING;
@@ -870,6 +895,8 @@ public class ModConfigScreen extends Screen {
                 positionToggleWithSettingsRow(row, rightX, entry.rowY);
             } else if (entry.widget instanceof ColorFieldRow row) {
                 positionColorFieldRow(row, rightX, entry.rowY);
+            } else if (entry.type == ConfigEntryType.FEATURE && entry.widget instanceof ButtonWidget button) {
+                button.setPosition(rightX, entry.rowY + (FEATURE_HEIGHT - FEATURE_BUTTON_HEIGHT) / 2);
             } else {
                 setWidgetPosition(entry.widget, rightX, entry.rowY);
             }
@@ -1183,7 +1210,19 @@ public class ModConfigScreen extends Screen {
                         widget.getWidth(),
                         widget.getHeight()
                     );
-                    if (entry.type == ConfigEntryType.DANGER_BUTTON) {
+                    if (entry.type == ConfigEntryType.FEATURE && widget.active) {
+                        ModUiTheme.drawCompactButton(
+                            context,
+                            this.textRenderer,
+                            widget.getX(),
+                            widget.getY(),
+                            widget.getWidth(),
+                            widget.getHeight(),
+                            widget.getMessage(),
+                            hovered,
+                            ModUiTheme.ButtonVariant.ACCENT
+                        );
+                    } else if (entry.type == ConfigEntryType.DANGER_BUTTON) {
                         ModUiTheme.drawCompactButton(
                             context,
                             this.textRenderer,
@@ -1284,6 +1323,8 @@ public class ModConfigScreen extends Screen {
 
             if (entry.widget instanceof PlatformSettingsCard card) {
                 drawPlatformCard(context, card, entry, rowHovered);
+            } else if (entry.type == ConfigEntryType.FEATURE) {
+                drawFeatureBanner(context, entry, rowHovered);
             } else {
                 ModUiTheme.drawListRow(
                     context,
@@ -1305,6 +1346,29 @@ public class ModConfigScreen extends Screen {
             if (rowHovered) {
                 hoveredDescriptionKey = entry.descriptionKey;
             }
+        }
+    }
+
+    /** Крупная акцентная карточка главной функции вкладки: заголовок, короткое описание, кнопка справа. */
+    private void drawFeatureBanner(DrawContext context, ConfigEntry entry, boolean hovered) {
+        int left = entry.rowX;
+        int top = entry.rowY;
+        int right = entry.rowX + entry.rowWidth;
+        int bottom = entry.rowY + FEATURE_HEIGHT;
+        boolean enabled = this.client != null && this.client.player != null;
+        context.fill(left, top, right, bottom, hovered && enabled ? ModUiTheme.ACCENT_BG_HOVER : ModUiTheme.ACCENT_BG);
+        context.fill(left, top, left + 3, bottom, enabled ? ModUiTheme.ACCENT : ModUiTheme.PANEL_BORDER);
+        context.fill(left, top, right, top + 1, ModUiTheme.ACCENT_DARK);
+        context.fill(left, bottom - 1, right, bottom, ModUiTheme.ACCENT_DARK);
+
+        int textX = left + 10;
+        int textWidth = Math.max(40, right - textX - CONTROL_WIDTH - 24);
+        context.drawTextWithShadow(this.textRenderer, Text.translatable(entry.labelKey), textX, top + 8, ModUiTheme.TEXT_PRIMARY);
+        List<OrderedText> lines = this.textRenderer.wrapLines(Text.translatable(entry.descriptionKey), textWidth);
+        int lineY = top + 21;
+        for (int i = 0; i < Math.min(2, lines.size()); i++) {
+            context.drawTextWithShadow(this.textRenderer, lines.get(i), textX, lineY, enabled ? ModUiTheme.TEXT_SECONDARY : ModUiTheme.TEXT_HINT);
+            lineY += 10;
         }
     }
 

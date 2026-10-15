@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class Message {
     private static final AtomicLong NEXT_ID = new AtomicLong(1);
+    /** Возраст сообщений редактора: анимация появления уже прошла, падение ещё не началось. */
+    public static final int PREVIEW_AGE = 10;
 
     private final long id = NEXT_ID.getAndIncrement();
     private final String text;
@@ -33,6 +35,8 @@ public class Message {
     // Отстающая базовая ориентация (yaw), вокруг которой вращается локальное смещение
     private float followBasisYaw;
     private boolean pinned;
+    private boolean preview;
+    private boolean blockCube;
     private Long historySourceId;
     private String dimensionKey;
 
@@ -147,6 +151,11 @@ public class Message {
     public float getPreviousYaw() { return previousYaw; }
     public float getPreviousPitch() { return previousPitch; }
     public boolean isPinned() { return pinned; }
+    public boolean isPreview() { return preview; }
+    public void setPreview(boolean preview) { this.preview = preview; }
+    /** Эталонный куб 1×1 блок вокруг пробного сообщения редактора. */
+    public boolean hasBlockCube() { return blockCube; }
+    public void setBlockCube(boolean blockCube) { this.blockCube = blockCube; }
     public void setPinned(boolean pinned) { this.pinned = pinned; }
     public long getId() { return id; }
     public Long getHistorySourceId() { return historySourceId; }
@@ -163,6 +172,9 @@ public class Message {
      * @return эффективный возраст сообщения в тиках
      */
     public int getEffectiveAge(int currentTick) {
+        if (preview) {
+            return PREVIEW_AGE;
+        }
         int baseAge = currentTick - (int)spawnTick;
         return Math.max(0, baseAge - frozenTicks);
     }
