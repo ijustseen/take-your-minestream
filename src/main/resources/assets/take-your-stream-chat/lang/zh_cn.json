@@ -230,6 +230,7 @@
   "takeyourstreamchat.twitch.error.reconnect": "重新连接 Twitch 时出错：%s",
   "key.takeyourstreamchat.openconfig": "打开 Stream Chat 设置",
   "key.takeyourstreamchat.startandstop": "连接 / 断开聊天",
+  "key.takeyourstreamchat.openhistory": "打开消息历史",
   "key.categories.takeyourstreamchat": "Take Your Stream Chat",
   "key.category.take-your-stream-chat.key_category": "Take Your Stream Chat",
   "takeyourstreamchat.config.role_filter_all": "显示所有人：",

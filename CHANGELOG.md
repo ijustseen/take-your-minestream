@@ -12,9 +12,11 @@
 
 - **Message collision fix** - fix an error of killing the wrong message caused by wrong counting order
 - **Chat history opens immediately** — card layouts are prepared when a message arrives, and the history column no longer starts scrolled past its content (pinned messages were visible, history looked empty until the next refresh)
+- **History footer clicks** — Clear and Close no longer open the message tucked under them. Card clicks follow the visible list, the same area the scissor already draws
 
 ### Added
 
+- **Chat history key** — `\` opens message history from the game (rebind it in Controls). Settings stay on `]`, connect / disconnect stays on `[`
 - **Twitch GIFs** — official GIPHY keyboard messages from the IRC `gifs` tag (`start-end|id|url`) are downloaded from the URL Twitch sends and drawn on their own line under the username, sized to the name+badges row, centered, with a small gap. Animated Twitch emotes now use the `default` CDN template instead of `static`
 - **Message width** — line width before wrapping (60–400 px, default 120) for world messages and the HUD widget. Chat history keeps its fixed width
 - **Visual message editor** — opened from the highlighted card at the top of the Appearance tab while in a world. A settings panel over the live game shows sample messages from every platform, rendered exactly as real ones, and updates instantly when size, width, colors, background, borders or role badges change. Two views: **Message only** (one sample in front of the camera — drag to rotate, scroll to move the camera, right-click to reset; the sample sits inside a translucent 1×1×1 block cube, so its real size stays clear while zooming) and **Around the player** (third-person camera you can orbit; samples spawn at the real positions for the current placement and min/max distance). In HUD mode the preview appears in the chosen HUD corner. Real chat messages are hidden while the editor is open and come back afterwards; camera perspective and view direction are restored on close

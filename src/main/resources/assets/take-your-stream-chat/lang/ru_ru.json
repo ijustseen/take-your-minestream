@@ -230,6 +230,7 @@
   "takeyourstreamchat.twitch.error.reconnect": "Ошибка при переподключении к Twitch: %s",
   "key.takeyourstreamchat.openconfig": "Открыть настройки Stream Chat",
   "key.takeyourstreamchat.startandstop": "Подключить / отключить чат",
+  "key.takeyourstreamchat.openhistory": "Открыть историю чата",
   "key.categories.takeyourstreamchat": "Stream Chat",
   "key.category.take-your-stream-chat.key_category": "Stream Chat",
   "takeyourstreamchat.config.role_filter_all": "Показывать всех:",

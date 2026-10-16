@@ -51,6 +51,7 @@ Turning a platform on does **not** connect by itself. That’s on purpose: you c
 | ------- | -------------------------------------- |
 | **`]`** | Open settings                          |
 | **`[`** | Connect / disconnect all enabled chats |
+| **`\`** | Open chat history                      |
 
 In the world, empty hand:
 

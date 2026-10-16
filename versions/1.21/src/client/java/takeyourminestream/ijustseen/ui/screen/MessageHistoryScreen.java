@@ -378,6 +378,12 @@ public class MessageHistoryScreen extends Screen {
     }
 
     private HistoryCard findCardAt(List<HistoryCard> cards, int scrollOffset, int mouseX, int mouseY) {
+        int listTop = contentTop + LIST_PADDING;
+        int listBottom = contentBottom - LIST_PADDING;
+        if (mouseY < listTop || mouseY > listBottom) {
+            return null;
+        }
+
         for (HistoryCard card : cards) {
             int drawY = card.y - scrollOffset;
             if (mouseX >= card.x && mouseX <= card.x + card.layout.width()

@@ -230,6 +230,7 @@
   "takeyourstreamchat.twitch.error.reconnect": "Erreur lors de la reconnexion à Twitch : %s",
   "key.takeyourstreamchat.openconfig": "Ouvrir les paramètres Stream Chat",
   "key.takeyourstreamchat.startandstop": "Connecter / déconnecter le chat",
+  "key.takeyourstreamchat.openhistory": "Ouvrir l'historique des messages",
   "key.categories.takeyourstreamchat": "Take Your Stream Chat",
   "key.category.take-your-stream-chat.key_category": "Take Your Stream Chat",
   "takeyourstreamchat.config.role_filter_all": "Afficher tout le monde :",

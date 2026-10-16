@@ -9,6 +9,7 @@ import org.lwjgl.glfw.GLFW;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
 import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
+import takeyourminestream.ijustseen.ui.screen.MessageHistoryScreen;
 import takeyourminestream.ijustseen.ui.screen.ModConfigScreen;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.utils.Logger;
@@ -23,6 +24,7 @@ public class KeyBindingManager {
     private final MessageSpawner messageSpawner;
     private KeyBinding openConfigScreenKeyBinding;
     private KeyBinding startAndStopMessagesKeyBinding;
+    private KeyBinding openMessageHistoryKeyBinding;
 
     public KeyBindingManager(IChatConnectionManager chatConnectionManager, MessageSpawner messageSpawner) {
         this.chatConnectionManager = chatConnectionManager;
@@ -44,12 +46,22 @@ public class KeyBindingManager {
             KEY_CATEGORY
         ));
 
+        openMessageHistoryKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+            "key.takeyourstreamchat.openhistory",
+            InputUtil.Type.KEYSYM,
+            GLFW.GLFW_KEY_BACKSLASH,
+            KEY_CATEGORY
+        ));
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openConfigScreenKeyBinding.wasPressed()) {
                 handleOpenConfigScreen();
             }
             while (startAndStopMessagesKeyBinding.wasPressed()) {
                 handleChatToggle();
+            }
+            while (openMessageHistoryKeyBinding.wasPressed()) {
+                handleOpenMessageHistory();
             }
         });
     }
@@ -60,6 +72,32 @@ public class KeyBindingManager {
         } catch (Exception e) {
             Logger.error("Failed to open settings screen", e);
             Logger.sendErrorToPlayer("Failed to open settings screen");
+        }
+    }
+
+    private void handleOpenMessageHistory() {
+        try {
+            MessageSpawner spawner = this.messageSpawner != null
+                ? this.messageSpawner
+                : TakeYourMineStreamClient.getStaticMessageSpawner();
+            if (spawner == null) {
+                return;
+            }
+            var client = net.minecraft.client.MinecraftClient.getInstance();
+            if (ScreenNavigationCompat.current(client) instanceof MessageHistoryScreen) {
+                return;
+            }
+            var lifecycle = spawner.getLifecycleManager();
+            if (client.textRenderer != null) {
+                lifecycle.warmHistoryLayouts(client.textRenderer);
+            }
+            ScreenNavigationCompat.open(client, new MessageHistoryScreen(
+                ScreenNavigationCompat.current(client),
+                lifecycle
+            ));
+        } catch (Exception e) {
+            Logger.error("Failed to open message history", e);
+            Logger.sendErrorToPlayer("Failed to open message history");
         }
     }
 

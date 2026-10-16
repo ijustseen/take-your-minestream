@@ -230,6 +230,7 @@
   "takeyourstreamchat.twitch.error.reconnect": "Fehler beim erneuten Verbinden mit Twitch: %s",
   "key.takeyourstreamchat.openconfig": "Stream-Chat-Einstellungen öffnen",
   "key.takeyourstreamchat.startandstop": "Chat verbinden / trennen",
+  "key.takeyourstreamchat.openhistory": "Nachrichtenverlauf öffnen",
   "key.categories.takeyourstreamchat": "Take Your Stream Chat",
   "key.category.take-your-stream-chat.key_category": "Take Your Stream Chat",
   "takeyourstreamchat.config.role_filter_all": "Alle zeigen:",

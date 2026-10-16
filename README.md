@@ -31,7 +31,7 @@ Requires Fabric Loader ≥0.16.14 and Fabric API. Mod Menu optional.
 - `/streamchat banword` / `blockuser` — moderation
 - `/minestream` — legacy alias (same commands)
 
-Keybinds: **`]`** settings, **`[`** quick chat toggle
+Keybinds: **`]`** settings, **`[`** quick chat toggle, **`\`** chat history
 
 ## Build from source
 

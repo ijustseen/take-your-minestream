@@ -307,6 +307,7 @@ stonecutter parameters {
             replace("GLFW.GLFW_KEY_ESCAPE", "InputConstants.KEY_ESCAPE")
             replace("GLFW.GLFW_KEY_RIGHT_BRACKET", "InputConstants.KEY_RBRACKET")
             replace("GLFW.GLFW_KEY_LEFT_BRACKET", "InputConstants.KEY_LBRACKET")
+            replace("GLFW.GLFW_KEY_BACKSLASH", "InputConstants.KEY_BACKSLASH")
             // SDL mouse buttons: left is 1, not GLFW's 0.
             replace("click.button() == 0", "click.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT")
             replace("if (button != 0)", "if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT)")
