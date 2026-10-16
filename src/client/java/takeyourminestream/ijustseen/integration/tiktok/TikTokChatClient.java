@@ -121,6 +121,19 @@ public class TikTokChatClient implements ChatConnection {
                 );
             }
 
+            @Override
+            public void onSubscribe(long msgId, String uniqueId, String displayName) {
+                if (!markSeen(msgId)) {
+                    return;
+                }
+                submitEvent(
+                    uniqueId,
+                    displayName,
+                    Text.translatable("takeyourstreamchat.event.tiktok.subscribe"),
+                    ChatEventType.SUBSCRIBE
+                );
+            }
+
             private void submitEvent(String uniqueId, String displayName, Text text, ChatEventType eventType) {
                 pipeline.process(IncomingChatMessage.builder(ChatPlatform.TIKTOK)
                     .authorLogin(uniqueId)

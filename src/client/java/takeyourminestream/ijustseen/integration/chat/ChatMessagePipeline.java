@@ -109,18 +109,22 @@ public final class ChatMessagePipeline {
     }
 
     private PreparedSpawn prepare(IncomingChatMessage message) {
-        if (message.text() == null || message.text().isBlank()) {
-            return null;
+        String rawText = message.text();
+        boolean hasTwitchGifs = message.platform() == ChatPlatform.TWITCH
+            && message.twitchGifsTag() != null
+            && !message.twitchGifsTag().isBlank();
+        if (rawText == null || rawText.isBlank()) {
+            if (!hasTwitchGifs) {
+                return null;
+            }
+            rawText = "\uFFFC";
         }
 
         String platformKey = message.platform().getIconKey();
         if (!ModConfig.isPLATFORM_SHOW_MESSAGES(platformKey)) {
             return null;
         }
-        if (message.eventType() == ChatEventType.GIFT && !ModConfig.isTIKTOK_GIFT_EVENTS()) {
-            return null;
-        }
-        if (message.eventType() == ChatEventType.FOLLOW && !ModConfig.isTIKTOK_FOLLOW_EVENTS()) {
+        if (message.eventType().isEvent() && !shouldShowEvent(message)) {
             return null;
         }
 
@@ -128,7 +132,7 @@ public final class ChatMessagePipeline {
             ? message.displayName()
             : message.authorLogin();
         String userLogin = message.authorLogin() != null ? message.authorLogin() : displayName;
-        String filteredText = message.text().replace("͏", "").trim();
+        String filteredText = rawText.replace("͏", "").trim();
         if (filteredText.isEmpty()) {
             return null;
         }
@@ -151,7 +155,7 @@ public final class ChatMessagePipeline {
             return null;
         }
 
-        if (FilteringManager.getInstance().fitsRegexp(filteredText)) {
+        if (!hasTwitchGifs && FilteringManager.getInstance().fitsRegexp(filteredText)) {
             return null;
         }
 
@@ -175,7 +179,7 @@ public final class ChatMessagePipeline {
             }
         }
 
-        if (ModConfig.isENABLE_AUTOMODERATION() && BanwordManager.getInstance().containsBanwords(filteredText)) {
+        if (!hasTwitchGifs && ModConfig.isENABLE_AUTOMODERATION() && BanwordManager.getInstance().containsBanwords(filteredText)) {
             filteredText = BanwordManager.getInstance().filterBanwords(filteredText);
         }
 
@@ -192,14 +196,24 @@ public final class ChatMessagePipeline {
         String coloredName = colorPrefix + displayName + ":§r ";
         List<MessageEmote> parsedEmotes = new ArrayList<>();
 
-        if (message.platform() == ChatPlatform.TWITCH
-            && message.twitchEmotesTag() != null
-            && filteredText.length() == message.text().length()) {
+        boolean twitchRangesIntact = message.platform() == ChatPlatform.TWITCH
+            && filteredText.length() == rawText.length();
+        if (twitchRangesIntact && message.twitchEmotesTag() != null) {
             parsedEmotes = new ArrayList<>(parseTwitchEmotes(
                 message.twitchEmotesTag(),
                 filteredText,
                 coloredName.length()
             ));
+        }
+        if (twitchRangesIntact && hasTwitchGifs) {
+            List<MessageEmote> twitchGifs = parseTwitchGifs(
+                message.twitchGifsTag(),
+                filteredText,
+                coloredName.length()
+            );
+            parsedEmotes = new ArrayList<>(UnicodeEmojiParser.mergeNonOverlapping(twitchGifs, parsedEmotes));
+        }
+        if (!parsedEmotes.isEmpty()) {
             for (MessageEmote emote : parsedEmotes) {
                 TwitchEmoteTextureCache.preload(emote.getProvider(), emote.getEmoteId());
             }
@@ -260,6 +274,21 @@ public final class ChatMessagePipeline {
         return new PreparedSpawn(fullText, rgb, emotesWithIcon);
     }
 
+    /**
+     * События эфира показываются всегда, кроме TikTok-подарков/фолловов —
+     * у них остаются отдельные тумблеры (по умолчанию выключены).
+     */
+    private static boolean shouldShowEvent(IncomingChatMessage message) {
+        if (message.platform() != ChatPlatform.TIKTOK) {
+            return true;
+        }
+        return switch (message.eventType()) {
+            case GIFT -> ModConfig.isTIKTOK_GIFT_EVENTS();
+            case FOLLOW -> ModConfig.isTIKTOK_FOLLOW_EVENTS();
+            default -> true;
+        };
+    }
+
     private static List<MessageEmote> parseTwitchEmotes(String emotesTag, String message, int messageStartOffset) {
         if (emotesTag == null || emotesTag.isEmpty()) {
             return Collections.emptyList();
@@ -296,6 +325,57 @@ public final class ChatMessagePipeline {
         }
 
         return emotes.isEmpty() ? Collections.emptyList() : List.copyOf(emotes);
+    }
+
+    /**
+     * Официальный IRC-тег {@code gifs}: {@code start-end|gifId|url}, несколько — через запятую.
+     * URL нельзя менять: его отдаёт Twitch для конкретного GIF.
+     */
+    private static List<MessageEmote> parseTwitchGifs(String gifsTag, String message, int messageStartOffset) {
+        if (gifsTag == null || gifsTag.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<MessageEmote> gifs = new ArrayList<>();
+        for (String part : gifsTag.split(",")) {
+            if (part.isBlank()) {
+                continue;
+            }
+            String[] fields = part.split("\\|", 3);
+            if (fields.length < 3) {
+                continue;
+            }
+            String range = fields[0];
+            String url = fields[2].trim();
+            if (url.isEmpty() || !(url.startsWith("https://") || url.startsWith("http://"))) {
+                continue;
+            }
+
+            int dashIndex = range.indexOf('-');
+            if (dashIndex <= 0 || dashIndex >= range.length() - 1) {
+                continue;
+            }
+
+            try {
+                int start = Integer.parseInt(range.substring(0, dashIndex));
+                int end = Integer.parseInt(range.substring(dashIndex + 1));
+                if (start < 0 || end < start || end >= message.length()) {
+                    continue;
+                }
+
+                String gifCode = message.substring(start, end + 1);
+                gifs.add(new MessageEmote(
+                    MessageEmote.GIF_PROVIDER,
+                    url,
+                    gifCode,
+                    messageStartOffset + start,
+                    messageStartOffset + end
+                ));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        return gifs.isEmpty() ? Collections.emptyList() : List.copyOf(gifs);
     }
 
     private static String toNearestSectionColor(int rgb) {

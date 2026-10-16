@@ -124,24 +124,21 @@ public class MessageHistoryScreen extends Screen {
     }
 
     private boolean needsLayoutRefresh() {
-        List<Message> allMessages = lifecycleManager.getAllMessages();
-        long firstId = allMessages.isEmpty() ? -1L : allMessages.get(0).getId();
-        long lastId = allMessages.isEmpty() ? -1L : allMessages.get(allMessages.size() - 1).getId();
-        long pinnedSignature = computePinnedSignature();
-        if (firstId != cachedFirstMessageId || lastId != cachedLastMessageId || pinnedSignature != cachedPinnedSignature) {
+        if (this.width != cachedWidth || this.height != cachedHeight) {
             return true;
         }
-        return this.width != cachedWidth || this.height != cachedHeight;
+        long firstId = lifecycleManager.peekHistoryFirstId();
+        long lastId = lifecycleManager.peekHistoryLastId();
+        if (firstId != cachedFirstMessageId || lastId != cachedLastMessageId) {
+            return true;
+        }
+        return computePinnedSignature() != cachedPinnedSignature;
     }
 
     private void updateLayout() {
         int previousHistoryHeight = getTotalContentHeight(historyCards);
         int previousPinnedHeight = getTotalContentHeight(pinnedCards);
-        int visibleHeight = getVisibleListHeight();
-        boolean stickHistoryToBottom = previousHistoryHeight > visibleHeight
-            && historyScrollOffset >= previousHistoryHeight - visibleHeight - 4;
-        boolean stickPinnedToBottom = previousPinnedHeight > visibleHeight
-            && pinnedScrollOffset >= previousPinnedHeight - visibleHeight - 4;
+        boolean firstHistoryOpen = historyCards.isEmpty() && historyScrollOffset == Integer.MAX_VALUE;
 
         cachedWidth = this.width;
         cachedHeight = this.height;
@@ -163,6 +160,13 @@ public class MessageHistoryScreen extends Screen {
         contentTop = HEADER_HEIGHT;
         contentBottom = this.height - FOOTER_HEIGHT;
         contentMaxWidth = MessageCardLayout.getWrapWidth(getListContentWidth());
+        int visibleHeight = Math.max(0, getVisibleListHeight());
+        boolean stickHistoryToBottom = firstHistoryOpen
+            || historyScrollOffset == Integer.MAX_VALUE
+            || (previousHistoryHeight > visibleHeight
+                && historyScrollOffset >= previousHistoryHeight - visibleHeight - 4);
+        boolean stickPinnedToBottom = previousPinnedHeight > visibleHeight
+            && pinnedScrollOffset >= previousPinnedHeight - visibleHeight - 4;
 
         List<Message> allMessages = lifecycleManager.getAllMessages();
         cachedFirstMessageId = allMessages.isEmpty() ? -1L : allMessages.get(0).getId();
@@ -190,8 +194,8 @@ public class MessageHistoryScreen extends Screen {
     private void buildCardList(List<Message> messages, int listLeft, List<HistoryCard> target) {
         int y = contentTop + LIST_PADDING;
         for (Message message : messages) {
-            ChatMessageParser.ParsedMessage parsed = ChatMessageParser.parse(message.getText());
-            MessageCardLayout.Layout layout = MessageCardLayout.compute(textRenderer, message, contentMaxWidth);
+            ChatMessageParser.ParsedMessage parsed = message.getParsed();
+            MessageCardLayout.Layout layout = message.getHistoryLayout(this.textRenderer, contentMaxWidth);
             if (lifecycleManager.isPinnedInWorld(message)) {
                 y += MessagePanelConstants.PIN_ICON_OVERFLOW;
             }

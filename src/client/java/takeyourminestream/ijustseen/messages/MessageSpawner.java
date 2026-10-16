@@ -26,6 +26,9 @@ public class MessageSpawner {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             TwitchEmoteTextureCache.drainUploads(client);
+            if (client.textRenderer != null) {
+                lifecycleManager.warmPendingHistoryLayouts(client.textRenderer, 8);
+            }
             if (client.player != null && client.world != null) {
                 pinnedInteractionManager.tick(client);
                 lifecycleManager.updateMessages(client);

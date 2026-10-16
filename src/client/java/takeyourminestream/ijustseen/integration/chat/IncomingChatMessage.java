@@ -16,6 +16,8 @@ public record IncomingChatMessage(
     String twitchRoomId,
     String twitchChannelName,
     String twitchEmotesTag,
+    /** IRC-тег {@code gifs}: {@code start-end|id|url} через запятую. */
+    String twitchGifsTag,
     /** Unix-время сообщения в микросекундах (YouTube {@code timestampUsec}); null — показать сразу. */
     Long sourceTimestampMicros,
     ChatEventType eventType
@@ -41,6 +43,7 @@ public record IncomingChatMessage(
         private String twitchRoomId;
         private String twitchChannelName;
         private String twitchEmotesTag;
+        private String twitchGifsTag;
         private Long sourceTimestampMicros;
         private ChatEventType eventType = ChatEventType.CHAT;
 
@@ -93,6 +96,11 @@ public record IncomingChatMessage(
             return this;
         }
 
+        public Builder twitchGifsTag(String twitchGifsTag) {
+            this.twitchGifsTag = twitchGifsTag;
+            return this;
+        }
+
         public Builder sourceTimestampMicros(Long sourceTimestampMicros) {
             this.sourceTimestampMicros = sourceTimestampMicros;
             return this;
@@ -115,6 +123,7 @@ public record IncomingChatMessage(
                 twitchRoomId,
                 twitchChannelName,
                 twitchEmotesTag,
+                twitchGifsTag,
                 sourceTimestampMicros,
                 eventType
             );

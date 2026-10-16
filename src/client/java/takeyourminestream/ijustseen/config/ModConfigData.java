@@ -5,6 +5,10 @@ package takeyourminestream.ijustseen.config;
  */
 public class ModConfigData {
     private String twitchChannelName = "ijustseen";
+    /** Старый глобальный Simple/Pro; читается только чтобы перенести Pro на Twitch stream key. */
+    private String connectionMode;
+    private TwitchConnectMethod twitchConnectMethod = TwitchConnectMethod.CHANNEL;
+    private String twitchStreamKey = "";
     private boolean twitchEnabled = true;
     private boolean youtubeEnabled = false;
     private String youtubeChannel = "";
@@ -97,6 +101,10 @@ public class ModConfigData {
     public int getChanceForSpawn() { return chanceForSpawn; }
     public int getMessageHistoryMaxSize() { return messageHistoryMaxSize; }
     public String getTwitchChannelName() { return twitchChannelName; }
+    public TwitchConnectMethod getTwitchConnectMethod() {
+        return twitchConnectMethod != null ? twitchConnectMethod : TwitchConnectMethod.CHANNEL;
+    }
+    public String getTwitchStreamKey() { return twitchStreamKey != null ? twitchStreamKey : ""; }
     public boolean isTwitchEnabled() { return twitchEnabled; }
     public boolean isYoutubeEnabled() { return youtubeEnabled; }
     public String getYoutubeChannel() { return youtubeChannel; }
@@ -156,6 +164,10 @@ public class ModConfigData {
     public void setChanceForSpawn(int chanceForSpawn) { this.chanceForSpawn = chanceForSpawn; }
     public void setMessageHistoryMaxSize(int messageHistoryMaxSize) { this.messageHistoryMaxSize = Math.max(10, messageHistoryMaxSize); }
     public void setTwitchChannelName(String twitchChannelName) { this.twitchChannelName = twitchChannelName; }
+    public void setTwitchConnectMethod(TwitchConnectMethod twitchConnectMethod) {
+        this.twitchConnectMethod = twitchConnectMethod != null ? twitchConnectMethod : TwitchConnectMethod.CHANNEL;
+    }
+    public void setTwitchStreamKey(String twitchStreamKey) { this.twitchStreamKey = twitchStreamKey != null ? twitchStreamKey : ""; }
     public void setTwitchEnabled(boolean twitchEnabled) { this.twitchEnabled = twitchEnabled; }
     public void setYoutubeEnabled(boolean youtubeEnabled) { this.youtubeEnabled = youtubeEnabled; }
     public void setYoutubeChannel(String youtubeChannel) { this.youtubeChannel = youtubeChannel != null ? youtubeChannel : ""; }
@@ -259,6 +271,17 @@ public class ModConfigData {
         syncLegacyRoleFilter();
         migratePlatformRoleFilters();
         migratePlatformRoleFiltersV2();
+    }
+
+    /** Глобальный Pro больше нет: если он был включён, Twitch подключается ключом трансляции. */
+    public void migrateLegacyProMode() {
+        if (twitchConnectMethod == null) {
+            twitchConnectMethod = TwitchConnectMethod.CHANNEL;
+        }
+        if (connectionMode != null && connectionMode.equalsIgnoreCase("PRO")) {
+            twitchConnectMethod = TwitchConnectMethod.STREAM_KEY;
+        }
+        connectionMode = null;
     }
 
     /** Один раз переносит пресет {@link MessageScale} в проценты (мир и HUD раньше делили один размер). */

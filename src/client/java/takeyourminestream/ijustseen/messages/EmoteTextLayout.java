@@ -18,6 +18,15 @@ public final class EmoteTextLayout {
         public boolean hasEmotes() {
             return !emotes.isEmpty();
         }
+
+        public boolean isGifLine() {
+            for (MessageEmote emote : emotes) {
+                if (emote.isGif()) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     private sealed interface Token permits TextToken, EmoteToken {}
@@ -55,7 +64,8 @@ public final class EmoteTextLayout {
 
         for (Token token : tokens) {
             if (token instanceof EmoteToken emoteToken) {
-                if (lineHasContent && lineWidth + emoteAdvance > maxWidth) {
+                boolean gifOnOwnLine = emoteToken.emote().isGif();
+                if (lineHasContent && (gifOnOwnLine || lineWidth + emoteAdvance > maxWidth)) {
                     lines.add(new LineContent(lineText.toString(), List.copyOf(lineEmotes)));
                     lineText = new StringBuilder(activeFormatting);
                     lineEmotes = new ArrayList<>();
@@ -71,8 +81,15 @@ public final class EmoteTextLayout {
                     start,
                     lineText.length() - 1
                 ));
-                lineWidth += emoteAdvance;
+                lineWidth += gifOnOwnLine ? emoteToken.emote().iconSize() : emoteAdvance;
                 lineHasContent = true;
+                if (gifOnOwnLine) {
+                    lines.add(new LineContent(lineText.toString(), List.copyOf(lineEmotes)));
+                    lineText = new StringBuilder(activeFormatting);
+                    lineEmotes = new ArrayList<>();
+                    lineWidth = 0;
+                    lineHasContent = false;
+                }
                 continue;
             }
 
@@ -119,13 +136,27 @@ public final class EmoteTextLayout {
             activeFormatting = updateFormatting(activeFormatting, word);
         }
 
-        if (lineText.length() > 0 || !lineEmotes.isEmpty()) {
+        if (!lineEmotes.isEmpty() || hasVisibleText(lineText)) {
             lines.add(new LineContent(lineText.toString(), List.copyOf(lineEmotes)));
         }
         if (lines.isEmpty()) {
             lines.add(new LineContent(text, List.of()));
         }
         return lines;
+    }
+
+    private static boolean hasVisibleText(CharSequence text) {
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '§') {
+                i++;
+                continue;
+            }
+            if (c != ' ') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Текущие активные коды форматирования (§x), которые надо перенести на следующую строку. */

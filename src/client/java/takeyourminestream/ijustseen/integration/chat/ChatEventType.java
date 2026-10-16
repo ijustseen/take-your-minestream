@@ -4,7 +4,10 @@ package takeyourminestream.ijustseen.integration.chat;
 public enum ChatEventType {
     CHAT,
     GIFT,
-    FOLLOW;
+    FOLLOW,
+    SUBSCRIBE,
+    RAID,
+    BITS;
 
     public boolean isEvent() {
         return this != CHAT;

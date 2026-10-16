@@ -12,6 +12,7 @@ import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.messages.EmoteTextLayout;
 import takeyourminestream.ijustseen.messages.Message;
+import takeyourminestream.ijustseen.messages.MessageEmote;
 import takeyourminestream.ijustseen.messages.RoleBadges;
 
 /** Отрисовка одной карточки сообщения в GUI-истории. */
@@ -75,17 +76,37 @@ public final class MessageCardRenderer {
         int bodyColor = applyAlpha(visibleInWorld ? (hovered ? 0xFFFFFFAA : 0xFFFFFFFF) : 0xFF888888, alpha);
         if (layout.emoteBodyLine() != null) {
             int lineY = innerY;
+            boolean sawBody = false;
             for (EmoteTextLayout.LineContent line : layout.emoteBodyLine().lines()) {
-                MessageEmoteGuiRenderer.drawLine(
-                    context,
-                    textRenderer,
-                    line.text(),
-                    line.emotes(),
-                    innerX,
-                    lineY,
-                    bodyColor
-                );
-                lineY += MessageCardLayout.emoteLineAdvance(textRenderer, line);
+                if (line.isGifLine()) {
+                    if (parsed.username() != null || sawBody) {
+                        lineY += MessageEmote.GIF_LINE_GAP;
+                    }
+                    MessageEmoteGuiRenderer.drawLine(
+                        context,
+                        textRenderer,
+                        line.text(),
+                        line.emotes(),
+                        innerX,
+                        lineY,
+                        bodyColor,
+                        layout.gifDisplaySize(),
+                        layout.contentWidth()
+                    );
+                    lineY += layout.gifDisplaySize();
+                } else {
+                    MessageEmoteGuiRenderer.drawLine(
+                        context,
+                        textRenderer,
+                        line.text(),
+                        line.emotes(),
+                        innerX,
+                        lineY,
+                        bodyColor
+                    );
+                    lineY += MessageCardLayout.emoteLineAdvance(textRenderer, line);
+                }
+                sawBody = true;
             }
         } else {
             for (OrderedText line : layout.bodyLines()) {
@@ -145,17 +166,37 @@ public final class MessageCardRenderer {
         int bodyColor = applyAlpha(0xFFFFFFFF, alpha);
         if (layout.emoteBodyLine() != null) {
             int lineY = innerY;
+            boolean sawBody = false;
             for (EmoteTextLayout.LineContent line : layout.emoteBodyLine().lines()) {
-                MessageEmoteGuiRenderer.drawLine(
-                    context,
-                    textRenderer,
-                    line.text(),
-                    line.emotes(),
-                    innerX,
-                    lineY,
-                    bodyColor
-                );
-                lineY += MessageCardLayout.emoteLineAdvance(textRenderer, line);
+                if (line.isGifLine()) {
+                    if (parsed.username() != null || sawBody) {
+                        lineY += MessageEmote.GIF_LINE_GAP;
+                    }
+                    MessageEmoteGuiRenderer.drawLine(
+                        context,
+                        textRenderer,
+                        line.text(),
+                        line.emotes(),
+                        innerX,
+                        lineY,
+                        bodyColor,
+                        layout.gifDisplaySize(),
+                        layout.contentWidth()
+                    );
+                    lineY += layout.gifDisplaySize();
+                } else {
+                    MessageEmoteGuiRenderer.drawLine(
+                        context,
+                        textRenderer,
+                        line.text(),
+                        line.emotes(),
+                        innerX,
+                        lineY,
+                        bodyColor
+                    );
+                    lineY += MessageCardLayout.emoteLineAdvance(textRenderer, line);
+                }
+                sawBody = true;
             }
         } else {
             for (OrderedText line : layout.bodyLines()) {

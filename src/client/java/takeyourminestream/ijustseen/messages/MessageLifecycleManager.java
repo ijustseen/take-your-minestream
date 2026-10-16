@@ -1,6 +1,7 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.util.math.MathHelper;
 import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.MessageSpawnMode;
@@ -164,6 +165,10 @@ public class MessageLifecycleManager {
         
         // Добавляем в историю
         messageHistory.add(message);
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client != null && client.textRenderer != null) {
+            message.warmHistoryLayout(client.textRenderer);
+        }
         
         // Ограничиваем размер истории
         enforceHistoryLimit();
@@ -304,7 +309,43 @@ public class MessageLifecycleManager {
      * @return список всех сообщений в истории
      */
     public List<Message> getAllMessages() {
-        return new ArrayList<>(messageHistory);
+        return List.copyOf(messageHistory);
+    }
+
+    public void warmHistoryLayouts(TextRenderer textRenderer) {
+        if (textRenderer == null) {
+            return;
+        }
+        for (Message message : messageHistory) {
+            message.warmHistoryLayout(textRenderer);
+        }
+        for (Message message : getAllPinnedMessages()) {
+            message.warmHistoryLayout(textRenderer);
+        }
+    }
+
+    public void warmPendingHistoryLayouts(TextRenderer textRenderer, int limit) {
+        if (textRenderer == null || limit <= 0) {
+            return;
+        }
+        int remaining = limit;
+        for (Message message : messageHistory) {
+            if (message.hasWarmedHistoryLayout()) {
+                continue;
+            }
+            message.warmHistoryLayout(textRenderer);
+            if (--remaining <= 0) {
+                return;
+            }
+        }
+    }
+
+    public long peekHistoryFirstId() {
+        return messageHistory.isEmpty() ? -1L : messageHistory.get(0).getId();
+    }
+
+    public long peekHistoryLastId() {
+        return messageHistory.isEmpty() ? -1L : messageHistory.get(messageHistory.size() - 1).getId();
     }
     
     /**

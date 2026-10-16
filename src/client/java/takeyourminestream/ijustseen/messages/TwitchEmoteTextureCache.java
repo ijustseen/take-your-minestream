@@ -48,7 +48,7 @@ public final class TwitchEmoteTextureCache {
         CACHE_DIR = modRoot.resolve("emote-cache");
     }
 
-    private static final String TWITCH_URL = "https://static-cdn.jtvnw.net/emoticons/v2/%s/static/dark/1.0";
+    private static final String TWITCH_URL = "https://static-cdn.jtvnw.net/emoticons/v2/%s/default/dark/1.0";
     private static final String SEVENTV_URL_PNG = "https://cdn.7tv.app/emote/%s/1x.png";
     private static final String SEVENTV_URL_GIF = "https://cdn.7tv.app/emote/%s/1x.gif";
 
@@ -176,6 +176,8 @@ public final class TwitchEmoteTextureCache {
                 connection.setRequestProperty("Referer", "https://kick.com/");
             } else if (url.contains("tiktok") || url.contains("ibyteimg.com") || url.contains("byteimg.com")) {
                 connection.setRequestProperty("Referer", "https://www.tiktok.com/");
+            } else if (url.contains("giphy.com") || url.contains("jtvnw.net") || url.contains("twitch.tv")) {
+                connection.setRequestProperty("Referer", "https://www.twitch.tv/");
             }
 
             int responseCode = connection.getResponseCode();
@@ -343,9 +345,10 @@ public final class TwitchEmoteTextureCache {
     }
 
     private static Path diskCachePath(String provider, String emoteId) {
+        String suffix = "twitch".equals(provider) ? ".default.bin" : ".png";
         String fileName = emoteId.matches("[a-zA-Z0-9._-]+")
-            ? emoteId + ".png"
-            : getSafeTexturePathPart(emoteId) + ".png";
+            ? emoteId + suffix
+            : getSafeTexturePathPart(emoteId) + suffix;
         return CACHE_DIR.resolve(provider).resolve(fileName);
     }
 

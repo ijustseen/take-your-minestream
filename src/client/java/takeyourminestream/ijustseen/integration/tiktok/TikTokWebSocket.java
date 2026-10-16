@@ -37,6 +37,8 @@ final class TikTokWebSocket {
 
         void onFollow(long msgId, String uniqueId, String displayName);
 
+        void onSubscribe(long msgId, String uniqueId, String displayName);
+
         void onLiveEnded();
     }
 
@@ -299,12 +301,13 @@ final class TikTokWebSocket {
         TikTokProto.ProtoMap eventDetails = social.getMessage(1).getMessage(8);
         String hint = (eventDetails.getString(1) + ' ' + eventDetails.getString(2))
             .toLowerCase(java.util.Locale.ROOT);
-        if (!hint.contains("follow")) {
-            return;
-        }
-
         UserIdentity user = extractUserSafe(social, 2);
-        handler.onFollow(resolveMsgId(social, wrapperMsgId), user.uniqueId(), user.displayName());
+        long msgId = resolveMsgId(social, wrapperMsgId);
+        if (hint.contains("follow")) {
+            handler.onFollow(msgId, user.uniqueId(), user.displayName());
+        } else if (hint.contains("subscribe")) {
+            handler.onSubscribe(msgId, user.uniqueId(), user.displayName());
+        }
     }
 
     private static long resolveMsgId(TikTokProto.ProtoMap chat, long wrapperMsgId) {

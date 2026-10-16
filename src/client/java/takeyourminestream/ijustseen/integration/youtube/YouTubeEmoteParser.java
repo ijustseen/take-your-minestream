@@ -25,11 +25,39 @@ final class YouTubeEmoteParser {
     }
 
     static Parsed parse(JsonObject renderer) {
-        if (renderer == null || !renderer.has("message") || !renderer.get("message").isJsonObject()) {
+        if (renderer == null) {
             return Parsed.empty();
         }
-        JsonObject messageObj = renderer.getAsJsonObject("message");
-        if (messageObj.has("simpleText")) {
+        return parseTextObject(renderer.has("message") && renderer.get("message").isJsonObject()
+            ? renderer.getAsJsonObject("message")
+            : null);
+    }
+
+    static String plainText(JsonObject parent, String key) {
+        if (parent == null || !parent.has(key) || parent.get(key).isJsonNull()) {
+            return "";
+        }
+        JsonElement element = parent.get(key);
+        if (element.isJsonPrimitive()) {
+            String value = element.getAsString();
+            return value != null ? value : "";
+        }
+        if (!element.isJsonObject()) {
+            return "";
+        }
+        return parseTextObject(element.getAsJsonObject()).text();
+    }
+
+    static String authorName(JsonObject renderer) {
+        String name = plainText(renderer, "authorName");
+        return name.startsWith("@") ? name.substring(1) : name;
+    }
+
+    private static Parsed parseTextObject(JsonObject messageObj) {
+        if (messageObj == null) {
+            return Parsed.empty();
+        }
+        if (messageObj.has("simpleText") && messageObj.get("simpleText").isJsonPrimitive()) {
             String simple = messageObj.get("simpleText").getAsString();
             return new Parsed(simple != null ? simple : "", List.of());
         }

@@ -309,7 +309,7 @@ public class ModConfigScreen extends Screen {
             ConfigEntryType.FEATURE,
             editorButton,
             ConfigCategory.MESSAGES
-        ));
+        ).enabledWhen(this::hasWorldClient));
 
         // Вид: сначала мир / HUD, дальше общий внешний вид пузыря
         displayModeButton = ButtonWidget.builder(
@@ -933,7 +933,11 @@ public class ModConfigScreen extends Screen {
         historyButton = ButtonWidget.builder(Text.translatable("takeyourstreamchat.config.message_history"), btn -> {
             var messageSpawner = TakeYourMineStreamClient.getStaticMessageSpawner();
             if (messageSpawner != null) {
-                ScreenNavigationCompat.open(this.client, new MessageHistoryScreen(this, messageSpawner.getLifecycleManager()));
+                var lifecycle = messageSpawner.getLifecycleManager();
+                if (this.client != null) {
+                    lifecycle.warmHistoryLayouts(this.textRenderer);
+                }
+                ScreenNavigationCompat.open(this.client, new MessageHistoryScreen(this, lifecycle));
             }
         }).dimensions(0, 0, 1, FOOTER_BUTTON_HEIGHT).build();
 
@@ -1012,7 +1016,12 @@ public class ModConfigScreen extends Screen {
             ? Text.translatable("takeyourstreamchat.config.unpin_mode.whole_message")
             : Text.translatable("takeyourstreamchat.config.unpin_mode.pin_icon");
     }
-    
+
+    private boolean hasWorldClient() {
+        var client = this.client;
+        return client != null && client.world != null;
+    }
+
 
     
     @Override
@@ -1355,7 +1364,7 @@ public class ModConfigScreen extends Screen {
         int top = entry.rowY;
         int right = entry.rowX + entry.rowWidth;
         int bottom = entry.rowY + FEATURE_HEIGHT;
-        boolean enabled = this.client != null && this.client.player != null;
+        boolean enabled = entry.isEnabled();
         context.fill(left, top, right, bottom, hovered && enabled ? ModUiTheme.ACCENT_BG_HOVER : ModUiTheme.ACCENT_BG);
         context.fill(left, top, left + 3, bottom, enabled ? ModUiTheme.ACCENT : ModUiTheme.PANEL_BORDER);
         context.fill(left, top, right, top + 1, ModUiTheme.ACCENT_DARK);

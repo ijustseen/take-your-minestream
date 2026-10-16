@@ -12,6 +12,7 @@ import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.integration.chat.ChatConnectionManager;
 import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
 import takeyourminestream.ijustseen.integration.chat.PlatformRoleKind;
+import takeyourminestream.ijustseen.integration.chat.StreamKeyResolver;
 import takeyourminestream.ijustseen.ui.gui.ConfigUiHelper;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer;
@@ -54,12 +55,16 @@ public class PlatformConfigScreen extends Screen {
     private final List<Entry> entries = new ArrayList<>();
     private ButtonWidget backButton;
     private ButtonWidget enabledToggle;
-    private String hoveredDescriptionKey;
+    private Text hoveredDescription;
+    private Text identityHint;
     private int scrollOffset;
 
+    private TextFieldWidget identityField;
+    private Entry identityEntry;
+
     private static class Entry {
-        final String labelKey;
-        final String descriptionKey;
+        String labelKey;
+        String descriptionKey;
         final Object widget;
         java.util.function.BooleanSupplier enabledWhen;
 
@@ -119,7 +124,34 @@ public class PlatformConfigScreen extends Screen {
     }
 
     private void createChannelEntry() {
-        String labelKey = channelLabelKey(platform);
+        if (platform == ChatPlatform.TWITCH) {
+            createTwitchConnectMethodEntry();
+        }
+        createIdentityField();
+    }
+
+    private void createTwitchConnectMethodEntry() {
+        ButtonWidget button = ButtonWidget.builder(
+            twitchConnectMethodText(),
+            btn -> {
+                ModConfig.setTWITCH_CONNECT_METHOD(ModConfig.getTWITCH_CONNECT_METHOD().toggle());
+                btn.setMessage(twitchConnectMethodText());
+                applyIdentityFieldToCurrentMethod();
+                syncEnabledToggleAvailability();
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, CONTROL_HEIGHT).build();
+        this.addDrawableChild(button);
+        entries.add(new Entry(
+            "takeyourstreamchat.config.twitch_connect",
+            "takeyourstreamchat.config.twitch_connect.desc",
+            button
+        ));
+    }
+
+    private void createIdentityField() {
+        boolean streamKey = usesTwitchStreamKey();
+        String configKey = identityConfigKey(streamKey);
+        String labelKey = identityLabelKey(streamKey);
         TextFieldWidget field = new TextFieldWidget(
             this.textRenderer,
             0,
@@ -128,13 +160,90 @@ public class PlatformConfigScreen extends Screen {
             CONTROL_HEIGHT,
             Text.translatable(labelKey)
         );
-        field.setText(channelValue(platform));
-        field.setChangedListener(value -> {
-            ConfigManager.getInstance().setConfigValue(channelConfigKey(platform), value);
-            syncEnabledToggleAvailability();
-        });
+        identityField = field;
+        field.setMaxLength(streamKey ? 128 : 64);
+        Object stored = ConfigManager.getInstance().getConfigValue(configKey);
+        field.setText(stored instanceof String s ? s : "");
+        identityHint = Text.translatable(labelKey + ".desc");
+        bindIdentityListener(streamKey);
         this.addDrawableChild(field);
-        entries.add(new Entry(labelKey, labelKey + ".desc", field));
+        identityEntry = new Entry(labelKey, labelKey + ".desc", field);
+        entries.add(identityEntry);
+        if (streamKey && !field.getText().isBlank()) {
+            resolveTwitchStreamKey(field.getText());
+        }
+    }
+
+    private void applyIdentityFieldToCurrentMethod() {
+        if (identityField == null || identityEntry == null) {
+            return;
+        }
+        boolean streamKey = usesTwitchStreamKey();
+        String labelKey = identityLabelKey(streamKey);
+        identityEntry.labelKey = labelKey;
+        identityEntry.descriptionKey = labelKey + ".desc";
+        identityField.setMaxLength(streamKey ? 128 : 64);
+        identityHint = Text.translatable(labelKey + ".desc");
+        bindIdentityListener(streamKey);
+        Object stored = ConfigManager.getInstance().getConfigValue(identityConfigKey(streamKey));
+        identityField.setText(stored instanceof String s ? s : "");
+        if (!streamKey) {
+            syncEnabledToggleAvailability();
+        }
+    }
+
+    private void bindIdentityListener(boolean streamKey) {
+        String configKey = identityConfigKey(streamKey);
+        identityField.setChangedListener(value -> {
+            ConfigManager.getInstance().setConfigValue(configKey, value);
+            if (streamKey) {
+                resolveTwitchStreamKey(value);
+            } else {
+                identityHint = Text.translatable(identityLabelKey(false) + ".desc");
+                syncEnabledToggleAvailability();
+            }
+        });
+    }
+
+    private void resolveTwitchStreamKey(String value) {
+        identityHint = Text.translatable("takeyourstreamchat.config.stream_key.resolving");
+        StreamKeyResolver.applyAsync(value, result -> {
+            if (ScreenNavigationCompat.current(this.client) != this) {
+                return;
+            }
+            updateIdentityHint(result);
+            syncEnabledToggleAvailability();
+            ChatConnectionManager.getInstance(ConfigManager.getInstance()).reconnectChangedPlatforms();
+        });
+    }
+
+    private void updateIdentityHint(StreamKeyResolver.Result result) {
+        identityHint = switch (result.status()) {
+            case EMPTY -> Text.translatable("takeyourstreamchat.config.stream_key.twitch.desc");
+            case RESOLVED -> Text.translatable("takeyourstreamchat.config.stream_key.resolved", result.channel());
+            case CHANNEL -> Text.translatable("takeyourstreamchat.config.stream_key.channel", result.channel());
+            case INVALID -> Text.translatable("takeyourstreamchat.config.stream_key.invalid");
+        };
+    }
+
+    private boolean usesTwitchStreamKey() {
+        return platform == ChatPlatform.TWITCH && ModConfig.isTWITCH_STREAM_KEY_CONNECT();
+    }
+
+    private String identityConfigKey(boolean streamKey) {
+        return streamKey ? "twitchStreamKey" : channelConfigKey(platform);
+    }
+
+    private String identityLabelKey(boolean streamKey) {
+        return streamKey
+            ? "takeyourstreamchat.config.stream_key.twitch"
+            : channelLabelKey(platform);
+    }
+
+    private static Text twitchConnectMethodText() {
+        return Text.translatable(
+            "takeyourstreamchat.config.twitch_connect." + ModConfig.getTWITCH_CONNECT_METHOD().getKey()
+        );
     }
 
     private void createPlatformToggles() {
@@ -257,7 +366,7 @@ public class PlatformConfigScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         updateEntryPositions();
-        hoveredDescriptionKey = null;
+        hoveredDescription = null;
 
         java.util.Set<ButtonWidget> hiddenButtons = ScreenUiHelper.hideButtons(this);
         List<Object> temporarilyHidden = new ArrayList<>();
@@ -298,9 +407,9 @@ public class PlatformConfigScreen extends Screen {
 
         drawFixedPanelFooter(context);
 
-        Text description = hoveredDescriptionKey == null
+        Text description = hoveredDescription == null
             ? Text.translatable("takeyourstreamchat.config.hint_default")
-            : Text.translatable(hoveredDescriptionKey);
+            : hoveredDescription;
         context.drawTextWithShadow(
             this.textRenderer,
             description,
@@ -385,7 +494,9 @@ public class PlatformConfigScreen extends Screen {
                     entry.isEnabled() ? ModUiTheme.TEXT_PRIMARY : ModUiTheme.TEXT_HINT
                 );
                 if (rowHovered) {
-                    hoveredDescriptionKey = entry.descriptionKey;
+                    hoveredDescription = entry.widget instanceof TextFieldWidget && identityHint != null
+                        ? identityHint
+                        : Text.translatable(entry.descriptionKey);
                 }
             }
             y += ENTRY_HEIGHT + ENTRY_SPACING;

@@ -11,11 +11,15 @@
 ### Fixed
 
 - **Message collision fix** - fix an error of killing the wrong message caused by wrong counting order
+- **Chat history opens immediately** — card layouts are prepared when a message arrives, and the history column no longer starts scrolled past its content (pinned messages were visible, history looked empty until the next refresh)
 
 ### Added
 
+- **Twitch GIFs** — official GIPHY keyboard messages from the IRC `gifs` tag (`start-end|id|url`) are downloaded from the URL Twitch sends and drawn on their own line under the username, sized to the name+badges row, centered, with a small gap. Animated Twitch emotes now use the `default` CDN template instead of `static`
 - **Message width** — line width before wrapping (60–400 px, default 120) for world messages and the HUD widget. Chat history keeps its fixed width
 - **Visual message editor** — opened from the highlighted card at the top of the Appearance tab while in a world. A settings panel over the live game shows sample messages from every platform, rendered exactly as real ones, and updates instantly when size, width, colors, background, borders or role badges change. Two views: **Message only** (one sample in front of the camera — drag to rotate, scroll to move the camera, right-click to reset; the sample sits inside a translucent 1×1×1 block cube, so its real size stays clear while zooming) and **Around the player** (third-person camera you can orbit; samples spawn at the real positions for the current placement and min/max distance). In HUD mode the preview appears in the chosen HUD corner. Real chat messages are hidden while the editor is open and come back afterwards; camera perspective and view direction are restored on close
+- **Twitch can connect two ways** — on the Twitch page, switch between channel name and the primary stream key from Creator Dashboard (`live_<id>_…`). The key is resolved to the channel automatically. YouTube / Kick / TikTok stay on a name or live URL. Reset keeps the Twitch method and key together with channel names
+- **Live events** — subscriptions, gifts, raids and similar events from each platform’s public feed: Twitch IRC `USERNOTICE` / bits; YouTube Super Chat / Super Sticker / membership / gifted memberships; Kick Pusher subscription / gifted-sub / host; TikTok gifts and follows (still behind their existing toggles) plus LIVE subs
 
 ## [2.1.1] - 2026-10-07
 

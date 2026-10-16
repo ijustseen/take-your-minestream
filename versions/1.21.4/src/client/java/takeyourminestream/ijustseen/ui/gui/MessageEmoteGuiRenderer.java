@@ -89,7 +89,7 @@ public final class MessageEmoteGuiRenderer {
             if (emote.getStartIndex() > cursor) {
                 width += textRenderer.getWidth(ChatMessageParser.stripFormatting(text.substring(cursor, emote.getStartIndex())));
             }
-            width += ICON_SIZE + ICON_SPACING;
+            width += emote.iconSize() + ICON_SPACING;
             cursor = emote.getEndIndex() + 1;
         }
         if (cursor < text.length()) {
@@ -107,6 +107,20 @@ public final class MessageEmoteGuiRenderer {
         int y,
         int color
     ) {
+        drawLine(context, textRenderer, text, emotes, x, y, color, 0, 0);
+    }
+
+    public static void drawLine(
+        DrawContext context,
+        TextRenderer textRenderer,
+        String text,
+        List<MessageEmote> emotes,
+        int x,
+        int y,
+        int color,
+        int gifSize,
+        int contentWidth
+    ) {
         List<MessageEmote> sortedEmotes = getSortedValidEmotes(text, emotes);
         int cursor = 0;
         int drawX = x;
@@ -118,6 +132,10 @@ public final class MessageEmoteGuiRenderer {
             }
 
             Identifier texture = TwitchEmoteTextureCache.getTextureIdentifier(emote.getProvider(), emote.getEmoteId());
+            int iconSize = emote.displaySize(gifSize);
+            if (emote.isGif() && gifSize > 0 && contentWidth > iconSize) {
+                drawX = x + (contentWidth - iconSize) / 2;
+            }
             if (texture != null) {
                 context.drawTexture(
                     RenderLayer::getGuiTextured,
@@ -126,19 +144,19 @@ public final class MessageEmoteGuiRenderer {
                     y - 1,
                     0,
                     0,
-                    ICON_SIZE,
-                    ICON_SIZE,
-                    ICON_SIZE,
-                    ICON_SIZE,
-                    ICON_SIZE,
-                    ICON_SIZE,
+                    iconSize,
+                    iconSize,
+                    iconSize,
+                    iconSize,
+                    iconSize,
+                    iconSize,
                     color
                 );
-                drawX += ICON_SIZE + ICON_SPACING;
+                drawX += iconSize + ICON_SPACING;
             } else if (!"emoji".equals(emote.getProvider())) {
                 drawX = drawSegment(context, textRenderer, emote.getEmoteCode(), drawX, y, color);
             } else {
-                drawX += ICON_SIZE + ICON_SPACING;
+                drawX += iconSize + ICON_SPACING;
             }
             cursor = emote.getEndIndex() + 1;
         }

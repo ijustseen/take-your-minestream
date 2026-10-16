@@ -3,6 +3,7 @@ package takeyourminestream.ijustseen.messages;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.client.font.TextRenderer;
 import takeyourminestream.ijustseen.core.MessagePanelConstants;
+import takeyourminestream.ijustseen.core.text.ChatMessageParser;
 import takeyourminestream.ijustseen.ui.gui.MessageCardLayout;
 
 import java.util.List;
@@ -44,6 +45,9 @@ public class Message {
     private volatile List<EmoteTextLayout.LineContent> cachedEmoteLines;
     private volatile MessageCardLayout.Layout cachedHudLayout;
     private volatile int cachedHudMaxWidth = -1;
+    private volatile MessageCardLayout.Layout cachedHistoryLayout;
+    private volatile int cachedHistoryMaxWidth = -1;
+    private volatile ChatMessageParser.ParsedMessage cachedParsed;
     private volatile int cachedWrapWidth = -1;
     
     public Message(String text, Vec3d position, long spawnTick, float yaw, float pitch) {
@@ -200,13 +204,48 @@ public class Message {
                 s -> textRenderer.getWidth(s),
                 getText(),
                 getEmotes(),
-                MessagePanelLayout.EMOTE_ICON_SIZE + MessagePanelLayout.EMOTE_ICON_SPACING,
+                MessageEmote.maxIconSize(getEmotes()) + MessagePanelLayout.EMOTE_ICON_SPACING,
                 MessagePanelLayout.wrapWidth(),
                 getWorldLayout(textRenderer).firstLineIconOffset()
             );
             cachedEmoteLines = cached;
         }
         return cached;
+    }
+
+    public ChatMessageParser.ParsedMessage getParsed() {
+        ChatMessageParser.ParsedMessage parsed = cachedParsed;
+        if (parsed == null) {
+            parsed = ChatMessageParser.parse(text);
+            cachedParsed = parsed;
+        }
+        return parsed;
+    }
+
+    public MessageCardLayout.Layout getHistoryLayout(TextRenderer textRenderer, int maxAvailableWidth) {
+        invalidateLayoutIfWrapChanged();
+        if (cachedHistoryLayout != null && cachedHistoryMaxWidth == maxAvailableWidth) {
+            return cachedHistoryLayout;
+        }
+        TextRenderer fonts = textRenderer;
+        MessageCardLayout.Layout layout = MessageCardLayout.compute(fonts, this, maxAvailableWidth);
+        cachedHistoryLayout = layout;
+        cachedHistoryMaxWidth = maxAvailableWidth;
+        return layout;
+    }
+
+    public void warmHistoryLayout(TextRenderer textRenderer) {
+        if (textRenderer == null || hasWarmedHistoryLayout()) {
+            return;
+        }
+        getParsed();
+        getHistoryLayout(textRenderer, MessagePanelConstants.MESSAGE_WRAP_WIDTH);
+    }
+
+    public boolean hasWarmedHistoryLayout() {
+        return cachedParsed != null
+            && cachedHistoryLayout != null
+            && cachedHistoryMaxWidth == MessagePanelConstants.MESSAGE_WRAP_WIDTH;
     }
 
     public MessageCardLayout.Layout getHudLayout(TextRenderer textRenderer, int maxAvailableWidth) {
@@ -226,6 +265,7 @@ public class Message {
             cachedWorldLayout = null;
             cachedEmoteLines = null;
             cachedHudLayout = null;
+            cachedHistoryLayout = null;
             cachedWrapWidth = wrapWidth;
         }
     }

@@ -14,7 +14,28 @@ public class ModConfig {
 
     // Обратная совместимость - статические поля теперь возвращают значения из ConfigManager
     public static String getTWITCH_CHANNEL_NAME() {
-        return (String) ConfigManager.getInstance().getConfigValue("twitchChannelName");
+        Object value = ConfigManager.getInstance().getConfigValue("twitchChannelName");
+        return value instanceof String s ? s : "";
+    }
+
+    public static void setTWITCH_CHANNEL_NAME(String value) {
+        ConfigManager.getInstance().setConfigValue("twitchChannelName", value != null ? value : "");
+    }
+
+    public static TwitchConnectMethod getTWITCH_CONNECT_METHOD() {
+        Object value = ConfigManager.getInstance().getConfigValue("twitchConnectMethod");
+        return value instanceof TwitchConnectMethod method ? method : TwitchConnectMethod.CHANNEL;
+    }
+
+    public static void setTWITCH_CONNECT_METHOD(TwitchConnectMethod value) {
+        ConfigManager.getInstance().setConfigValue(
+            "twitchConnectMethod",
+            value != null ? value : TwitchConnectMethod.CHANNEL
+        );
+    }
+
+    public static boolean isTWITCH_STREAM_KEY_CONNECT() {
+        return getTWITCH_CONNECT_METHOD().usesStreamKey();
     }
 
     public static boolean isTWITCH_ENABLED() {

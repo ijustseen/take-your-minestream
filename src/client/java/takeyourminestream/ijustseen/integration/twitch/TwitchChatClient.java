@@ -1,16 +1,20 @@
 package takeyourminestream.ijustseen.integration.twitch;
 
+import net.minecraft.text.Text;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles;
 import takeyourminestream.ijustseen.integration.chat.ChatConnection;
+import takeyourminestream.ijustseen.integration.chat.ChatEventType;
 import takeyourminestream.ijustseen.integration.chat.ChatMessagePipeline;
 import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
 import takeyourminestream.ijustseen.integration.chat.IncomingChatMessage;
-import takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles;
 import takeyourminestream.ijustseen.messages.SevenTVEmoteProvider;
 
 import java.io.*;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class TwitchChatClient implements ChatConnection {
@@ -79,11 +83,13 @@ public class TwitchChatClient implements ChatConnection {
             while (running && (line = reader.readLine()) != null) {
                 if (line.startsWith("PING ")) {
                     sendRaw("PONG " + line.substring(5));
-                } else if (line.startsWith("@") && line.contains(" ROOMSTATE ")) {
-                    String roomId = extractTagValue(line, "room-id");
+                } else if (line.contains(" ROOMSTATE ")) {
+                    String roomId = parseTags(line).get("room-id");
                     if (roomId != null && !roomId.isBlank()) {
                         SevenTVEmoteProvider.init(channelName, roomId);
                     }
+                } else if (line.contains(" USERNOTICE ")) {
+                    handleUserNotice(line);
                 } else if (line.contains(" PRVMSG ") || line.contains(" PRIVMSG ")) {
                     handlePrivMsg(line);
                 }
@@ -102,85 +108,210 @@ public class TwitchChatClient implements ChatConnection {
         }
     }
 
-    private String extractTagValue(String ircLine, String tagName) {
-        if (ircLine == null || !ircLine.startsWith("@")) {
-            return null;
-        }
-
-        int firstSpace = ircLine.indexOf(' ');
-        if (firstSpace <= 1) {
-            return null;
-        }
-
-        String tagsPart = ircLine.substring(1, firstSpace);
-        String[] tags = tagsPart.split(";");
-        for (String tag : tags) {
-            int eq = tag.indexOf('=');
-            String key = eq >= 0 ? tag.substring(0, eq) : tag;
-            String val = eq >= 0 ? tag.substring(eq + 1) : "";
-            if (tagName.equals(key)) {
-                return val;
-            }
-        }
-        return null;
-    }
-
     private void handlePrivMsg(String line) {
-        String tagsPart = null;
-        String rest = line;
-        if (line.startsWith("@")) {
-            int space = line.indexOf(' ');
-            tagsPart = line.substring(1, space);
-            rest = line.substring(space + 1);
-        }
+        String rest = stripTags(line);
         int excl = rest.indexOf('!');
         int colon = rest.indexOf(" :", 1);
-        int hash = rest.indexOf("#");
+        int hash = rest.indexOf('#');
         if (excl <= 1 || colon <= 1 || hash <= 1) {
             return;
         }
 
+        Map<String, String> tags = parseTags(line);
         String user = rest.substring(1, excl);
         String message = rest.substring(colon + 2);
-
-        String displayName = user;
-        Integer rgb = null;
-        String emotesTag = null;
-        String roomId = null;
-        String badgesTag = null;
-        if (tagsPart != null) {
-            String[] tags = tagsPart.split(";");
-            for (String tag : tags) {
-                int eq = tag.indexOf('=');
-                String key = eq >= 0 ? tag.substring(0, eq) : tag;
-                String val = eq >= 0 ? tag.substring(eq + 1) : "";
-                if (key.equals("display-name") && !val.isEmpty()) {
-                    displayName = val;
-                } else if (key.equals("color") && val.startsWith("#") && val.length() == 7) {
-                    try {
-                        rgb = Integer.parseInt(val.substring(1), 16);
-                    } catch (NumberFormatException ignored) {}
-                } else if (key.equals("emotes") && !val.isEmpty()) {
-                    emotesTag = val;
-                } else if (key.equals("room-id") && !val.isEmpty()) {
-                    roomId = val;
-                } else if (key.equals("badges")) {
-                    badgesTag = val;
-                }
-            }
+        String displayName = firstNonBlank(tags.get("display-name"), user);
+        String bits = tags.get("bits");
+        if (bits != null && !bits.isBlank()) {
+            String eventText = message.isBlank()
+                ? Text.translatable("takeyourstreamchat.event.twitch.bits", bits).getString()
+                : Text.translatable("takeyourstreamchat.event.twitch.bits_message", bits, message).getString();
+            emit(user, displayName, eventText, tags, ChatEventType.BITS, null);
+            return;
         }
 
-        ChatAuthorRoles roles = rolesFromBadges(badgesTag);
-        pipeline.process(IncomingChatMessage.builder(ChatPlatform.TWITCH)
-            .authorLogin(user)
+        emit(user, displayName, message, tags, ChatEventType.CHAT, tags.get("emotes"));
+    }
+
+    /**
+     * Подписки, гифты и рейды приходят как USERNOTICE при CAP twitch.tv/commands —
+     * без OAuth, тем же justinfan-сокеттом, что и обычный чат.
+     */
+    private void handleUserNotice(String line) {
+        Map<String, String> tags = parseTags(line);
+        String msgId = tags.getOrDefault("msg-id", "");
+        ChatEventType eventType = eventTypeForUserNotice(msgId);
+        if (eventType == null) {
+            return;
+        }
+
+        String login = firstNonBlank(tags.get("login"), tags.get("display-name"), "Viewer");
+        String displayName = firstNonBlank(tags.get("display-name"), login);
+        String text = userNoticeText(msgId, tags, trailingIrcMessage(stripTags(line), " USERNOTICE "));
+        if (text.isBlank()) {
+            return;
+        }
+        emit(login, displayName, text, tags, eventType, null);
+    }
+
+    private void emit(
+        String login,
+        String displayName,
+        String text,
+        Map<String, String> tags,
+        ChatEventType eventType,
+        String emotesTag
+    ) {
+        String gifsTag = firstNonBlank(tags.get("gifs"), tags.get("gif"));
+        if ((text == null || text.isBlank()) && gifsTag.isBlank()) {
+            return;
+        }
+        if (text == null || text.isBlank()) {
+            text = "\uFFFC";
+        }
+        IncomingChatMessage.Builder builder = IncomingChatMessage.builder(ChatPlatform.TWITCH)
+            .authorLogin(login)
             .displayName(displayName)
-            .text(message)
-            .authorColorRgb(rgb)
-            .roles(roles)
-            .twitchRoomId(roomId)
+            .text(text)
+            .roles(rolesFromBadges(tags.get("badges")))
+            .twitchRoomId(emptyToNull(tags.get("room-id")))
             .twitchChannelName(channelName)
-            .twitchEmotesTag(emotesTag)
-            .build());
+            .twitchEmotesTag(emptyToNull(emotesTag))
+            .twitchGifsTag(emptyToNull(gifsTag))
+            .eventType(eventType);
+        Integer rgb = parseHexColor(tags.get("color"));
+        if (rgb != null) {
+            builder.authorColorRgb(rgb);
+        }
+        pipeline.process(builder.build());
+    }
+
+    private static ChatEventType eventTypeForUserNotice(String msgId) {
+        return switch (msgId) {
+            case "sub", "resub", "giftpaidupgrade", "primepaidupgrade",
+                 "communitypayforward", "standardpayforward" -> ChatEventType.SUBSCRIBE;
+            case "subgift", "anonsubgift", "submysterygift", "rewardgift",
+                 "anongiftpaidupgrade" -> ChatEventType.GIFT;
+            case "raid" -> ChatEventType.RAID;
+            default -> null;
+        };
+    }
+
+    private static String userNoticeText(String msgId, Map<String, String> tags, String userMessage) {
+        String text = switch (msgId) {
+            case "resub" -> Text.translatable(
+                "takeyourstreamchat.event.twitch.resub",
+                firstNonBlank(tags.get("msg-param-cumulative-months"), tags.get("msg-param-months"), "1")
+            ).getString();
+            case "subgift", "anonsubgift" -> Text.translatable(
+                "takeyourstreamchat.event.twitch.subgift",
+                firstNonBlank(tags.get("msg-param-recipient-display-name"), tags.get("msg-param-recipient-user-name"), "?")
+            ).getString();
+            case "submysterygift" -> Text.translatable(
+                "takeyourstreamchat.event.twitch.submystery",
+                firstNonBlank(tags.get("msg-param-mass-gift-count"), "1")
+            ).getString();
+            case "raid" -> Text.translatable(
+                "takeyourstreamchat.event.twitch.raid",
+                firstNonBlank(tags.get("msg-param-viewerCount"), tags.get("msg-param-viewer-count"), "0")
+            ).getString();
+            case "sub", "giftpaidupgrade", "primepaidupgrade",
+                 "communitypayforward", "standardpayforward" ->
+                Text.translatable("takeyourstreamchat.event.twitch.sub").getString();
+            case "rewardgift", "anongiftpaidupgrade" ->
+                Text.translatable("takeyourstreamchat.event.twitch.subgift_unknown").getString();
+            default -> firstNonBlank(tags.get("system-msg"), "");
+        };
+        if (userMessage != null && !userMessage.isBlank()) {
+            return text + " — " + userMessage;
+        }
+        return text;
+    }
+
+    private static Map<String, String> parseTags(String line) {
+        Map<String, String> tags = new HashMap<>();
+        if (line == null || !line.startsWith("@")) {
+            return tags;
+        }
+        int firstSpace = line.indexOf(' ');
+        if (firstSpace <= 1) {
+            return tags;
+        }
+        for (String tag : line.substring(1, firstSpace).split(";")) {
+            int eq = tag.indexOf('=');
+            if (eq >= 0) {
+                tags.put(tag.substring(0, eq), unescapeIrc(tag.substring(eq + 1)));
+            } else if (!tag.isEmpty()) {
+                tags.put(tag, "");
+            }
+        }
+        return tags;
+    }
+
+    private static String stripTags(String line) {
+        if (line != null && line.startsWith("@")) {
+            int space = line.indexOf(' ');
+            if (space > 0 && space + 1 < line.length()) {
+                return line.substring(space + 1);
+            }
+        }
+        return line == null ? "" : line;
+    }
+
+    private static String trailingIrcMessage(String rest, String command) {
+        int cmd = rest.indexOf(command);
+        if (cmd < 0) {
+            return "";
+        }
+        int trail = rest.indexOf(" :", cmd + 1);
+        return trail >= 0 ? rest.substring(trail + 2) : "";
+    }
+
+    private static String unescapeIrc(String value) {
+        if (value == null || value.indexOf('\\') < 0) {
+            return value == null ? "" : value;
+        }
+        StringBuilder out = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '\\' && i + 1 < value.length()) {
+                char next = value.charAt(++i);
+                out.append(switch (next) {
+                    case ':' -> ';';
+                    case 's' -> ' ';
+                    case 'r' -> '\r';
+                    case 'n' -> '\n';
+                    default -> next;
+                });
+            } else {
+                out.append(c);
+            }
+        }
+        return out.toString();
+    }
+
+    private static Integer parseHexColor(String color) {
+        if (color == null || !color.startsWith("#") || color.length() != 7) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(color.substring(1), 16);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private static String emptyToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     private static ChatAuthorRoles rolesFromBadges(String badgesTag) {

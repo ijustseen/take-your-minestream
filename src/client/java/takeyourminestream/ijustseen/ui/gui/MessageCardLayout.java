@@ -37,10 +37,21 @@ public final class MessageCardLayout {
         int width,
         int height,
         int contentWidth,
-        EmoteBodyLine emoteBodyLine
+        EmoteBodyLine emoteBodyLine,
+        int gifDisplaySize
     ) {
         public Layout(List<OrderedText> bodyLines, int width, int height, int contentWidth) {
-            this(bodyLines, width, height, contentWidth, null);
+            this(bodyLines, width, height, contentWidth, null, 0);
+        }
+
+        public Layout(
+            List<OrderedText> bodyLines,
+            int width,
+            int height,
+            int contentWidth,
+            EmoteBodyLine emoteBodyLine
+        ) {
+            this(bodyLines, width, height, contentWidth, emoteBodyLine, 0);
         }
     }
 
@@ -68,7 +79,7 @@ public final class MessageCardLayout {
 
     private static Layout computeWithEmotes(TextRenderer textRenderer, Message message, int maxAvailableWidth, int preferredWrapWidth) {
         String rawMessageText = message.getText();
-        ChatMessageParser.ParsedMessage parsed = ChatMessageParser.parse(rawMessageText);
+        ChatMessageParser.ParsedMessage parsed = message.getParsed();
         String bodyText = MessageEmoteGuiRenderer.getBodyText(rawMessageText);
         List<MessageEmote> bodyEmotes = MessageEmoteGuiRenderer.remapEmotesToBody(rawMessageText, message.getEmotes());
 
@@ -77,7 +88,7 @@ public final class MessageCardLayout {
             s -> textRenderer.getWidth(s.isBlank() ? s : ChatMessageParser.stripFormatting(s)),
             bodyText,
             bodyEmotes,
-            MessageEmoteGuiRenderer.ICON_SIZE + MessageEmoteGuiRenderer.ICON_SPACING,
+            MessageEmote.maxIconSize(bodyEmotes) + MessageEmoteGuiRenderer.ICON_SPACING,
             wrapWidth,
             0
         );
@@ -86,11 +97,22 @@ public final class MessageCardLayout {
         if (parsed.username() != null) {
             contentWidth = textRenderer.getWidth(Text.empty().append(parsed.usernameText())) + usernameIconOffset(message);
         }
+        int gifSize = MessageEmote.fitGifSize(contentWidth);
         int bodyHeight = 0;
+        boolean sawBody = false;
         for (EmoteTextLayout.LineContent line : bodyLines) {
-            int lineWidth = MessageEmoteGuiRenderer.measureLine(textRenderer, line.text(), line.emotes());
-            contentWidth = Math.max(contentWidth, lineWidth);
-            bodyHeight += emoteLineAdvance(textRenderer, line);
+            if (line.isGifLine()) {
+                if (parsed.username() != null || sawBody) {
+                    bodyHeight += MessageEmote.GIF_LINE_GAP;
+                }
+                bodyHeight += gifSize;
+                contentWidth = Math.max(contentWidth, gifSize);
+            } else {
+                int lineWidth = MessageEmoteGuiRenderer.measureLine(textRenderer, line.text(), line.emotes());
+                contentWidth = Math.max(contentWidth, lineWidth);
+                bodyHeight += emoteLineAdvance(textRenderer, line);
+            }
+            sawBody = true;
         }
         contentWidth = Math.max(contentWidth, 40);
 
@@ -106,13 +128,21 @@ public final class MessageCardLayout {
             cardWidth,
             cardHeight,
             contentWidth,
-            new EmoteBodyLine(bodyLines)
+            new EmoteBodyLine(bodyLines),
+            gifSize
         );
     }
 
     /** Высота строки тела: с эмоутами чуть выше обычного текста. */
     public static int emoteLineAdvance(TextRenderer textRenderer, EmoteTextLayout.LineContent line) {
-        return line.hasEmotes() ? MessageEmoteGuiRenderer.ICON_SIZE + 1 : textRenderer.fontHeight;
+        return emoteLineAdvance(textRenderer, line, 0);
+    }
+
+    public static int emoteLineAdvance(TextRenderer textRenderer, EmoteTextLayout.LineContent line, int gifSize) {
+        if (line.isGifLine() && gifSize > 0) {
+            return gifSize;
+        }
+        return line.hasEmotes() ? MessageEmote.maxIconSize(line.emotes()) + 1 : textRenderer.fontHeight;
     }
 
     public static Layout compute(

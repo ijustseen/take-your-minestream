@@ -69,6 +69,7 @@ public class ConfigManager implements IConfigManager {
                     this.configData = loadedData;
                     this.configData.migrateLegacyRoleFilter();
                     this.configData.migrateLegacyMessageScale();
+                    this.configData.migrateLegacyProMode();
                     updateConfigCache();
                     LOGGER.info("Configuration loaded");
                 }
@@ -84,7 +85,7 @@ public class ConfigManager implements IConfigManager {
 
     /**
      * Сбрасывает JSON-конфиг к значениям {@link ModConfigData} по умолчанию.
-     * Имена каналов платформ и списки банвордов/ников/regexp не трогает.
+     * Имена каналов платформ, способ подключения Twitch и списки банвордов/ников/regexp не трогает.
      */
     public void resetToDefaults() {
         ModConfigData previous = this.configData;
@@ -94,9 +95,12 @@ public class ConfigManager implements IConfigManager {
             this.configData.setYoutubeChannel(previous.getYoutubeChannel());
             this.configData.setKickChannel(previous.getKickChannel());
             this.configData.setTiktokUsername(previous.getTiktokUsername());
+            this.configData.setTwitchConnectMethod(previous.getTwitchConnectMethod());
+            this.configData.setTwitchStreamKey(previous.getTwitchStreamKey());
         }
         this.configData.migrateLegacyRoleFilter();
         this.configData.migrateLegacyMessageScale();
+        this.configData.migrateLegacyProMode();
         saveConfig();
         LOGGER.info("Configuration reset to defaults");
     }
@@ -134,6 +138,20 @@ public class ConfigManager implements IConfigManager {
                 break;
             case "twitchChannelName":
                 configData.setTwitchChannelName((String) value);
+                break;
+            case "twitchConnectMethod":
+                if (value instanceof TwitchConnectMethod method) {
+                    configData.setTwitchConnectMethod(method);
+                } else if (value instanceof String name) {
+                    try {
+                        configData.setTwitchConnectMethod(TwitchConnectMethod.valueOf(name.toUpperCase(java.util.Locale.ROOT)));
+                    } catch (IllegalArgumentException ignored) {
+                        configData.setTwitchConnectMethod(TwitchConnectMethod.CHANNEL);
+                    }
+                }
+                break;
+            case "twitchStreamKey":
+                configData.setTwitchStreamKey(value instanceof String s ? s : "");
                 break;
             case "twitchEnabled":
                 configData.setTwitchEnabled((Boolean) value);
@@ -301,6 +319,8 @@ public class ConfigManager implements IConfigManager {
         configCache.put("chanceForSpawn", configData.getChanceForSpawn());
         configCache.put("messageHistoryMaxSize", configData.getMessageHistoryMaxSize());
         configCache.put("twitchChannelName", configData.getTwitchChannelName());
+        configCache.put("twitchConnectMethod", configData.getTwitchConnectMethod());
+        configCache.put("twitchStreamKey", configData.getTwitchStreamKey());
         configCache.put("twitchEnabled", configData.isTwitchEnabled());
         configCache.put("youtubeEnabled", configData.isYoutubeEnabled());
         configCache.put("youtubeChannel", configData.getYoutubeChannel());

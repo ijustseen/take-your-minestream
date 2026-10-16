@@ -4,9 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.text.Text;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles;
 import takeyourminestream.ijustseen.integration.chat.ChatConnection;
+import takeyourminestream.ijustseen.integration.chat.ChatEventType;
 import takeyourminestream.ijustseen.integration.chat.ChatHttp;
 import takeyourminestream.ijustseen.integration.chat.ChatMessagePipeline;
 import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
@@ -23,6 +25,7 @@ public class KickChatClient implements ChatConnection {
     private volatile boolean running;
     private volatile Thread workerThread;
     private SimpleWebSocket webSocket;
+    private long channelId;
     private long chatroomId;
 
     public KickChatClient(String channelSlug, ChatMessagePipeline pipeline) {
@@ -41,7 +44,9 @@ public class KickChatClient implements ChatConnection {
     private void connectLoop() {
         while (running) {
             try {
-                chatroomId = resolveChatroomId(channelSlug);
+                KickIds ids = resolveIds(channelSlug);
+                channelId = ids.channelId();
+                chatroomId = ids.chatroomId();
                 takeyourminestream.ijustseen.integration.chat.ChatErrorReporter.clear(ChatPlatform.KICK);
                 connectWebSocket();
                 while (running && webSocket != null && webSocket.isRunning()) {
@@ -65,13 +70,20 @@ public class KickChatClient implements ChatConnection {
 
     private void connectWebSocket() {
         webSocket = new SimpleWebSocket(PUSHER_URL, () -> {
-            String subscribe = GSON.toJson(java.util.Map.of(
-                "event", "pusher:subscribe",
-                "data", java.util.Map.of("auth", "", "channel", "chatrooms." + chatroomId + ".v2")
-            ));
-            webSocket.send(subscribe);
+            subscribePusher("chatrooms." + chatroomId + ".v2");
+            subscribePusher("chatrooms." + chatroomId);
+            if (channelId > 0) {
+                subscribePusher("channel." + channelId);
+            }
         }, this::handleMessage);
         webSocket.connect();
+    }
+
+    private void subscribePusher(String channel) {
+        webSocket.send(GSON.toJson(java.util.Map.of(
+            "event", "pusher:subscribe",
+            "data", java.util.Map.of("auth", "", "channel", channel)
+        )));
     }
 
     private void handleMessage(String raw) {
@@ -83,22 +95,20 @@ public class KickChatClient implements ChatConnection {
         }
 
         String event = envelope.has("event") ? envelope.get("event").getAsString() : "";
-        if (!"App\\Events\\ChatMessageEvent".equals(event) && !event.endsWith("ChatMessageEvent")) {
+        JsonObject data = parseData(envelope);
+        if (data == null) {
             return;
         }
 
-        String dataStr = envelope.has("data") ? envelope.get("data").getAsString() : null;
-        if (dataStr == null || dataStr.isBlank()) {
+        String eventName = shortEventName(event);
+        if ("ChatMessageEvent".equals(eventName)) {
+            handleChatMessage(data);
             return;
         }
+        handleLiveEvent(eventName, data);
+    }
 
-        JsonObject data;
-        try {
-            data = JsonParser.parseString(dataStr).getAsJsonObject();
-        } catch (Exception e) {
-            return;
-        }
-
+    private void handleChatMessage(JsonObject data) {
         String username = textOrEmpty(data, "username");
         if (username.isBlank()) {
             username = textOrEmpty(data, "sender", "username");
@@ -151,6 +161,65 @@ public class KickChatClient implements ChatConnection {
         pipeline.process(builder.build());
     }
 
+    /**
+     * Публичные Pusher-события чата Kick: подписки и гифты на {@code chatrooms.{id}.v2},
+     * хосты и фолловы иногда на {@code channel.{id}}.
+     */
+    private void handleLiveEvent(String eventName, JsonObject data) {
+        String username = firstNonBlank(
+            textOrEmpty(data, "username"),
+            textOrEmpty(data, "gifter_username"),
+            textOrEmpty(data, "host_username"),
+            textOrEmpty(data, "user", "username"),
+            textOrEmpty(data, "sender", "username")
+        );
+        String text;
+        ChatEventType type;
+        switch (eventName) {
+            case "SubscriptionEvent", "ChannelSubscriptionEvent" -> {
+                int months = intOrZero(data, "months");
+                type = ChatEventType.SUBSCRIBE;
+                text = months > 1
+                    ? Text.translatable("takeyourstreamchat.event.kick.resub", months).getString()
+                    : Text.translatable("takeyourstreamchat.event.kick.sub").getString();
+            }
+            case "GiftedSubscriptionsEvent" -> {
+                type = ChatEventType.GIFT;
+                int count = giftedCount(data);
+                String recipient = firstGiftedUsername(data);
+                text = count <= 1 && !recipient.isBlank()
+                    ? Text.translatable("takeyourstreamchat.event.kick.subgift_one", recipient).getString()
+                    : Text.translatable("takeyourstreamchat.event.kick.subgift", Math.max(count, 1)).getString();
+            }
+            case "StreamHostEvent" -> {
+                type = ChatEventType.RAID;
+                text = Text.translatable(
+                    "takeyourstreamchat.event.kick.host",
+                    Math.max(intOrZero(data, "number_viewers"), 0)
+                ).getString();
+            }
+            case "FollowersUpdated" -> {
+                if (username.isBlank()) {
+                    return;
+                }
+                type = ChatEventType.FOLLOW;
+                text = Text.translatable("takeyourstreamchat.event.kick.follow").getString();
+            }
+            default -> {
+                return;
+            }
+        }
+        if (username.isBlank()) {
+            username = "Viewer";
+        }
+        pipeline.process(IncomingChatMessage.builder(ChatPlatform.KICK)
+            .authorLogin(username)
+            .displayName(username)
+            .text(text)
+            .eventType(type)
+            .build());
+    }
+
     /** Kick identity.badges: subscriber / og / vip / moderator. Фолловеров в сообщении нет. */
     private static ChatAuthorRoles rolesFromKickIdentity(JsonObject identity) {
         boolean subscriber = false;
@@ -179,7 +248,9 @@ public class KickChatClient implements ChatConnection {
         return new ChatAuthorRoles(false, subscriber, vip, moderator, broadcaster);
     }
 
-    private static long resolveChatroomId(String slug) throws java.io.IOException {
+    private record KickIds(long channelId, long chatroomId) {}
+
+    private static KickIds resolveIds(String slug) throws java.io.IOException {
         String body = ChatHttp.get("https://kick.com/api/v2/channels/" + slug);
         JsonObject json = JsonParser.parseString(body).getAsJsonObject();
         if (!json.has("chatroom") || !json.get("chatroom").isJsonObject()) {
@@ -196,11 +267,100 @@ public class KickChatClient implements ChatConnection {
                 "Kick", slug
             );
         }
-        return json.getAsJsonObject("chatroom").get("id").getAsLong();
+        long chatroomId = json.getAsJsonObject("chatroom").get("id").getAsLong();
+        long channelId = json.has("id") && json.get("id").isJsonPrimitive()
+            ? json.get("id").getAsLong()
+            : 0L;
+        return new KickIds(channelId, chatroomId);
+    }
+
+    private static JsonObject parseData(JsonObject envelope) {
+        if (!envelope.has("data") || envelope.get("data").isJsonNull()) {
+            return null;
+        }
+        JsonElement data = envelope.get("data");
+        if (data.isJsonObject()) {
+            return data.getAsJsonObject();
+        }
+        if (!data.isJsonPrimitive()) {
+            return null;
+        }
+        String dataStr = data.getAsString();
+        if (dataStr == null || dataStr.isBlank()) {
+            return null;
+        }
+        try {
+            JsonElement parsed = JsonParser.parseString(dataStr);
+            return parsed.isJsonObject() ? parsed.getAsJsonObject() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String shortEventName(String event) {
+        if (event == null || event.isBlank()) {
+            return "";
+        }
+        int slash = Math.max(event.lastIndexOf('\\'), event.lastIndexOf('.'));
+        return slash >= 0 ? event.substring(slash + 1) : event;
+    }
+
+    private static int giftedCount(JsonObject data) {
+        if (data.has("gifted_usernames") && data.get("gifted_usernames").isJsonArray()) {
+            return data.getAsJsonArray("gifted_usernames").size();
+        }
+        int total = intOrZero(data, "gifter_total");
+        return Math.max(total, 0);
+    }
+
+    private static String firstGiftedUsername(JsonObject data) {
+        if (!data.has("gifted_usernames") || !data.get("gifted_usernames").isJsonArray()) {
+            return "";
+        }
+        for (JsonElement element : data.getAsJsonArray("gifted_usernames")) {
+            if (element.isJsonPrimitive()) {
+                String name = element.getAsString();
+                if (name != null && !name.isBlank()) {
+                    return name;
+                }
+            }
+        }
+        return "";
+    }
+
+    private static int intOrZero(JsonObject obj, String key) {
+        if (!obj.has(key) || obj.get(key).isJsonNull() || !obj.get(key).isJsonPrimitive()) {
+            return 0;
+        }
+        try {
+            return obj.get(key).getAsInt();
+        } catch (NumberFormatException | UnsupportedOperationException ignored) {
+            try {
+                return Integer.parseInt(obj.get(key).getAsString());
+            } catch (NumberFormatException ignoredAgain) {
+                return 0;
+            }
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     private static String textOrEmpty(JsonObject obj, String key) {
-        return obj.has(key) && !obj.get(key).isJsonNull() ? obj.get(key).getAsString() : "";
+        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull() || !obj.get(key).isJsonPrimitive()) {
+            return "";
+        }
+        try {
+            return obj.get(key).getAsString();
+        } catch (RuntimeException ignored) {
+            return "";
+        }
     }
 
     private static String textOrEmpty(JsonObject obj, String parent, String key) {

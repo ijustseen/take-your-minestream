@@ -64,7 +64,7 @@ final class EmoteImageCodec {
         if (imageBytes == null || imageBytes.length == 0) {
             return null;
         }
-        if ("7tv".equals(provider) && isGif(imageBytes)) {
+        if (isGif(imageBytes)) {
             DecodedEmote animated = decodeGif(imageBytes);
             if (animated != null) {
                 return animated;

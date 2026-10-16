@@ -23,8 +23,19 @@ public final class MessagePanelLayout {
         float totalTextHeight,
         int panelWidth,
         int panelHeight,
-        int firstLineIconOffset
-    ) {}
+        int firstLineIconOffset,
+        int gifDisplaySize
+    ) {
+        public Dimensions(
+            int maxTextWidth,
+            float totalTextHeight,
+            int panelWidth,
+            int panelHeight,
+            int firstLineIconOffset
+        ) {
+            this(maxTextWidth, totalTextHeight, panelWidth, panelHeight, firstLineIconOffset, 0);
+        }
+    }
 
     private MessagePanelLayout() {}
 
@@ -40,24 +51,38 @@ public final class MessagePanelLayout {
 
         float totalTextHeight;
         int maxTextWidth;
+        int gifSize = 0;
 
         if (hasInlineEmotes) {
             List<EmoteTextLayout.LineContent> lines = EmoteTextLayout.wrap(
                 s -> textRenderer.getWidth(s),
                 message.getText(),
                 message.getEmotes(),
-                EMOTE_ICON_SIZE + EMOTE_ICON_SPACING,
+                MessageEmote.maxIconSize(message.getEmotes()) + EMOTE_ICON_SPACING,
                 wrapWidth(),
                 iconOffset
             );
+            gifSize = gifDisplaySize(textRenderer, lines, iconOffset);
             totalTextHeight = 0.0f;
             maxTextWidth = 0;
+            boolean sawContent = false;
             for (int i = 0; i < lines.size(); i++) {
                 EmoteTextLayout.LineContent line = lines.get(i);
-                totalTextHeight += line.hasEmotes() ? EMOTE_ICON_SIZE + 1 : textRenderer.fontHeight;
-                int lineWidth = measureEmoteLineWidth(textRenderer, line.text(), line.emotes())
-                    + (i == 0 ? iconOffset : 0);
-                maxTextWidth = Math.max(maxTextWidth, lineWidth);
+                if (line.isGifLine()) {
+                    if (sawContent) {
+                        totalTextHeight += MessageEmote.GIF_LINE_GAP;
+                    }
+                    totalTextHeight += gifSize;
+                    maxTextWidth = Math.max(maxTextWidth, gifSize);
+                } else {
+                    totalTextHeight += line.hasEmotes()
+                        ? MessageEmote.maxIconSize(line.emotes()) + 1
+                        : textRenderer.fontHeight;
+                    int lineWidth = measureEmoteLineWidth(textRenderer, line.text(), line.emotes())
+                        + (i == 0 ? iconOffset : 0);
+                    maxTextWidth = Math.max(maxTextWidth, lineWidth);
+                }
+                sawContent = true;
             }
         } else {
             List<OrderedText> wrappedText = textRenderer.wrapLines(
@@ -74,7 +99,25 @@ public final class MessagePanelLayout {
 
         int panelWidth = maxTextWidth + MessagePanelConstants.PADDING_X * 2;
         int panelHeight = (int) totalTextHeight + MessagePanelConstants.PADDING_Y * 2;
-        return new Dimensions(maxTextWidth, totalTextHeight, panelWidth, panelHeight, iconOffset);
+        return new Dimensions(maxTextWidth, totalTextHeight, panelWidth, panelHeight, iconOffset, gifSize);
+    }
+
+    public static int gifDisplaySize(
+        TextRenderer textRenderer,
+        List<EmoteTextLayout.LineContent> lines,
+        int iconOffset
+    ) {
+        int headerWidth = iconOffset;
+        for (int i = 0; i < lines.size(); i++) {
+            EmoteTextLayout.LineContent line = lines.get(i);
+            if (line.isGifLine()) {
+                continue;
+            }
+            int lineWidth = measureEmoteLineWidth(textRenderer, line.text(), line.emotes())
+                + (i == 0 ? iconOffset : 0);
+            headerWidth = Math.max(headerWidth, lineWidth);
+        }
+        return MessageEmote.fitGifSize(headerWidth);
     }
 
     public static float fallOffsetY(int effectiveAge) {
@@ -129,7 +172,7 @@ public final class MessagePanelLayout {
             if (emote.getStartIndex() > cursor) {
                 width += textRenderer.getWidth(text.substring(cursor, emote.getStartIndex()));
             }
-            width += EMOTE_ICON_SIZE + EMOTE_ICON_SPACING;
+            width += emote.iconSize() + EMOTE_ICON_SPACING;
             cursor = emote.getEndIndex() + 1;
         }
         if (cursor < text.length()) {

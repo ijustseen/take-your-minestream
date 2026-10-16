@@ -4,12 +4,15 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import net.minecraft.text.Text;
 import takeyourminestream.ijustseen.integration.chat.ChatAuthorRoles;
 import takeyourminestream.ijustseen.integration.chat.ChatConnection;
+import takeyourminestream.ijustseen.integration.chat.ChatEventType;
 import takeyourminestream.ijustseen.integration.chat.ChatHttp;
 import takeyourminestream.ijustseen.integration.chat.ChatMessagePipeline;
 import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
 import takeyourminestream.ijustseen.integration.chat.IncomingChatMessage;
+import takeyourminestream.ijustseen.messages.MessageEmote;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -382,6 +385,16 @@ public class YouTubeChatClient implements ChatConnection {
             JsonObject obj = element.getAsJsonObject();
             if (obj.has("liveChatTextMessageRenderer")) {
                 handleTextMessage(obj.getAsJsonObject("liveChatTextMessageRenderer"), deliver, batch);
+            } else if (obj.has("liveChatPaidMessageRenderer")) {
+                handlePaidMessage(obj.getAsJsonObject("liveChatPaidMessageRenderer"), deliver, batch);
+            } else if (obj.has("liveChatPaidStickerRenderer")) {
+                handlePaidSticker(obj.getAsJsonObject("liveChatPaidStickerRenderer"), deliver, batch);
+            } else if (obj.has("liveChatMembershipItemRenderer")) {
+                handleMembership(obj.getAsJsonObject("liveChatMembershipItemRenderer"), deliver, batch);
+            } else if (obj.has("liveChatSponsorshipsGiftPurchaseAnnouncementRenderer")) {
+                handleGiftPurchase(obj.getAsJsonObject("liveChatSponsorshipsGiftPurchaseAnnouncementRenderer"), deliver, batch);
+            } else if (obj.has("liveChatSponsorshipsGiftRedemptionAnnouncementRenderer")) {
+                handleGiftRedemption(obj.getAsJsonObject("liveChatSponsorshipsGiftRedemptionAnnouncementRenderer"), deliver, batch);
             }
             for (String key : obj.keySet()) {
                 collectMessages(obj.get(key), deliver, batch);
@@ -394,19 +407,7 @@ public class YouTubeChatClient implements ChatConnection {
     }
 
     private void handleTextMessage(JsonObject renderer, boolean deliver, List<IncomingChatMessage> batch) {
-        if (renderer.has("id") && renderer.get("id").isJsonPrimitive()) {
-            String messageId = renderer.get("id").getAsString();
-            if (!seenMessageIds.add(messageId)) {
-                return;
-            }
-            if (seenMessageIds.size() > MAX_SEEN_MESSAGE_IDS) {
-                seenMessageIds.clear();
-                seenMessageIds.add(messageId);
-            }
-        }
-
-        if (!deliver) {
-            // Стартовая история чата: только запоминаем ID, в игру не отправляем
+        if (!rememberRenderer(renderer) || !deliver) {
             return;
         }
 
@@ -414,36 +415,138 @@ public class YouTubeChatClient implements ChatConnection {
         if (parsed.text().isBlank()) {
             return;
         }
+        emitYouTube(renderer, parsed.text(), parsed.emotes(), ChatEventType.CHAT, batch);
+    }
 
-        String authorName = "";
-        String authorChannelId = "";
-        ChatAuthorRoles roles = ChatAuthorRoles.NONE;
-        if (renderer.has("authorName") && renderer.get("authorName").isJsonObject()) {
-            JsonObject author = renderer.getAsJsonObject("authorName");
-            if (author.has("simpleText")) {
-                authorName = author.get("simpleText").getAsString();
+    private void handlePaidMessage(JsonObject renderer, boolean deliver, List<IncomingChatMessage> batch) {
+        if (!rememberRenderer(renderer) || !deliver) {
+            return;
+        }
+        YouTubeEmoteParser.Parsed parsed = YouTubeEmoteParser.parse(renderer);
+        String amount = YouTubeEmoteParser.plainText(renderer, "purchaseAmountText");
+        String text = parsed.text().isBlank()
+            ? Text.translatable("takeyourstreamchat.event.youtube.superchat_plain", firstNonBlank(amount, "?")).getString()
+            : amount.isBlank()
+                ? parsed.text()
+                : Text.translatable("takeyourstreamchat.event.youtube.superchat", amount, parsed.text()).getString();
+        emitYouTube(renderer, text, parsed.emotes(), ChatEventType.GIFT, batch);
+    }
+
+    private void handlePaidSticker(JsonObject renderer, boolean deliver, List<IncomingChatMessage> batch) {
+        if (!rememberRenderer(renderer) || !deliver) {
+            return;
+        }
+        String amount = YouTubeEmoteParser.plainText(renderer, "purchaseAmountText");
+        String text = Text.translatable(
+            "takeyourstreamchat.event.youtube.supersticker",
+            firstNonBlank(amount, "?")
+        ).getString();
+        emitYouTube(renderer, text, List.of(), ChatEventType.GIFT, batch);
+    }
+
+    private void handleMembership(JsonObject renderer, boolean deliver, List<IncomingChatMessage> batch) {
+        if (!rememberRenderer(renderer) || !deliver) {
+            return;
+        }
+        String detail = firstNonBlank(
+            YouTubeEmoteParser.plainText(renderer, "headerSubtext"),
+            YouTubeEmoteParser.plainText(renderer, "headerPrimaryText"),
+            YouTubeEmoteParser.parse(renderer).text()
+        );
+        String text = detail.isBlank()
+            ? Text.translatable("takeyourstreamchat.event.youtube.member").getString()
+            : Text.translatable("takeyourstreamchat.event.youtube.member_milestone", detail).getString();
+        emitYouTube(renderer, text, List.of(), ChatEventType.SUBSCRIBE, batch);
+    }
+
+    private void handleGiftPurchase(JsonObject renderer, boolean deliver, List<IncomingChatMessage> batch) {
+        if (!rememberRenderer(renderer) || !deliver) {
+            return;
+        }
+        JsonObject header = sponsorshipHeader(renderer);
+        String primary = YouTubeEmoteParser.plainText(header, "primaryText");
+        String text = primary.isBlank()
+            ? Text.translatable("takeyourstreamchat.event.youtube.gift_purchase_unknown").getString()
+            : primary;
+        emitYouTube(header != null ? header : renderer, text, List.of(), ChatEventType.GIFT, batch);
+    }
+
+    private void handleGiftRedemption(JsonObject renderer, boolean deliver, List<IncomingChatMessage> batch) {
+        if (!rememberRenderer(renderer) || !deliver) {
+            return;
+        }
+        String detail = firstNonBlank(
+            YouTubeEmoteParser.parse(renderer).text(),
+            YouTubeEmoteParser.plainText(renderer, "headerSubtext")
+        );
+        String text = detail.isBlank()
+            ? Text.translatable("takeyourstreamchat.event.youtube.gift_redeem").getString()
+            : detail;
+        emitYouTube(renderer, text, List.of(), ChatEventType.GIFT, batch);
+    }
+
+    private static JsonObject sponsorshipHeader(JsonObject renderer) {
+        if (renderer == null || !renderer.has("header") || !renderer.get("header").isJsonObject()) {
+            return renderer;
+        }
+        JsonObject header = renderer.getAsJsonObject("header");
+        if (header.has("liveChatSponsorshipsHeaderRenderer")
+            && header.get("liveChatSponsorshipsHeaderRenderer").isJsonObject()) {
+            return header.getAsJsonObject("liveChatSponsorshipsHeaderRenderer");
+        }
+        return header;
+    }
+
+    private boolean rememberRenderer(JsonObject renderer) {
+        if (renderer.has("id") && renderer.get("id").isJsonPrimitive()) {
+            String messageId = renderer.get("id").getAsString();
+            if (!seenMessageIds.add(messageId)) {
+                return false;
+            }
+            if (seenMessageIds.size() > MAX_SEEN_MESSAGE_IDS) {
+                seenMessageIds.clear();
+                seenMessageIds.add(messageId);
             }
         }
-        if (authorName.startsWith("@")) {
-            authorName = authorName.substring(1);
-        }
-        if (renderer.has("authorExternalChannelId")) {
-            authorChannelId = renderer.get("authorExternalChannelId").getAsString();
-        }
-        if (renderer.has("authorBadges")) {
-            roles = rolesFromYouTubeBadges(renderer.get("authorBadges"));
-        }
+        return true;
+    }
 
-        Long timestampMicros = parseTimestampMicros(renderer);
-        IncomingChatMessage incoming = IncomingChatMessage.builder(ChatPlatform.YOUTUBE)
+    private void emitYouTube(
+        JsonObject renderer,
+        String text,
+        List<MessageEmote> emotes,
+        ChatEventType eventType,
+        List<IncomingChatMessage> batch
+    ) {
+        if (text == null || text.isBlank()) {
+            return;
+        }
+        String authorName = YouTubeEmoteParser.authorName(renderer);
+        String authorChannelId = renderer.has("authorExternalChannelId")
+            && renderer.get("authorExternalChannelId").isJsonPrimitive()
+            ? renderer.get("authorExternalChannelId").getAsString()
+            : "";
+        ChatAuthorRoles roles = renderer.has("authorBadges")
+            ? rolesFromYouTubeBadges(renderer.get("authorBadges"))
+            : ChatAuthorRoles.NONE;
+        batch.add(IncomingChatMessage.builder(ChatPlatform.YOUTUBE)
             .authorLogin(authorChannelId.isBlank() ? authorName : authorChannelId)
             .displayName(authorName.isBlank() ? "Viewer" : authorName)
-            .text(parsed.text())
-            .emotes(parsed.emotes())
+            .text(text)
+            .emotes(emotes)
             .roles(roles)
-            .sourceTimestampMicros(timestampMicros)
-            .build();
-        batch.add(incoming);
+            .sourceTimestampMicros(parseTimestampMicros(renderer))
+            .eventType(eventType)
+            .build());
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     private static Long parseTimestampMicros(JsonObject renderer) {
