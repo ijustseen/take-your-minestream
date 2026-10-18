@@ -70,7 +70,7 @@ public final class MessagePanelWorldRenderer {
         }
     }
 
-    /** Полупрозрачный куб 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
+    /** Каркас куба 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
     public static void drawBlockCube(org.joml.Matrix4f matrix, SubmitNodeCollector collector) {
         PoseStack poseStack = new PoseStack();
         poseStack.mulPose(matrix);

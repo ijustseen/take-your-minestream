@@ -90,7 +90,7 @@ public final class MessagePanelWorldRenderer {
         }
     }
 
-    /** Полупрозрачный куб 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
+    /** Каркас куба 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
     public static void drawBlockCube(Matrix4f matrix, net.minecraft.client.render.VertexConsumerProvider consumers) {
         VertexConsumer consumer = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.EDITOR_CUBE_TEXTURE);
         int light = 0xF000F0;

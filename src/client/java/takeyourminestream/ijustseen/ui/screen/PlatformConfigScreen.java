@@ -61,6 +61,7 @@ public class PlatformConfigScreen extends Screen {
 
     private TextFieldWidget identityField;
     private Entry identityEntry;
+    private boolean applyingIdentityMask;
 
     private static class Entry {
         String labelKey;
@@ -163,14 +164,15 @@ public class PlatformConfigScreen extends Screen {
         identityField = field;
         field.setMaxLength(streamKey ? 128 : 64);
         Object stored = ConfigManager.getInstance().getConfigValue(configKey);
-        field.setText(stored instanceof String s ? s : "");
+        String raw = stored instanceof String s ? s : "";
         identityHint = Text.translatable(labelKey + ".desc");
         bindIdentityListener(streamKey);
+        showIdentityValue(streamKey, raw);
         this.addDrawableChild(field);
         identityEntry = new Entry(labelKey, labelKey + ".desc", field);
         entries.add(identityEntry);
-        if (streamKey && !field.getText().isBlank()) {
-            resolveTwitchStreamKey(field.getText());
+        if (streamKey && !raw.isBlank()) {
+            resolveTwitchStreamKey(raw);
         }
     }
 
@@ -186,8 +188,13 @@ public class PlatformConfigScreen extends Screen {
         identityHint = Text.translatable(labelKey + ".desc");
         bindIdentityListener(streamKey);
         Object stored = ConfigManager.getInstance().getConfigValue(identityConfigKey(streamKey));
-        identityField.setText(stored instanceof String s ? s : "");
-        if (!streamKey) {
+        String raw = stored instanceof String s ? s : "";
+        showIdentityValue(streamKey, raw);
+        if (streamKey) {
+            if (!raw.isBlank()) {
+                resolveTwitchStreamKey(raw);
+            }
+        } else {
             syncEnabledToggleAvailability();
         }
     }
@@ -195,14 +202,49 @@ public class PlatformConfigScreen extends Screen {
     private void bindIdentityListener(boolean streamKey) {
         String configKey = identityConfigKey(streamKey);
         identityField.setChangedListener(value -> {
-            ConfigManager.getInstance().setConfigValue(configKey, value);
+            if (applyingIdentityMask) {
+                return;
+            }
             if (streamKey) {
-                resolveTwitchStreamKey(value);
+                if (isSecretMask(value)) {
+                    return;
+                }
+                String key = value == null ? "" : value.replace("*", "").trim();
+                ConfigManager.getInstance().setConfigValue(configKey, key);
+                showIdentityValue(true, key);
+                resolveTwitchStreamKey(key);
             } else {
+                ConfigManager.getInstance().setConfigValue(configKey, value);
                 identityHint = Text.translatable(identityLabelKey(false) + ".desc");
                 syncEnabledToggleAvailability();
             }
         });
+    }
+
+    private void showIdentityValue(boolean streamKey, String stored) {
+        String display = streamKey ? maskSecret(stored) : (stored != null ? stored : "");
+        applyingIdentityMask = true;
+        identityField.setText(display);
+        applyingIdentityMask = false;
+    }
+
+    private static String maskSecret(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        return "*".repeat(value.length());
+    }
+
+    private static boolean isSecretMask(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            if (value.charAt(i) != '*') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void resolveTwitchStreamKey(String value) {

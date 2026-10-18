@@ -14,6 +14,10 @@ stonecutter parameters {
             replace("return RenderLayers.text(texture);", "return RenderLayer.getText(texture);")
             replace("camera.getCameraPos()", "camera.getPos()")
         }
+        string(eval(current.version, "< 1.21")) {
+            replace("public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta)", "public void renderBackground(DrawContext context)")
+            replace("super.renderBackground(context, mouseX, mouseY, delta)", "super.renderBackground(context)")
+        }
         string(eval(current.version, ">= 26.1")) {
             // Packages (imports)
             replace("net.minecraft.client.MinecraftClient", "net.minecraft.client.Minecraft")

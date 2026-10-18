@@ -87,6 +87,16 @@ public class BanwordConfigScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(DrawContext context) {
+        var client = this.client;
+        if (client != null && client.world != null) {
+            ModUiTheme.drawWorldDim(context, this.width, this.height);
+        } else {
+            super.renderBackground(context);
+        }
+    }
+
+    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         var hiddenButtons = ScreenUiHelper.hideButtons(this);
         super.render(context, mouseX, mouseY, delta);
