@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Экран истории сообщений с контекстным меню действий. */
-public class MessageHistoryScreen extends Screen {
+public class MessageHistoryScreen extends DimScreen {
     private static final int LIST_PADDING = 10;
     private static final int HEADER_HEIGHT = 36;
     private static final int FOOTER_HEIGHT = 36;
@@ -70,16 +70,6 @@ public class MessageHistoryScreen extends Screen {
         super(Text.translatable("takeyourstreamchat.history.title"));
         this.parent = parent;
         this.lifecycleManager = lifecycleManager;
-    }
-
-    @Override
-    public void renderBackground(DrawContext context) {
-        var client = this.client;
-        if (client != null && client.world != null) {
-            ModUiTheme.drawWorldDim(context, this.width, this.height);
-        } else {
-            super.renderBackground(context);
-        }
     }
 
     @Override

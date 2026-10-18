@@ -13,7 +13,7 @@ import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import java.util.function.IntConsumer;
 
 /** HSV color picker: квадрат насыщенности/яркости, полоса оттенка, HEX и предпросмотр. */
-public class ColorPickerScreen extends Screen {
+public class ColorPickerScreen extends DimScreen {
     private static final int SV_SIZE = 140;
     private static final int HUE_WIDTH = 16;
     private static final int GAP = 10;
@@ -95,16 +95,6 @@ public class ColorPickerScreen extends Screen {
 
     private int currentRgb() {
         return ColorHsv.toRgb(hue, saturation, value);
-    }
-
-    @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        var client = this.client;
-        if (client != null && client.world != null) {
-            ModUiTheme.drawWorldDim(context, this.width, this.height);
-        } else {
-            super.renderBackground(context, mouseX, mouseY, delta);
-        }
     }
 
     @Override

@@ -15,7 +15,7 @@ import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BanwordConfigScreen extends Screen {
+public class BanwordConfigScreen extends DimScreen {
     private final @Nullable Screen parent;
     private IBanwordManager banwordManager;
     private TextFieldWidget inputField;
@@ -84,16 +84,6 @@ public class BanwordConfigScreen extends Screen {
             return trimmed;
         }
         return trimmed.substring(0, 2) + "*".repeat(trimmed.length() - 2);
-    }
-
-    @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        var client = this.client;
-        if (client != null && client.world != null) {
-            ModUiTheme.drawWorldDim(context, this.width, this.height);
-        } else {
-            super.renderBackground(context, mouseX, mouseY, delta);
-        }
     }
 
     @Override

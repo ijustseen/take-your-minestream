@@ -33,7 +33,7 @@ import takeyourminestream.ijustseen.ui.widget.ToggleWithSettingsRow;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ModConfigScreen extends Screen {
+public class ModConfigScreen extends DimScreen {
     private final @Nullable Screen parent;
     private String hoveredDescriptionKey;
     
@@ -1046,16 +1046,6 @@ public class ModConfigScreen extends Screen {
 
 
     
-    @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        var client = this.client;
-        if (client != null && client.world != null) {
-            ModUiTheme.drawWorldDim(context, this.width, this.height);
-        } else {
-            super.renderBackground(context, mouseX, mouseY, delta);
-        }
-    }
-
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         updateEntryPositions();

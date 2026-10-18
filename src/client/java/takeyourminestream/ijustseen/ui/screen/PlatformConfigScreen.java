@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Настройки одной платформы: баннер, канал, показ сообщений, звук и события. */
-public class PlatformConfigScreen extends Screen {
+public class PlatformConfigScreen extends DimScreen {
     private static final Identifier ICON_BACK =
         Identifier.of("take-your-stream-chat", "textures/gui/icon_back.png");
     private static final int BUTTON_ICON_SIZE = 10;
@@ -402,16 +402,6 @@ public class PlatformConfigScreen extends Screen {
             setWidgetVisible(entry.widget, visible);
             setWidgetEnabled(entry.widget, entry.isEnabled());
             y += ENTRY_HEIGHT + ENTRY_SPACING;
-        }
-    }
-
-    @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        var client = this.client;
-        if (client != null && client.world != null) {
-            ModUiTheme.drawWorldDim(context, this.width, this.height);
-        } else {
-            super.renderBackground(context, mouseX, mouseY, delta);
         }
     }
 

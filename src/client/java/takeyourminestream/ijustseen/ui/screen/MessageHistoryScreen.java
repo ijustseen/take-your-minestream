@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Экран истории сообщений с контекстным меню действий. */
-public class MessageHistoryScreen extends Screen {
+public class MessageHistoryScreen extends DimScreen {
     private static final int LIST_PADDING = 10;
     private static final int HEADER_HEIGHT = 36;
     private static final int FOOTER_HEIGHT = 36;
@@ -201,16 +201,6 @@ public class MessageHistoryScreen extends Screen {
             }
             target.add(new HistoryCard(message, parsed, layout, listLeft, y));
             y += layout.height() + CARD_SPACING;
-        }
-    }
-
-    @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        var client = this.client;
-        if (client != null && client.world != null) {
-            ModUiTheme.drawWorldDim(context, this.width, this.height);
-        } else {
-            super.renderBackground(context, mouseX, mouseY, delta);
         }
     }
 

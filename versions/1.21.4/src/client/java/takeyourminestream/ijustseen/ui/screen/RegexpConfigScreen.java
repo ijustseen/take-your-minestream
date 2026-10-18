@@ -15,7 +15,7 @@ import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RegexpConfigScreen extends Screen {
+public class RegexpConfigScreen extends DimScreen {
     private final @Nullable Screen parent;
     private FilteringManager filteringManager;
     private TextFieldWidget inputField;
@@ -69,16 +69,6 @@ public class RegexpConfigScreen extends Screen {
         regexpList.clear();
         regexpList.addAll(filteringManager.getRegexps());
         regexpList.sort(String::compareTo);
-    }
-
-    @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        var client = this.client;
-        if (client != null && client.world != null) {
-            ModUiTheme.drawWorldDim(context, this.width, this.height);
-        } else {
-            super.renderBackground(context, mouseX, mouseY, delta);
-        }
     }
 
     @Override

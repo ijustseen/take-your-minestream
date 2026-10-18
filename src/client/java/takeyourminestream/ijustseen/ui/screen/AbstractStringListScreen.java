@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * Базовый экран со скроллируемым списком строк, полем ввода и кнопкой добавления.
  */
-public abstract class AbstractStringListScreen extends Screen {
+public abstract class AbstractStringListScreen extends DimScreen {
     protected static final int LINE_HEIGHT = 14;
     protected static final int PADDING = 10;
     protected static final int REMOVE_BTN_SIZE = 12;
@@ -33,16 +33,6 @@ public abstract class AbstractStringListScreen extends Screen {
     protected AbstractStringListScreen(Text title, @Nullable Screen parent) {
         super(title);
         this.parent = parent;
-    }
-
-    @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        var client = this.client;
-        if (client != null && client.world != null) {
-            ModUiTheme.drawWorldDim(context, this.width, this.height);
-        } else {
-            super.renderBackground(context, mouseX, mouseY, delta);
-        }
     }
 
     @Override
