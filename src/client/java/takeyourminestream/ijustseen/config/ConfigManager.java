@@ -219,6 +219,9 @@ public class ConfigManager implements IConfigManager {
             case "showMessageBackground":
                 configData.setShowMessageBackground((Boolean) value);
                 break;
+            case "message3dFrame":
+                configData.setMessage3dFrame((Boolean) value);
+                break;
             case "followPlayer":
                 configData.setFollowPlayer((Boolean) value);
                 break;
@@ -347,6 +350,7 @@ public class ConfigManager implements IConfigManager {
         configCache.put("hudSizePercent", configData.getHudSizePercent());
         configCache.put("messageWrapWidth", configData.getMessageWrapWidth());
         configCache.put("showMessageBackground", configData.isShowMessageBackground());
+        configCache.put("message3dFrame", configData.isMessage3dFrame());
         configCache.put("followPlayer", configData.isFollowPlayer());
         configCache.put("enableClickToRemove", configData.isEnableClickToRemove());
         configCache.put("enableMessageSound", configData.isEnableMessageSound());

@@ -113,6 +113,8 @@ public class MessageEditorScreen extends PreviewPointerScreen {
 
         addToggleRow("takeyourstreamchat.config.show_message_bg", ModConfig::isSHOW_MESSAGE_BACKGROUND,
             ModConfig::setSHOW_MESSAGE_BACKGROUND, () -> true);
+        addCycleRow("takeyourstreamchat.config.message_3d_frame", this::frameStyleText, this::toggleFrameStyle,
+            this::isWorldMode, ModConfig::isSHOW_MESSAGE_BACKGROUND);
         addColorRow("takeyourstreamchat.config.panel_base_color", ModConfig::getPANEL_BASE_COLOR_RGB,
             ModConfig::setPANEL_BASE_COLOR_RGB, ModConfig::isSHOW_MESSAGE_BACKGROUND);
         addToggleRow("takeyourstreamchat.config.panel_border_from_platform", ModConfig::isPANEL_BORDER_FROM_PLATFORM,
@@ -145,21 +147,41 @@ public class MessageEditorScreen extends PreviewPointerScreen {
     // --- Строки панели ---
 
     private void addCycleRow(String labelKey, Supplier<Text> text, Runnable action, BooleanSupplier visible) {
+        addCycleRow(labelKey, text, action, visible, () -> true);
+    }
+
+    private void addCycleRow(
+        String labelKey,
+        Supplier<Text> text,
+        Runnable action,
+        BooleanSupplier visible,
+        BooleanSupplier enabled
+    ) {
         ButtonWidget button = ButtonWidget.builder(text.get(), btn -> {
             action.run();
             btn.setMessage(text.get());
         }).dimensions(0, 0, controlWidth(), CONTROL_HEIGHT).build();
         labelRefreshers.add(() -> button.setMessage(text.get()));
-        addButtonRow(labelKey, button, visible, () -> true);
+        addButtonRow(labelKey, button, visible, enabled);
     }
 
     private void addToggleRow(String labelKey, BooleanSupplier getter, java.util.function.Consumer<Boolean> setter, BooleanSupplier enabled) {
+        addToggleRow(labelKey, getter, setter, () -> true, enabled);
+    }
+
+    private void addToggleRow(
+        String labelKey,
+        BooleanSupplier getter,
+        java.util.function.Consumer<Boolean> setter,
+        BooleanSupplier visible,
+        BooleanSupplier enabled
+    ) {
         ButtonWidget button = ButtonWidget.builder(ConfigUiHelper.onOffText(getter.getAsBoolean()), btn -> {
             setter.accept(!getter.getAsBoolean());
             btn.setMessage(ConfigUiHelper.onOffText(getter.getAsBoolean()));
         }).dimensions(0, 0, controlWidth(), CONTROL_HEIGHT).build();
         labelRefreshers.add(() -> button.setMessage(ConfigUiHelper.onOffText(getter.getAsBoolean())));
-        addButtonRow(labelKey, button, () -> true, enabled);
+        addButtonRow(labelKey, button, visible, enabled);
     }
 
     private void addColorRow(String labelKey, IntSupplier getter, IntConsumer setter, BooleanSupplier enabled) {
@@ -278,6 +300,16 @@ public class MessageEditorScreen extends PreviewPointerScreen {
 
     private Text hudAnchorText() {
         return Text.translatable("takeyourstreamchat.config.hud_anchor." + ModConfig.getHUD_ANCHOR().getKey());
+    }
+
+    private Text frameStyleText() {
+        return Text.translatable(ModConfig.isMESSAGE_3D_FRAME()
+            ? "takeyourstreamchat.config.message_3d_frame.3d"
+            : "takeyourstreamchat.config.message_3d_frame.2d");
+    }
+
+    private void toggleFrameStyle() {
+        ModConfig.setMESSAGE_3D_FRAME(!ModConfig.isMESSAGE_3D_FRAME());
     }
 
     // --- Предпросмотр ---

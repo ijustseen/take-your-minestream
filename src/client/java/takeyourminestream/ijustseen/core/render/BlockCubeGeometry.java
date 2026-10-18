@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Эталонный куб 1×1×1 блок вокруг сообщения в редакторе: полупрозрачные грани
- * и светлые рёбра (полосы по краю каждой грани, поэтому ребро видно под любым углом).
+ * Эталонный куб 1×1×1 блок вокруг сообщения в редакторе.
+ * Рисуются только рёбра: сплошные грани на 26.2/26.3 перекрывают рамку панели по глубине.
  */
 public final class BlockCubeGeometry {
     public static final float HALF = 0.5f;
@@ -31,8 +31,6 @@ public final class BlockCubeGeometry {
         float w = EDGE_WIDTH;
         for (int axis = 0; axis < 3; axis++) {
             for (int sign = -1; sign <= 1; sign += 2) {
-                float plane = sign * h;
-                quads.add(face(axis, plane, -h, -h, h, h, false));
                 float edgePlane = sign * (h + EDGE_LIFT);
                 quads.add(face(axis, edgePlane, -h, -h, -h + w, h, true));
                 quads.add(face(axis, edgePlane, h - w, -h, h, h, true));

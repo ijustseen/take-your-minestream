@@ -125,6 +125,32 @@ public final class SubmitGeometryHelper {
         );
     }
 
+    public static void submitFrameQuads(
+        SubmitNodeCollector collector,
+        PoseStack poseStack,
+        java.util.List<takeyourminestream.ijustseen.core.render.MessageFrame3DModel.FrameQuad> quads
+    ) {
+        if (quads == null || quads.isEmpty()) return;
+        java.util.Map<Identifier, java.util.List<takeyourminestream.ijustseen.core.render.MessageFrame3DModel.FrameQuad>> byTexture = new java.util.LinkedHashMap<>();
+        for (takeyourminestream.ijustseen.core.render.MessageFrame3DModel.FrameQuad q : quads) {
+            byTexture.computeIfAbsent(q.textureId(), k -> new java.util.ArrayList<>()).add(q);
+        }
+        for (java.util.Map.Entry<Identifier, java.util.List<takeyourminestream.ijustseen.core.render.MessageFrame3DModel.FrameQuad>> entry : byTexture.entrySet()) {
+            collector.submitCustomGeometry(
+                poseStack,
+                RenderTypes.entityTranslucent(entry.getKey()),
+                (pose, consumer) -> {
+                    for (takeyourminestream.ijustseen.core.render.MessageFrame3DModel.FrameQuad q : entry.getValue()) {
+                        addVertex(consumer, pose, q.x0(), q.y0(), q.z0(), q.u0(), q.v0(), q.r(), q.g(), q.b(), q.a());
+                        addVertex(consumer, pose, q.x1(), q.y1(), q.z1(), q.u1(), q.v1(), q.r(), q.g(), q.b(), q.a());
+                        addVertex(consumer, pose, q.x2(), q.y2(), q.z2(), q.u2(), q.v2(), q.r(), q.g(), q.b(), q.a());
+                        addVertex(consumer, pose, q.x3(), q.y3(), q.z3(), q.u3(), q.v3(), q.r(), q.g(), q.b(), q.a());
+                    }
+                }
+            );
+        }
+    }
+
     public static void submitBlockCube(SubmitNodeCollector collector, PoseStack poseStack, Identifier texture) {
         collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(texture), (pose, consumer) -> {
             for (BlockCubeGeometry.Quad quad : BlockCubeGeometry.quads()) {

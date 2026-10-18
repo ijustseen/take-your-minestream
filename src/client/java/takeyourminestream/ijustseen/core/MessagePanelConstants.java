@@ -8,6 +8,9 @@ public final class MessagePanelConstants {
     public static final Identifier PANEL_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/message_panel.png");
     /** Бортик панели (белая текстура, тонируется цветом платформы или своим HEX). */
     public static final Identifier PANEL_BORDER_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/message_panel_border.png");
+    public static final Identifier FRAME_BACK_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/message_frame_back.png");
+    /** Белая заливка куба-эталона в редакторе (отдельный слой от панели). */
+    public static final Identifier EDITOR_CUBE_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/editor_cube.png");
     public static final Identifier PIN_TEXTURE = Identifier.of("take-your-stream-chat", "textures/gui/pin.png");
 
     /** Цвет бортика по умолчанию (исходный фиолетовый из текстуры). */

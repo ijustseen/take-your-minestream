@@ -364,6 +364,22 @@ public class ModConfigScreen extends Screen {
         this.addDrawableChild(showBgButton);
         configEntries.add(new ConfigEntry("takeyourstreamchat.config.show_message_bg", "takeyourstreamchat.config.show_message_bg.desc", ConfigEntryType.TOGGLE, showBgButton, ConfigCategory.MESSAGES));
 
+        ButtonWidget frameStyleButton = ButtonWidget.builder(
+            getMessageFrameButtonText(),
+            btn -> {
+                ModConfig.setMESSAGE_3D_FRAME(!ModConfig.isMESSAGE_3D_FRAME());
+                btn.setMessage(getMessageFrameButtonText());
+            }
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(frameStyleButton);
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.message_3d_frame",
+            "takeyourstreamchat.config.message_3d_frame.desc",
+            ConfigEntryType.BUTTON,
+            frameStyleButton,
+            ConfigCategory.MESSAGES
+        )).visibleWhen(ModConfigScreen::isWorldMode).enabledWhen(ModConfig::isSHOW_MESSAGE_BACKGROUND);
+
         addColorEntry(
             "takeyourstreamchat.config.panel_base_color",
             "takeyourstreamchat.config.panel_base_color.desc",
@@ -1017,6 +1033,12 @@ public class ModConfigScreen extends Screen {
             : Text.translatable("takeyourstreamchat.config.unpin_mode.pin_icon");
     }
 
+    private static Text getMessageFrameButtonText() {
+        return Text.translatable(ModConfig.isMESSAGE_3D_FRAME()
+            ? "takeyourstreamchat.config.message_3d_frame.3d"
+            : "takeyourstreamchat.config.message_3d_frame.2d");
+    }
+
     private boolean hasWorldClient() {
         var client = this.client;
         return client != null && client.world != null;
@@ -1024,6 +1046,16 @@ public class ModConfigScreen extends Screen {
 
 
     
+    @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        var client = this.client;
+        if (client != null && client.world != null) {
+            ModUiTheme.drawWorldDim(context, this.width, this.height);
+        } else {
+            super.renderBackground(context, mouseX, mouseY, delta);
+        }
+    }
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         updateEntryPositions();

@@ -15,7 +15,7 @@ public final class MessagePanelWorldRenderer {
 
     private MessagePanelWorldRenderer() {}
 
-    /** Панель: фон + бортик, тонированный цветом платформы. */
+    /** 3D-рамка сообщения: выпуклый бортик + задняя стенка. */
     public static void drawPanelWithBorder(
         PoseStack poseStack,
         SubmitNodeCollector collector,
@@ -27,45 +27,53 @@ public final class MessagePanelWorldRenderer {
         int borderRgb
     ) {
         int baseRgb = takeyourminestream.ijustseen.core.MessagePanelColors.baseRgb();
-        SubmitGeometryHelper.submitPanel(
-            collector,
-            poseStack,
-            MessagePanelConstants.PANEL_TEXTURE,
-            x,
-            y,
-            width,
-            height,
-            0f,
-            alpha,
-            ((baseRgb >> 16) & 0xFF) / 255.0f,
-            ((baseRgb >> 8) & 0xFF) / 255.0f,
-            (baseRgb & 0xFF) / 255.0f
-        );
-
         int resolvedBorderRgb = takeyourminestream.ijustseen.core.MessagePanelColors.borderRgb(borderRgb);
-        float red = ((resolvedBorderRgb >> 16) & 0xFF) / 255.0f;
-        float green = ((resolvedBorderRgb >> 8) & 0xFF) / 255.0f;
-        float blue = (resolvedBorderRgb & 0xFF) / 255.0f;
-        SubmitGeometryHelper.submitPanel(
-            collector,
-            poseStack,
-            MessagePanelConstants.PANEL_BORDER_TEXTURE,
-            x,
-            y,
-            width,
-            height,
-            BORDER_Z,
-            alpha,
-            red,
-            green,
-            blue
-        );
+        if (takeyourminestream.ijustseen.config.ModConfig.isMESSAGE_3D_FRAME()) {
+            java.util.List<takeyourminestream.ijustseen.core.render.MessageFrame3DModel.FrameQuad> quads =
+                takeyourminestream.ijustseen.core.render.MessageFrame3DModel.getInstance().buildQuads(
+                    x, y, width, height, alpha, baseRgb, resolvedBorderRgb
+                );
+            SubmitGeometryHelper.submitFrameQuads(collector, poseStack, quads);
+        } else {
+            SubmitGeometryHelper.submitPanel(
+                collector,
+                poseStack,
+                MessagePanelConstants.PANEL_TEXTURE,
+                x,
+                y,
+                width,
+                height,
+                0f,
+                alpha,
+                ((baseRgb >> 16) & 0xFF) / 255.0f,
+                ((baseRgb >> 8) & 0xFF) / 255.0f,
+                (baseRgb & 0xFF) / 255.0f
+            );
+
+            float red = ((resolvedBorderRgb >> 16) & 0xFF) / 255.0f;
+            float green = ((resolvedBorderRgb >> 8) & 0xFF) / 255.0f;
+            float blue = (resolvedBorderRgb & 0xFF) / 255.0f;
+            SubmitGeometryHelper.submitPanel(
+                collector,
+                poseStack,
+                MessagePanelConstants.PANEL_BORDER_TEXTURE,
+                x,
+                y,
+                width,
+                height,
+                BORDER_Z,
+                alpha,
+                red,
+                green,
+                blue
+            );
+        }
     }
 
     /** Полупрозрачный куб 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
     public static void drawBlockCube(org.joml.Matrix4f matrix, SubmitNodeCollector collector) {
         PoseStack poseStack = new PoseStack();
         poseStack.mulPose(matrix);
-        SubmitGeometryHelper.submitBlockCube(collector, poseStack, MessagePanelConstants.PANEL_TEXTURE);
+        SubmitGeometryHelper.submitBlockCube(collector, poseStack, MessagePanelConstants.EDITOR_CUBE_TEXTURE);
     }
 }

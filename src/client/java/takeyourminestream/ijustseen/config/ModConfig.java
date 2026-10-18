@@ -221,6 +221,15 @@ public class ModConfig {
         ConfigManager.getInstance().setConfigValue("showMessageBackground", value);
     }
 
+    public static boolean isMESSAGE_3D_FRAME() {
+        Object value = ConfigManager.getInstance().getConfigValue("message3dFrame");
+        return value == null || (Boolean) value;
+    }
+
+    public static void setMESSAGE_3D_FRAME(boolean value) {
+        ConfigManager.getInstance().setConfigValue("message3dFrame", value);
+    }
+
     public static boolean isENABLE_COLOR_EMOJIS() {
         Object value = ConfigManager.getInstance().getConfigValue("enableColorEmojis");
         return value == null || (Boolean) value;

@@ -114,6 +114,8 @@ stonecutter parameters {
             replace("public void render(DrawContext context, int mouseX, int mouseY, float delta)", "public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta)")
             replace("public void render(DrawContext context, Font textRenderer, int mouseX, int mouseY)", "public void extractRenderState(GuiGraphicsExtractor context, Font textRenderer, int mouseX, int mouseY)")
             replace("public boolean shouldPause()", "public boolean isPauseScreen()")
+            replace("public void renderBackground(", "public void extractBackground(")
+            replace("super.renderBackground(", "super.extractBackground(")
             replace("super.render(context, mouseX, mouseY, delta)", "super.extractRenderState(context, mouseX, mouseY, delta)")
             replace(".renderWidget(", ".extractWidgetRenderState(")
             replace("addDrawableChild", "addRenderableWidget")

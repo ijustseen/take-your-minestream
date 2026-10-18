@@ -51,6 +51,11 @@ public final class ModUiTheme {
 
     private ModUiTheme() {}
 
+    /** Затемнение мира без анимации blur — иначе экраны вспыхивают при открытии и смене. */
+    public static void drawWorldDim(DrawContext context, int width, int height) {
+        context.fill(0, 0, width, height, 0xB0000000);
+    }
+
     public static void drawBorderedPanel(DrawContext context, int x, int y, int width, int height) {
         context.fill(x, y, x + width, y + height, PANEL_BG);
         context.fill(x, y, x + width, y + 1, PANEL_BORDER);

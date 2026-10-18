@@ -39,6 +39,7 @@ public class ModConfigData {
     private int messageWrapWidth = DEFAULT_WRAP_WIDTH;
     private boolean messageSizeMigrated = false;
     private boolean showMessageBackground = true;
+    private boolean message3dFrame = true;
     private boolean enableColorEmojis = true;
     private boolean followPlayer = false;
     private boolean enableClickToRemove = true;
@@ -130,6 +131,7 @@ public class ModConfigData {
     public int getHudSizePercent() { return clampSizePercent(hudSizePercent); }
     public int getMessageWrapWidth() { return clampWrapWidth(messageWrapWidth); }
     public boolean isShowMessageBackground() { return showMessageBackground; }
+    public boolean isMessage3dFrame() { return message3dFrame; }
     public boolean isEnableColorEmojis() { return enableColorEmojis; }
     public boolean isFollowPlayer() { return followPlayer; }
     public boolean isEnableClickToRemove() { return enableClickToRemove; }
@@ -193,6 +195,7 @@ public class ModConfigData {
     public void setHudSizePercent(int hudSizePercent) { this.hudSizePercent = clampSizePercent(hudSizePercent); }
     public void setMessageWrapWidth(int messageWrapWidth) { this.messageWrapWidth = clampWrapWidth(messageWrapWidth); }
     public void setShowMessageBackground(boolean showMessageBackground) { this.showMessageBackground = showMessageBackground; }
+    public void setMessage3dFrame(boolean message3dFrame) { this.message3dFrame = message3dFrame; }
     public void setEnableColorEmojis(boolean enableColorEmojis) { this.enableColorEmojis = enableColorEmojis; }
     public void setFollowPlayer(boolean followPlayer) { this.followPlayer = followPlayer; }
     public void setEnableClickToRemove(boolean enableClickToRemove) { this.enableClickToRemove = enableClickToRemove; }

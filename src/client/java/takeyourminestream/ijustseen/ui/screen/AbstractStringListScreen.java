@@ -36,6 +36,16 @@ public abstract class AbstractStringListScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        var client = this.client;
+        if (client != null && client.world != null) {
+            ModUiTheme.drawWorldDim(context, this.width, this.height);
+        } else {
+            super.renderBackground(context, mouseX, mouseY, delta);
+        }
+    }
+
+    @Override
     protected void init() {
         reloadEntries();
 
