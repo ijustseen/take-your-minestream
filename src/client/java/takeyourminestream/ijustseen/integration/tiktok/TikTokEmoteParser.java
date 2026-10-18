@@ -39,6 +39,26 @@ final class TikTokEmoteParser {
         return "\uFFFC";
     }
 
+    /** Первый стикер из чата без текста (коммент из одних эмодзи). */
+    static MessageEmote firstStandaloneEmote(TikTokProto.ProtoMap chat) {
+        if (chat == null) {
+            return null;
+        }
+        for (int field : EMOTE_LIST_FIELDS) {
+            for (TikTokProto.ProtoMap subEmote : chat.getRepeatedMessages(field)) {
+                MessageEmote emote = parseStandaloneEmote(subEmote.getMessage(2));
+                if (emote != null) {
+                    return emote;
+                }
+                emote = parseStandaloneEmote(subEmote);
+                if (emote != null) {
+                    return emote;
+                }
+            }
+        }
+        return null;
+    }
+
     private static List<MessageEmote> parseProtoEmotes(TikTokProto.ProtoMap chat, String comment) {
         if (chat == null || comment == null || comment.isEmpty()) {
             return List.of();

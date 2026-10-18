@@ -121,16 +121,21 @@ public class MessageRenderer {
 
         poseStack.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
-            MessagePanelWorldRenderer.drawPanelWithBorder(
-                poseStack,
-                collector,
-                -MessagePanelConstants.PADDING_X,
-                -MessagePanelConstants.PADDING_Y,
-                panelWidth,
-                panelHeight,
-                1.0f,
-                takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(platformIconKey)
-            );
+            takeyourminestream.ijustseen.core.MessagePanelColors.bindEvent(message.getEventType());
+            try {
+                MessagePanelWorldRenderer.drawPanelWithBorder(
+                    poseStack,
+                    collector,
+                    -MessagePanelConstants.PADDING_X,
+                    -MessagePanelConstants.PADDING_Y,
+                    panelWidth,
+                    panelHeight,
+                    1.0f,
+                    takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(platformIconKey)
+                );
+            } finally {
+                takeyourminestream.ijustseen.core.MessagePanelColors.unbindEvent();
+            }
         }
         poseStack.translate(0f, 0f, 0.1f);
 

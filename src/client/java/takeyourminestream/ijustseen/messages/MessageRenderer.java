@@ -7,6 +7,7 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import takeyourminestream.ijustseen.config.ModConfig;
+import takeyourminestream.ijustseen.core.MessagePanelColors;
 import takeyourminestream.ijustseen.core.MessagePanelConstants;
 import takeyourminestream.ijustseen.core.text.LegacySectionText;
 import net.minecraft.util.math.RotationAxis;
@@ -130,16 +131,21 @@ public class MessageRenderer {
         matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
         // Рендерим панель (по флагу)
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
-            MessagePanelWorldRenderer.drawPanelWithBorder(
-                matrices,
-                consumers,
-                -MessagePanelConstants.PADDING_X,
-                -MessagePanelConstants.PADDING_Y,
-                panelWidth,
-                panelHeight,
-                1.0f,
-                takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(platformIconKey)
-            );
+            MessagePanelColors.bindEvent(message.getEventType());
+            try {
+                MessagePanelWorldRenderer.drawPanelWithBorder(
+                    matrices,
+                    consumers,
+                    -MessagePanelConstants.PADDING_X,
+                    -MessagePanelConstants.PADDING_Y,
+                    panelWidth,
+                    panelHeight,
+                    1.0f,
+                    takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(platformIconKey)
+                );
+            } finally {
+                MessagePanelColors.unbindEvent();
+            }
         }
         matrices.translate(0f, 0f, 0.1f);
         // Рендерим текст

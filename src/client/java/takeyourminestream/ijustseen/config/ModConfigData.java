@@ -5,10 +5,8 @@ package takeyourminestream.ijustseen.config;
  */
 public class ModConfigData {
     private String twitchChannelName = "ijustseen";
-    /** Старый глобальный Simple/Pro; читается только чтобы перенести Pro на Twitch stream key. */
+    /** Старый глобальный Simple/Pro; читается один раз и выбрасывается. */
     private String connectionMode;
-    private TwitchConnectMethod twitchConnectMethod = TwitchConnectMethod.CHANNEL;
-    private String twitchStreamKey = "";
     private boolean twitchEnabled = true;
     private boolean youtubeEnabled = false;
     private String youtubeChannel = "";
@@ -71,9 +69,12 @@ public class ModConfigData {
     private boolean kickMessageSound = true;
     private boolean tiktokShowMessages = true;
     private boolean tiktokMessageSound = true;
-    // Опциональные события TikTok
+    // Опциональные события TikTok (читаются один раз в {@link #migratePlatformEventFilters})
     private boolean tiktokGiftEvents = false;
     private boolean tiktokFollowEvents = false;
+    /** События эфира отдельно для каждого источника: ключ «&lt;платформа&gt;.&lt;событие&gt;». */
+    private java.util.Map<String, Boolean> platformEventFilters = new java.util.LinkedHashMap<>();
+    private boolean platformEventFiltersMigrated = false;
     /** Фильтры ролей отдельно для каждого источника: ключ «&lt;платформа&gt;.&lt;роль&gt;». */
     private java.util.Map<String, Boolean> platformRoleFilters = new java.util.LinkedHashMap<>();
     private boolean platformRoleFiltersMigrated = false;
@@ -102,10 +103,6 @@ public class ModConfigData {
     public int getChanceForSpawn() { return chanceForSpawn; }
     public int getMessageHistoryMaxSize() { return messageHistoryMaxSize; }
     public String getTwitchChannelName() { return twitchChannelName; }
-    public TwitchConnectMethod getTwitchConnectMethod() {
-        return twitchConnectMethod != null ? twitchConnectMethod : TwitchConnectMethod.CHANNEL;
-    }
-    public String getTwitchStreamKey() { return twitchStreamKey != null ? twitchStreamKey : ""; }
     public boolean isTwitchEnabled() { return twitchEnabled; }
     public boolean isYoutubeEnabled() { return youtubeEnabled; }
     public String getYoutubeChannel() { return youtubeChannel; }
@@ -159,17 +156,13 @@ public class ModConfigData {
     public boolean isKickMessageSound() { return kickMessageSound; }
     public boolean isTiktokShowMessages() { return tiktokShowMessages; }
     public boolean isTiktokMessageSound() { return tiktokMessageSound; }
-    public boolean isTiktokGiftEvents() { return tiktokGiftEvents; }
-    public boolean isTiktokFollowEvents() { return tiktokFollowEvents; }
+    public boolean isTiktokGiftEvents() { return isPlatformEventFilter("tiktok", "gift"); }
+    public boolean isTiktokFollowEvents() { return isPlatformEventFilter("tiktok", "follow"); }
 
     // Сеттеры
     public void setChanceForSpawn(int chanceForSpawn) { this.chanceForSpawn = chanceForSpawn; }
     public void setMessageHistoryMaxSize(int messageHistoryMaxSize) { this.messageHistoryMaxSize = Math.max(10, messageHistoryMaxSize); }
     public void setTwitchChannelName(String twitchChannelName) { this.twitchChannelName = twitchChannelName; }
-    public void setTwitchConnectMethod(TwitchConnectMethod twitchConnectMethod) {
-        this.twitchConnectMethod = twitchConnectMethod != null ? twitchConnectMethod : TwitchConnectMethod.CHANNEL;
-    }
-    public void setTwitchStreamKey(String twitchStreamKey) { this.twitchStreamKey = twitchStreamKey != null ? twitchStreamKey : ""; }
     public void setTwitchEnabled(boolean twitchEnabled) { this.twitchEnabled = twitchEnabled; }
     public void setYoutubeEnabled(boolean youtubeEnabled) { this.youtubeEnabled = youtubeEnabled; }
     public void setYoutubeChannel(String youtubeChannel) { this.youtubeChannel = youtubeChannel != null ? youtubeChannel : ""; }
@@ -235,8 +228,65 @@ public class ModConfigData {
     public void setKickMessageSound(boolean kickMessageSound) { this.kickMessageSound = kickMessageSound; }
     public void setTiktokShowMessages(boolean tiktokShowMessages) { this.tiktokShowMessages = tiktokShowMessages; }
     public void setTiktokMessageSound(boolean tiktokMessageSound) { this.tiktokMessageSound = tiktokMessageSound; }
-    public void setTiktokGiftEvents(boolean tiktokGiftEvents) { this.tiktokGiftEvents = tiktokGiftEvents; }
-    public void setTiktokFollowEvents(boolean tiktokFollowEvents) { this.tiktokFollowEvents = tiktokFollowEvents; }
+    public void setTiktokGiftEvents(boolean tiktokGiftEvents) {
+        this.tiktokGiftEvents = tiktokGiftEvents;
+        setPlatformEventFilter("tiktok", "gift", tiktokGiftEvents);
+    }
+    public void setTiktokFollowEvents(boolean tiktokFollowEvents) {
+        this.tiktokFollowEvents = tiktokFollowEvents;
+        setPlatformEventFilter("tiktok", "follow", tiktokFollowEvents);
+    }
+
+    /**
+     * Показывать ли событие {@code event} для источника {@code platformKey}.
+     * Нет ключа — TikTok gift/follow выключены (как раньше), остальное включено.
+     */
+    public boolean isPlatformEventFilter(String platformKey, String event) {
+        if (platformEventFilters != null) {
+            Boolean value = platformEventFilters.get(platformEventKey(platformKey, event));
+            if (value != null) {
+                return value;
+            }
+        }
+        if ("tiktok".equals(platformKey) && ("gift".equals(event) || "follow".equals(event))) {
+            return false;
+        }
+        return true;
+    }
+
+    public void setPlatformEventFilter(String platformKey, String event, boolean value) {
+        if (platformEventFilters == null) {
+            platformEventFilters = new java.util.LinkedHashMap<>();
+        }
+        platformEventFilters.put(platformEventKey(platformKey, event), value);
+        if ("tiktok".equals(platformKey) && "gift".equals(event)) {
+            tiktokGiftEvents = value;
+        }
+        if ("tiktok".equals(platformKey) && "follow".equals(event)) {
+            tiktokFollowEvents = value;
+        }
+    }
+
+    private static String platformEventKey(String platformKey, String event) {
+        return platformKey + '.' + event;
+    }
+
+    /** Один раз переносит старые TikTok-тумблеры в общую карту событий. */
+    public void migratePlatformEventFilters() {
+        if (platformEventFiltersMigrated) {
+            return;
+        }
+        platformEventFiltersMigrated = true;
+        if (platformEventFilters == null) {
+            platformEventFilters = new java.util.LinkedHashMap<>();
+        }
+        if (!platformEventFilters.containsKey(platformEventKey("tiktok", "gift"))) {
+            setPlatformEventFilter("tiktok", "gift", tiktokGiftEvents);
+        }
+        if (!platformEventFilters.containsKey(platformEventKey("tiktok", "follow"))) {
+            setPlatformEventFilter("tiktok", "follow", tiktokFollowEvents);
+        }
+    }
 
     /** Показывать ли роль {@code role} для источника {@code platformKey}. Нет ключа — включено. */
     public boolean isPlatformRoleFilter(String platformKey, String role) {
@@ -276,14 +326,8 @@ public class ModConfigData {
         migratePlatformRoleFiltersV2();
     }
 
-    /** Глобальный Pro больше нет: если он был включён, Twitch подключается ключом трансляции. */
+    /** Глобальный Simple/Pro и ключ трансляции больше не используются. */
     public void migrateLegacyProMode() {
-        if (twitchConnectMethod == null) {
-            twitchConnectMethod = TwitchConnectMethod.CHANNEL;
-        }
-        if (connectionMode != null && connectionMode.equalsIgnoreCase("PRO")) {
-            twitchConnectMethod = TwitchConnectMethod.STREAM_KEY;
-        }
         connectionMode = null;
     }
 

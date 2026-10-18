@@ -96,6 +96,33 @@ public final class ChatHttp {
         return sendForBody(builder.build(), url);
     }
 
+    /** Бинарный GET (protobuf TikTok IM fetch). Не гоняет тело через String. */
+    public static byte[] getBytes(String url, String referer, Map<String, String> extraHeaders) throws IOException {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
+            .timeout(TIMEOUT)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "application/x-protobuf, application/protobuf, */*")
+            .header("Accept-Language", "en-US,en;q=0.9")
+            .GET();
+        if (referer != null && !referer.isBlank()) {
+            builder.header("Referer", referer);
+        }
+        for (Map.Entry<String, String> header : extraHeaders.entrySet()) {
+            builder.header(header.getKey(), header.getValue());
+        }
+        try {
+            HttpResponse<byte[]> response = CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
+            byte[] body = response.body();
+            if (response.statusCode() >= 400) {
+                throw new IOException("HTTP " + response.statusCode() + " for " + url);
+            }
+            return body != null ? body : new byte[0];
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while requesting " + url, e);
+        }
+    }
+
     public static String fetchTtwidCookie() throws IOException {
         return fetchTtwidCookie(null);
     }

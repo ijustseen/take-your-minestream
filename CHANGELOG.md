@@ -7,9 +7,11 @@
 - **Message size is now a slider in percent** (25–300%, step 5%) instead of five presets. 100% is the former “Normal”; existing configs are migrated once (Tiny → 45%, Small → 75%, Large → 135%, Huge → 165%)
 - **Separate HUD widget size** — HUD cards have their own size slider (shown in HUD mode), world messages keep theirs (shown in world mode)
 - **Reset to defaults keeps channel names** — Twitch / YouTube / Kick channels and the TikTok username survive a reset; everything else (including which platforms are enabled) goes back to defaults
+- **Twitch connects by channel name only** — the stream-key option is gone. It never unlocked extra events, only resolved the same nick, so the field is just a channel name again. Old keys are dropped from the config on the next save
 
 ### Fixed
 
+- **TikTok missing comments** — emoji-only lines were thrown away as “binary proto”; the websocket stayed dead after a drop instead of reconnecting; chat is now also pulled from `/webcast/im/fetch/` (history + cursor) so WSS is not the only source
 - **26.3 / 26.2 editor cube** — the 1×1 preview cube no longer shares the panel texture (which hid the fill) and is drawn as a wireframe so the message frame stays visible through it
 - **Settings screen flash** — opening or switching settings screens no longer replays vanilla blur; the world is dimmed statically instead
 - **Message collision fix** - fix an error of killing the wrong message caused by wrong counting order
@@ -23,8 +25,7 @@
 - **Message width** — line width before wrapping (60–400 px, default 120) for world messages and the HUD widget. Chat history keeps its fixed width
 - **3D message frames** — world messages can use a raised picture-frame (rounded corners, beveled rim, back wall) instead of the flat 9-slice panel. Choose **2D** or **3D** in Settings → Messages or the visual editor (3D by default; HUD cards stay 2D). Textures can be replaced with a resource pack (`message_panel.png`, `message_panel_border.png`, `message_frame_back.png`)
 - **Visual message editor** — opened from the highlighted card at the top of the Appearance tab while in a world. A settings panel over the live game shows sample messages from every platform, rendered exactly as real ones, and updates instantly when size, width, colors, background, 3D/2D frame, borders or role badges change. Two views: **Message only** (one sample in front of the camera — drag to rotate, scroll to move the camera, right-click to reset; the sample sits inside a 1×1×1 wireframe cube, so its real size stays clear while zooming) and **Around the player** (third-person camera you can orbit; samples spawn at the real positions for the current placement and min/max distance). In HUD mode the preview appears in the chosen HUD corner. Real chat messages are hidden while the editor is open and come back afterwards; camera perspective and view direction are restored on close
-- **Twitch can connect two ways** — on the Twitch page, switch between channel name and the primary stream key from Creator Dashboard (`live_<id>_…`). The key is resolved to the channel automatically and shown as asterisks so it is not visible on stream. YouTube / Kick / TikTok stay on a name or live URL. Reset keeps the Twitch method and key together with channel names
-- **Live events** — subscriptions, gifts, raids and similar events from each platform’s public feed: Twitch IRC `USERNOTICE` / bits; YouTube Super Chat / Super Sticker / membership / gifted memberships; Kick Pusher subscription / gifted-sub / host; TikTok gifts and follows (still behind their existing toggles) plus LIVE subs
+- **Live events** — subscriptions, gifts, raids and similar events from each platform’s public feed: Twitch IRC `USERNOTICE` / bits; YouTube Super Chat / Super Sticker / membership / gifted memberships; Kick Pusher subscription / gifted-sub / host / follow; TikTok gifts, follows and LIVE subs. Each type has its own on/off switch on the platform page (TikTok gifts/follows stay off by default; the rest stay on). Event cards use their own accent color and badge, and read as “Name subscribed” instead of a normal chat line. Twitch follows are not in IRC, so there is no Twitch follow toggle.
 
 ## [2.1.1] - 2026-10-07
 

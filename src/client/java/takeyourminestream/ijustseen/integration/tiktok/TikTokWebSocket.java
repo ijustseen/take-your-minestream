@@ -42,10 +42,13 @@ final class TikTokWebSocket {
         void onLiveEnded();
     }
 
+    private enum SocketState { CONNECTING, OPEN, DEAD }
+
     private final String roomId;
     private final String ttwid;
     private final ChatHandler handler;
     private volatile boolean running;
+    private volatile SocketState state = SocketState.DEAD;
     private volatile WebSocket webSocket;
     private Thread maintenanceThread;
 
@@ -56,8 +59,12 @@ final class TikTokWebSocket {
     }
 
     void connect() {
+        connect(TikTokWssUrl.build(roomId));
+    }
+
+    void connect(String url) {
         running = true;
-        String url = TikTokWssUrl.build(roomId);
+        state = SocketState.CONNECTING;
         HTTP_CLIENT.newWebSocketBuilder()
             .header("Cookie", buildCookieHeader())
             .header("User-Agent", USER_AGENT)
@@ -68,6 +75,7 @@ final class TikTokWebSocket {
             .buildAsync(URI.create(url), new Listener())
             .whenComplete((ws, error) -> {
                 if (error != null && running) {
+                    state = SocketState.DEAD;
                     TakeYourMineStreamClient.LOGGER.warn("TikTok WSS handshake failed: {}", error.getMessage());
                 }
             });
@@ -75,6 +83,7 @@ final class TikTokWebSocket {
 
     void disconnect() {
         running = false;
+        state = SocketState.DEAD;
         WebSocket ws = webSocket;
         webSocket = null;
         if (ws != null) {
@@ -87,7 +96,21 @@ final class TikTokWebSocket {
     }
 
     boolean isRunning() {
-        return running;
+        return running && state != SocketState.DEAD;
+    }
+
+    boolean isConnecting() {
+        return running && state == SocketState.CONNECTING;
+    }
+
+    /** Сообщения из HTTP {@code /im/fetch/} — тот же разбор, что у кадров WSS. */
+    void ingest(List<TikTokProto.ProtoMap> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+        for (TikTokProto.ProtoMap message : messages) {
+            dispatchMessage(message);
+        }
     }
 
     private final class Listener implements WebSocket.Listener {
@@ -98,6 +121,7 @@ final class TikTokWebSocket {
         @Override
         public void onOpen(WebSocket ws) {
             webSocket = ws;
+            state = SocketState.OPEN;
             sendBinary(ws, TikTokFrames.buildHeartbeat(roomId));
             sendBinary(ws, TikTokFrames.buildEnterRoom(roomId));
             lastHeartbeatSentMs.set(System.currentTimeMillis());
@@ -135,18 +159,23 @@ final class TikTokWebSocket {
         @Override
         public CompletionStage<?> onClose(WebSocket ws, int statusCode, String reason) {
             webSocket = null;
+            state = SocketState.DEAD;
+            if (running) {
+                TakeYourMineStreamClient.LOGGER.info("TikTok WSS closed ({} {}): reconnecting", statusCode, reason);
+            }
             return null;
         }
 
         @Override
         public void onError(WebSocket ws, Throwable error) {
+            state = SocketState.DEAD;
             if (running) {
                 TakeYourMineStreamClient.LOGGER.warn("TikTok WSS error: {}", error.getMessage());
             }
         }
 
         private void startMaintenance(WebSocket ws) {
-            maintenanceThread = Thread.ofVirtual().name("TikTokWss-" + roomId).start(() -> {
+            maintenanceThread = daemon("TikTokWss-" + roomId, () -> {
                 while (running && webSocket == ws) {
                     try {
                         Thread.sleep(STALE_CHECK_INTERVAL_MS);
@@ -160,6 +189,7 @@ final class TikTokWebSocket {
                     long now = System.currentTimeMillis();
                     if (now - lastDataMs.get() > STALE_TIMEOUT_MS) {
                         TakeYourMineStreamClient.LOGGER.info("TikTok WSS stale for @{}, reconnecting", roomId);
+                        state = SocketState.DEAD;
                         ws.sendClose(WebSocket.NORMAL_CLOSURE, "stale");
                         return;
                     }
@@ -180,7 +210,8 @@ final class TikTokWebSocket {
             TakeYourMineStreamClient.LOGGER.debug("TikTok WSS outer frame parse skip: {}", e.getMessage());
             return;
         }
-        if (!"msg".equals(frame.getString(7))) {
+        String payloadType = frame.getString(7);
+        if ("hb".equals(payloadType) || "ack".equals(payloadType)) {
             return;
         }
 
@@ -242,12 +273,19 @@ final class TikTokWebSocket {
     private void handleChat(byte[] payload, long wrapperMsgId) {
         TikTokProto.ProtoMap chat = TikTokProto.decode(payload);
         String text = extractChatText(chat);
+        List<MessageEmote> emotes;
         if (text.isBlank()) {
-            return;
+            MessageEmote standalone = TikTokEmoteParser.firstStandaloneEmote(chat);
+            if (standalone == null) {
+                return;
+            }
+            text = TikTokEmoteParser.standaloneEmoteText();
+            emotes = List.of(standalone);
+        } else {
+            emotes = TikTokEmoteParser.parseChatEmotes(chat, text);
         }
 
         UserIdentity user = extractUserSafe(chat);
-        List<MessageEmote> emotes = TikTokEmoteParser.parseChatEmotes(chat, text);
         handler.onChat(
             resolveMsgId(chat, wrapperMsgId),
             user.uniqueId(),
@@ -344,44 +382,61 @@ final class TikTokWebSocket {
     }
 
     /**
-     * Текст комментария: field 3 (content) или вложенный CommentContent (field 29).
-     * Новые клиенты TikTok иногда кладут текст не в строковое поле 3.
+     * Текст комментария: field 3 (content) и более новые CommentContent (22/29/…).
+     * Не трогаем field 1 (common) и 2 (user) — там ник и служебные строки.
      */
+    private static final int[] CHAT_TEXT_FIELDS = {3, 4, 22, 29, 30, 31};
+
     private static String extractChatText(TikTokProto.ProtoMap chat) {
-        String direct = readableText(chat.getString(3));
+        for (int field : CHAT_TEXT_FIELDS) {
+            String text = readableFromField(chat, field);
+            if (!text.isBlank()) {
+                return text;
+            }
+        }
+        return "";
+    }
+
+    private static String readableFromField(TikTokProto.ProtoMap map, int field) {
+        String direct = readableText(map.getString(field));
         if (!direct.isBlank()) {
             return direct;
         }
-        String nestedFrom3 = "";
-        try {
-            nestedFrom3 = readableText(chat.getMessage(3).getString(1));
-        } catch (RuntimeException ignored) {
-            // field 3 — обычная строка, не вложенное сообщение
+        TikTokProto.ProtoMap nested = map.getMessage(field);
+        for (int inner : new int[] {1, 2, 3}) {
+            String text = readableText(nested.getString(inner));
+            if (!text.isBlank()) {
+                return text;
+            }
         }
-        if (!nestedFrom3.isBlank()) {
-            return nestedFrom3;
-        }
-        try {
-            return readableText(chat.getMessage(29).getString(1));
-        } catch (RuntimeException ignored) {
-            return "";
-        }
+        return "";
     }
 
+    /**
+     * Отсекает protobuf, прочитанный как UTF-8 (много U+FFFD / control).
+     * Считает кодпоинты, а не UTF-16 char'ы: иначе один эмодзи («😂»)
+     * выглядел как 1 printable / 2 length и выбрасывался.
+     */
     private static String readableText(String value) {
         if (value == null || value.isBlank()) {
             return "";
         }
+        int codePoints = 0;
         int printable = 0;
-        int length = value.length();
-        for (int i = 0; i < length; ) {
+        int replacement = 0;
+        for (int i = 0; i < value.length(); ) {
             int cp = value.codePointAt(i);
             i += Character.charCount(cp);
+            codePoints++;
+            if (cp == 0xFFFD) {
+                replacement++;
+                continue;
+            }
             if (!Character.isISOControl(cp) || cp == '\n' || cp == '\r' || cp == '\t') {
                 printable++;
             }
         }
-        if (printable * 4 < length * 3) {
+        if (codePoints == 0 || replacement * 2 >= codePoints || printable * 2 < codePoints) {
             return "";
         }
         return value.trim();

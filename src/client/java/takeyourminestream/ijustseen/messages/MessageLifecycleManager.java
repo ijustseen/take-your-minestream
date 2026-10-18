@@ -416,6 +416,7 @@ public class MessageLifecycleManager {
         );
         replacement.setPinned(false);
         replacement.setDimensionKey(message.getDimensionKey());
+        replacement.setEventType(message.getEventType());
 
         int idx = activeMessages.indexOf(message);
         activeMessages.set(idx, replacement);

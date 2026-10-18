@@ -22,22 +22,6 @@ public class ModConfig {
         ConfigManager.getInstance().setConfigValue("twitchChannelName", value != null ? value : "");
     }
 
-    public static TwitchConnectMethod getTWITCH_CONNECT_METHOD() {
-        Object value = ConfigManager.getInstance().getConfigValue("twitchConnectMethod");
-        return value instanceof TwitchConnectMethod method ? method : TwitchConnectMethod.CHANNEL;
-    }
-
-    public static void setTWITCH_CONNECT_METHOD(TwitchConnectMethod value) {
-        ConfigManager.getInstance().setConfigValue(
-            "twitchConnectMethod",
-            value != null ? value : TwitchConnectMethod.CHANNEL
-        );
-    }
-
-    public static boolean isTWITCH_STREAM_KEY_CONNECT() {
-        return getTWITCH_CONNECT_METHOD().usesStreamKey();
-    }
-
     public static boolean isTWITCH_ENABLED() {
         Object value = ConfigManager.getInstance().getConfigValue("twitchEnabled");
         return value == null || (Boolean) value;
@@ -485,22 +469,33 @@ public class ModConfig {
         ConfigManager.getInstance().setConfigValue(platformKey + "MessageSound", value);
     }
 
+    public static boolean isPLATFORM_EVENT(String platformKey, takeyourminestream.ijustseen.integration.chat.PlatformEventKind kind) {
+        return getCurrentConfig().isPlatformEventFilter(platformKey, kind.key());
+    }
+
+    public static void setPLATFORM_EVENT(
+        String platformKey,
+        takeyourminestream.ijustseen.integration.chat.PlatformEventKind kind,
+        boolean value
+    ) {
+        getCurrentConfig().setPlatformEventFilter(platformKey, kind.key(), value);
+        ConfigManager.getInstance().saveConfig();
+    }
+
     public static boolean isTIKTOK_GIFT_EVENTS() {
-        Object value = ConfigManager.getInstance().getConfigValue("tiktokGiftEvents");
-        return value instanceof Boolean b && b;
+        return isPLATFORM_EVENT("tiktok", takeyourminestream.ijustseen.integration.chat.PlatformEventKind.GIFT);
     }
 
     public static void setTIKTOK_GIFT_EVENTS(boolean value) {
-        ConfigManager.getInstance().setConfigValue("tiktokGiftEvents", value);
+        setPLATFORM_EVENT("tiktok", takeyourminestream.ijustseen.integration.chat.PlatformEventKind.GIFT, value);
     }
 
     public static boolean isTIKTOK_FOLLOW_EVENTS() {
-        Object value = ConfigManager.getInstance().getConfigValue("tiktokFollowEvents");
-        return value instanceof Boolean b && b;
+        return isPLATFORM_EVENT("tiktok", takeyourminestream.ijustseen.integration.chat.PlatformEventKind.FOLLOW);
     }
 
     public static void setTIKTOK_FOLLOW_EVENTS(boolean value) {
-        ConfigManager.getInstance().setConfigValue("tiktokFollowEvents", value);
+        setPLATFORM_EVENT("tiktok", takeyourminestream.ijustseen.integration.chat.PlatformEventKind.FOLLOW, value);
     }
 
     public static takeyourminestream.ijustseen.config.UnpinMode getUNPIN_MODE() {

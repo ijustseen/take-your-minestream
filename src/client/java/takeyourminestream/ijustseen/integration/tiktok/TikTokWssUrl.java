@@ -14,6 +14,10 @@ final class TikTokWssUrl {
     private TikTokWssUrl() {}
 
     static String build(String roomId) {
+        return build(roomId, "", "", null);
+    }
+
+    static String build(String roomId, String cursor, String internalExt, String pushServer) {
         String language = "en";
         String region = "US";
         String lastRtt = String.format("%.3f", LAST_RTT_MIN_MS + Math.random() * LAST_RTT_RANDOM_SPREAD_MS);
@@ -43,11 +47,17 @@ final class TikTokWssUrl {
         params.put("client_enter", "1");
         params.put("room_id", roomId);
         params.put("identity", "audience");
-        params.put("history_comment_count", "6");
+        params.put("history_comment_count", "36");
         params.put("last_rtt", lastRtt);
         params.put("heartbeat_duration", Long.toString(HEARTBEAT_INTERVAL_MS));
         params.put("resp_content_type", "protobuf");
         params.put("did_rule", "3");
+        if (cursor != null && !cursor.isBlank()) {
+            params.put("cursor", cursor);
+        }
+        if (internalExt != null && !internalExt.isBlank()) {
+            params.put("internal_ext", internalExt);
+        }
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -59,6 +69,12 @@ final class TikTokWssUrl {
                 .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
         }
 
-        return "wss://webcast-ws.tiktok.com/webcast/im/ws_proxy/ws_reuse_supplement/?" + sb;
+        String host = pushServer != null && !pushServer.isBlank()
+            ? pushServer.trim()
+            : "wss://webcast-ws.tiktok.com/webcast/im/ws_proxy/ws_reuse_supplement/";
+        if (host.contains("?")) {
+            return host + '&' + sb;
+        }
+        return host + (host.endsWith("&") || host.endsWith("?") ? "" : "?") + sb;
     }
 }

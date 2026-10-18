@@ -24,13 +24,17 @@ public class TikTokChatClient implements ChatConnection {
     private static final Pattern ROOM_ID_ALT = Pattern.compile("room_id=(\\d+)");
 
     private static final int MAX_SEEN_MESSAGE_IDS = 5000;
+    private static final long HANDSHAKE_TIMEOUT_MS = 20_000L;
+    private static final long RECONNECT_DELAY_MS = 3_000L;
 
     private final String username;
     private final ChatMessagePipeline pipeline;
     private volatile boolean running;
     private volatile Thread workerThread;
+    private volatile Thread fetchThread;
     private volatile TikTokWebSocket webSocket;
     private String roomId;
+    private volatile String fetchCursor = "";
     private final Set<Long> seenMessageIds = new LinkedHashSet<>();
 
     public TikTokChatClient(String username, ChatMessagePipeline pipeline) {
@@ -58,8 +62,18 @@ public class TikTokChatClient implements ChatConnection {
                 String ttwid = ChatHttp.fetchTtwidCookie(username);
                 connectWebSocket(ttwid);
 
+                long handshakeStarted = System.currentTimeMillis();
                 while (running && webSocket != null && webSocket.isRunning()) {
+                    if (webSocket.isConnecting()
+                        && System.currentTimeMillis() - handshakeStarted > HANDSHAKE_TIMEOUT_MS) {
+                        TakeYourMineStreamClient.LOGGER.warn("TikTok WSS handshake timed out for @{}", username);
+                        break;
+                    }
                     Thread.sleep(1000);
+                }
+                if (running) {
+                    disconnectWebSocket();
+                    sleepQuietly(RECONNECT_DELAY_MS);
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -151,7 +165,58 @@ public class TikTokChatClient implements ChatConnection {
                 disconnectWebSocket();
             }
         });
-        webSocket.connect();
+        TikTokImFetch.Result bootstrap = TikTokImFetch.tryFetch(currentRoomId, "");
+        if (bootstrap != null) {
+            fetchCursor = bootstrap.cursor();
+            webSocket.ingest(bootstrap.messages());
+            TakeYourMineStreamClient.LOGGER.info(
+                "TikTok IM fetch for @{}: {} messages",
+                username,
+                bootstrap.messages().size()
+            );
+        }
+        webSocket.connect(TikTokWssUrl.build(
+            currentRoomId,
+            bootstrap != null ? bootstrap.cursor() : "",
+            bootstrap != null ? bootstrap.internalExt() : "",
+            bootstrap != null && bootstrap.hasPushServer() ? bootstrap.pushServer() : null
+        ));
+        startFetchPoll(currentRoomId, webSocket, bootstrap);
+    }
+
+    private void startFetchPoll(String currentRoomId, TikTokWebSocket socket, TikTokImFetch.Result bootstrap) {
+        stopFetchPoll();
+        if (bootstrap == null) {
+            return;
+        }
+        fetchThread = new Thread(() -> {
+            long intervalMs = bootstrap.fetchIntervalMs();
+            while (running && webSocket == socket && socket.isRunning()) {
+                sleepQuietly(intervalMs);
+                if (!running || webSocket != socket) {
+                    break;
+                }
+                TikTokImFetch.Result next = TikTokImFetch.tryFetch(currentRoomId, fetchCursor);
+                if (next == null) {
+                    continue;
+                }
+                if (next.hasCursor()) {
+                    fetchCursor = next.cursor();
+                }
+                intervalMs = next.fetchIntervalMs();
+                socket.ingest(next.messages());
+            }
+        }, "TikTokFetch-" + username);
+        fetchThread.setDaemon(true);
+        fetchThread.start();
+    }
+
+    private void stopFetchPoll() {
+        Thread thread = fetchThread;
+        fetchThread = null;
+        if (thread != null) {
+            thread.interrupt();
+        }
     }
 
     /** Отсекает дубли сообщений и событий по msgId; false — уже видели. */
@@ -171,6 +236,7 @@ public class TikTokChatClient implements ChatConnection {
     }
 
     private void disconnectWebSocket() {
+        stopFetchPoll();
         TikTokWebSocket ws = webSocket;
         webSocket = null;
         if (ws != null) {

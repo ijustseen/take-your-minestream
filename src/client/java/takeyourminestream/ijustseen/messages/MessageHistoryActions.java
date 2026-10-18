@@ -112,6 +112,7 @@ public final class MessageHistoryActions {
             source.getEmotes()
         );
         message.setPinned(pinned);
+        message.setEventType(source.getEventType());
         PinnedMessageStore.tagWithCurrentDimension(message, client);
         return message;
     }

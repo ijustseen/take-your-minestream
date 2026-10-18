@@ -40,7 +40,12 @@ public final class ChatMessagePipeline {
         this.messageSpawner = messageSpawner;
     }
 
-    private record PreparedSpawn(String fullText, Integer authorColorRgb, List<MessageEmote> emotes) {}
+    private record PreparedSpawn(
+        String fullText,
+        Integer authorColorRgb,
+        List<MessageEmote> emotes,
+        ChatEventType eventType
+    ) {}
 
     public void process(IncomingChatMessage message) {
         if (message == null) {
@@ -55,7 +60,12 @@ public final class ChatMessagePipeline {
         client.execute(() -> {
             PreparedSpawn prepared = prepare(message);
             if (prepared != null) {
-                messageSpawner.setCurrentMessage(prepared.fullText(), prepared.authorColorRgb(), prepared.emotes());
+                messageSpawner.setCurrentMessage(
+                    prepared.fullText(),
+                    prepared.authorColorRgb(),
+                    prepared.emotes(),
+                    prepared.eventType()
+                );
             }
         });
     }
@@ -101,6 +111,7 @@ public final class ChatMessagePipeline {
                         prepared.fullText(),
                         prepared.authorColorRgb(),
                         prepared.emotes(),
+                        prepared.eventType(),
                         readyTick
                     );
                 }
@@ -193,7 +204,9 @@ public final class ChatMessagePipeline {
         }
 
         String colorPrefix = toNearestSectionColor(rgb);
-        String coloredName = colorPrefix + displayName + ":§r ";
+        String coloredName = isEvent
+            ? colorPrefix + displayName + "§r "
+            : colorPrefix + displayName + ":§r ";
         List<MessageEmote> parsedEmotes = new ArrayList<>();
 
         boolean twitchRangesIntact = message.platform() == ChatPlatform.TWITCH
@@ -259,6 +272,12 @@ public final class ChatMessagePipeline {
             -1,
             -1
         ));
+        if (isEvent) {
+            String eventBadge = message.eventType().badgeKey();
+            if (eventBadge != null) {
+                emotesWithIcon.add(new MessageEmote(RoleBadges.PROVIDER, eventBadge, "", -1, -1));
+            }
+        }
         if (ModConfig.isSHOW_ROLE_BADGES()) {
             ChatAuthorRoles roles = message.roles();
             for (String badgeKey : RoleBadges.keysFor(
@@ -271,22 +290,15 @@ public final class ChatMessagePipeline {
             }
         }
 
-        return new PreparedSpawn(fullText, rgb, emotesWithIcon);
+        return new PreparedSpawn(fullText, rgb, emotesWithIcon, message.eventType());
     }
 
-    /**
-     * События эфира показываются всегда, кроме TikTok-подарков/фолловов —
-     * у них остаются отдельные тумблеры (по умолчанию выключены).
-     */
     private static boolean shouldShowEvent(IncomingChatMessage message) {
-        if (message.platform() != ChatPlatform.TIKTOK) {
+        PlatformEventKind kind = PlatformEventKind.of(message.eventType());
+        if (kind == null) {
             return true;
         }
-        return switch (message.eventType()) {
-            case GIFT -> ModConfig.isTIKTOK_GIFT_EVENTS();
-            case FOLLOW -> ModConfig.isTIKTOK_FOLLOW_EVENTS();
-            default -> true;
-        };
+        return ModConfig.isPLATFORM_EVENT(message.platform().getIconKey(), kind);
     }
 
     private static List<MessageEmote> parseTwitchEmotes(String emotesTag, String message, int messageStartOffset) {

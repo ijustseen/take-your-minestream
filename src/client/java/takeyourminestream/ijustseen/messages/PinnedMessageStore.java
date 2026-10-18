@@ -85,6 +85,12 @@ public final class PinnedMessageStore {
                 );
                 message.setPinned(true);
                 message.setDimensionKey(dimensionKey);
+                if (entry.eventType != null && !entry.eventType.isBlank()) {
+                    try {
+                        message.setEventType(takeyourminestream.ijustseen.integration.chat.ChatEventType.valueOf(entry.eventType));
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
                 // Предзагружаем текстуры эмоутов для закреплённых сообщений
                 if (entry.emotes != null) {
                     for (PinnedEmoteEntry emote : entry.emotes) {
@@ -129,6 +135,7 @@ public final class PinnedMessageStore {
                 entry.yaw = message.getYaw();
                 entry.pitch = message.getPitch();
                 entry.authorColorRgb = message.getAuthorColorRgb();
+                entry.eventType = message.getEventType().name();
                 entry.emotes = message.getEmotes().stream()
                     .map(e -> {
                         PinnedEmoteEntry pe = new PinnedEmoteEntry();
@@ -288,6 +295,7 @@ public final class PinnedMessageStore {
         float yaw;
         float pitch;
         Integer authorColorRgb;
+        String eventType;
         List<PinnedEmoteEntry> emotes;
     }
 

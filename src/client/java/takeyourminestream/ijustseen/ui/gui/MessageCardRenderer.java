@@ -38,7 +38,12 @@ public final class MessageCardRenderer {
         boolean pinnedInWorld
     ) {
         float panelAlpha = visibleInWorld ? alpha : alpha * 0.55f;
-        MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), panelAlpha, borderColorFor(message));
+        takeyourminestream.ijustseen.core.MessagePanelColors.bindEvent(message.getEventType());
+        try {
+            MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), panelAlpha, borderColorFor(message));
+        } finally {
+            takeyourminestream.ijustseen.core.MessagePanelColors.unbindEvent();
+        }
 
         int innerX = x + MessagePanelConstants.PADDING_X;
         int innerY = y + MessagePanelConstants.PADDING_Y;
@@ -135,7 +140,12 @@ public final class MessageCardRenderer {
         float alpha
     ) {
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
-            MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), alpha, borderColorFor(message));
+            takeyourminestream.ijustseen.core.MessagePanelColors.bindEvent(message.getEventType());
+            try {
+                MessagePanelGuiRenderer.drawPanel(context, x, y, layout.width(), layout.height(), alpha, borderColorFor(message));
+            } finally {
+                takeyourminestream.ijustseen.core.MessagePanelColors.unbindEvent();
+            }
         }
 
         int innerX = x + MessagePanelConstants.PADDING_X;

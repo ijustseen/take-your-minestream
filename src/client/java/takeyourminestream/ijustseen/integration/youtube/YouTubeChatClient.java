@@ -429,7 +429,7 @@ public class YouTubeChatClient implements ChatConnection {
             : amount.isBlank()
                 ? parsed.text()
                 : Text.translatable("takeyourstreamchat.event.youtube.superchat", amount, parsed.text()).getString();
-        emitYouTube(renderer, text, parsed.emotes(), ChatEventType.GIFT, batch);
+        emitYouTube(renderer, text, parsed.emotes(), ChatEventType.BITS, batch);
     }
 
     private void handlePaidSticker(JsonObject renderer, boolean deliver, List<IncomingChatMessage> batch) {
@@ -441,7 +441,7 @@ public class YouTubeChatClient implements ChatConnection {
             "takeyourstreamchat.event.youtube.supersticker",
             firstNonBlank(amount, "?")
         ).getString();
-        emitYouTube(renderer, text, List.of(), ChatEventType.GIFT, batch);
+        emitYouTube(renderer, text, List.of(), ChatEventType.BITS, batch);
     }
 
     private void handleMembership(JsonObject renderer, boolean deliver, List<IncomingChatMessage> batch) {

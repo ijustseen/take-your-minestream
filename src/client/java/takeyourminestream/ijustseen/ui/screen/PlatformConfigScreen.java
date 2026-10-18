@@ -11,8 +11,8 @@ import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.integration.chat.ChatConnectionManager;
 import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
+import takeyourminestream.ijustseen.integration.chat.PlatformEventKind;
 import takeyourminestream.ijustseen.integration.chat.PlatformRoleKind;
-import takeyourminestream.ijustseen.integration.chat.StreamKeyResolver;
 import takeyourminestream.ijustseen.ui.gui.ConfigUiHelper;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer;
@@ -56,12 +56,7 @@ public class PlatformConfigScreen extends DimScreen {
     private ButtonWidget backButton;
     private ButtonWidget enabledToggle;
     private Text hoveredDescription;
-    private Text identityHint;
     private int scrollOffset;
-
-    private TextFieldWidget identityField;
-    private Entry identityEntry;
-    private boolean applyingIdentityMask;
 
     private static class Entry {
         String labelKey;
@@ -125,34 +120,8 @@ public class PlatformConfigScreen extends DimScreen {
     }
 
     private void createChannelEntry() {
-        if (platform == ChatPlatform.TWITCH) {
-            createTwitchConnectMethodEntry();
-        }
-        createIdentityField();
-    }
-
-    private void createTwitchConnectMethodEntry() {
-        ButtonWidget button = ButtonWidget.builder(
-            twitchConnectMethodText(),
-            btn -> {
-                ModConfig.setTWITCH_CONNECT_METHOD(ModConfig.getTWITCH_CONNECT_METHOD().toggle());
-                btn.setMessage(twitchConnectMethodText());
-                applyIdentityFieldToCurrentMethod();
-                syncEnabledToggleAvailability();
-            }
-        ).dimensions(0, 0, CONTROL_WIDTH, CONTROL_HEIGHT).build();
-        this.addDrawableChild(button);
-        entries.add(new Entry(
-            "takeyourstreamchat.config.twitch_connect",
-            "takeyourstreamchat.config.twitch_connect.desc",
-            button
-        ));
-    }
-
-    private void createIdentityField() {
-        boolean streamKey = usesTwitchStreamKey();
-        String configKey = identityConfigKey(streamKey);
-        String labelKey = identityLabelKey(streamKey);
+        String configKey = channelConfigKey(platform);
+        String labelKey = channelLabelKey(platform);
         TextFieldWidget field = new TextFieldWidget(
             this.textRenderer,
             0,
@@ -161,131 +130,14 @@ public class PlatformConfigScreen extends DimScreen {
             CONTROL_HEIGHT,
             Text.translatable(labelKey)
         );
-        identityField = field;
-        field.setMaxLength(streamKey ? 128 : 64);
-        Object stored = ConfigManager.getInstance().getConfigValue(configKey);
-        String raw = stored instanceof String s ? s : "";
-        identityHint = Text.translatable(labelKey + ".desc");
-        bindIdentityListener(streamKey);
-        showIdentityValue(streamKey, raw);
+        field.setMaxLength(64);
+        field.setText(channelValue(platform));
+        field.setChangedListener(value -> {
+            ConfigManager.getInstance().setConfigValue(configKey, value);
+            syncEnabledToggleAvailability();
+        });
         this.addDrawableChild(field);
-        identityEntry = new Entry(labelKey, labelKey + ".desc", field);
-        entries.add(identityEntry);
-        if (streamKey && !raw.isBlank()) {
-            resolveTwitchStreamKey(raw);
-        }
-    }
-
-    private void applyIdentityFieldToCurrentMethod() {
-        if (identityField == null || identityEntry == null) {
-            return;
-        }
-        boolean streamKey = usesTwitchStreamKey();
-        String labelKey = identityLabelKey(streamKey);
-        identityEntry.labelKey = labelKey;
-        identityEntry.descriptionKey = labelKey + ".desc";
-        identityField.setMaxLength(streamKey ? 128 : 64);
-        identityHint = Text.translatable(labelKey + ".desc");
-        bindIdentityListener(streamKey);
-        Object stored = ConfigManager.getInstance().getConfigValue(identityConfigKey(streamKey));
-        String raw = stored instanceof String s ? s : "";
-        showIdentityValue(streamKey, raw);
-        if (streamKey) {
-            if (!raw.isBlank()) {
-                resolveTwitchStreamKey(raw);
-            }
-        } else {
-            syncEnabledToggleAvailability();
-        }
-    }
-
-    private void bindIdentityListener(boolean streamKey) {
-        String configKey = identityConfigKey(streamKey);
-        identityField.setChangedListener(value -> {
-            if (applyingIdentityMask) {
-                return;
-            }
-            if (streamKey) {
-                if (isSecretMask(value)) {
-                    return;
-                }
-                String key = value == null ? "" : value.replace("*", "").trim();
-                ConfigManager.getInstance().setConfigValue(configKey, key);
-                showIdentityValue(true, key);
-                resolveTwitchStreamKey(key);
-            } else {
-                ConfigManager.getInstance().setConfigValue(configKey, value);
-                identityHint = Text.translatable(identityLabelKey(false) + ".desc");
-                syncEnabledToggleAvailability();
-            }
-        });
-    }
-
-    private void showIdentityValue(boolean streamKey, String stored) {
-        String display = streamKey ? maskSecret(stored) : (stored != null ? stored : "");
-        applyingIdentityMask = true;
-        identityField.setText(display);
-        applyingIdentityMask = false;
-    }
-
-    private static String maskSecret(String value) {
-        if (value == null || value.isEmpty()) {
-            return "";
-        }
-        return "*".repeat(value.length());
-    }
-
-    private static boolean isSecretMask(String value) {
-        if (value == null || value.isEmpty()) {
-            return false;
-        }
-        for (int i = 0; i < value.length(); i++) {
-            if (value.charAt(i) != '*') {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private void resolveTwitchStreamKey(String value) {
-        identityHint = Text.translatable("takeyourstreamchat.config.stream_key.resolving");
-        StreamKeyResolver.applyAsync(value, result -> {
-            if (ScreenNavigationCompat.current(this.client) != this) {
-                return;
-            }
-            updateIdentityHint(result);
-            syncEnabledToggleAvailability();
-            ChatConnectionManager.getInstance(ConfigManager.getInstance()).reconnectChangedPlatforms();
-        });
-    }
-
-    private void updateIdentityHint(StreamKeyResolver.Result result) {
-        identityHint = switch (result.status()) {
-            case EMPTY -> Text.translatable("takeyourstreamchat.config.stream_key.twitch.desc");
-            case RESOLVED -> Text.translatable("takeyourstreamchat.config.stream_key.resolved", result.channel());
-            case CHANNEL -> Text.translatable("takeyourstreamchat.config.stream_key.channel", result.channel());
-            case INVALID -> Text.translatable("takeyourstreamchat.config.stream_key.invalid");
-        };
-    }
-
-    private boolean usesTwitchStreamKey() {
-        return platform == ChatPlatform.TWITCH && ModConfig.isTWITCH_STREAM_KEY_CONNECT();
-    }
-
-    private String identityConfigKey(boolean streamKey) {
-        return streamKey ? "twitchStreamKey" : channelConfigKey(platform);
-    }
-
-    private String identityLabelKey(boolean streamKey) {
-        return streamKey
-            ? "takeyourstreamchat.config.stream_key.twitch"
-            : channelLabelKey(platform);
-    }
-
-    private static Text twitchConnectMethodText() {
-        return Text.translatable(
-            "takeyourstreamchat.config.twitch_connect." + ModConfig.getTWITCH_CONNECT_METHOD().getKey()
-        );
+        entries.add(new Entry(labelKey, labelKey + ".desc", field));
     }
 
     private void createPlatformToggles() {
@@ -325,18 +177,12 @@ public class PlatformConfigScreen extends DimScreen {
             }
         }
 
-        if (platform == ChatPlatform.TIKTOK) {
+        for (PlatformEventKind event : PlatformEventKind.filtersFor(platform)) {
             addToggle(
-                "takeyourstreamchat.config.tiktok_gift_events",
-                "takeyourstreamchat.config.tiktok_gift_events.desc",
-                ModConfig::isTIKTOK_GIFT_EVENTS,
-                ModConfig::setTIKTOK_GIFT_EVENTS
-            );
-            addToggle(
-                "takeyourstreamchat.config.tiktok_follow_events",
-                "takeyourstreamchat.config.tiktok_follow_events.desc",
-                ModConfig::isTIKTOK_FOLLOW_EVENTS,
-                ModConfig::setTIKTOK_FOLLOW_EVENTS
+                event.labelKey(platform),
+                event.labelKey(platform) + ".desc",
+                () -> ModConfig.isPLATFORM_EVENT(platformKey, event),
+                value -> ModConfig.setPLATFORM_EVENT(platformKey, event, value)
             );
         }
 
@@ -536,9 +382,7 @@ public class PlatformConfigScreen extends DimScreen {
                     entry.isEnabled() ? ModUiTheme.TEXT_PRIMARY : ModUiTheme.TEXT_HINT
                 );
                 if (rowHovered) {
-                    hoveredDescription = entry.widget instanceof TextFieldWidget && identityHint != null
-                        ? identityHint
-                        : Text.translatable(entry.descriptionKey);
+                    hoveredDescription = Text.translatable(entry.descriptionKey);
                 }
             }
             y += ENTRY_HEIGHT + ENTRY_SPACING;

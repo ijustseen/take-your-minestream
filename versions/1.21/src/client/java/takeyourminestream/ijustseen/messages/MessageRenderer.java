@@ -170,16 +170,21 @@ public class MessageRenderer {
         matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
         // Рендерим панель (по флагу)
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
-            MessagePanelWorldRenderer.drawPanelWithBorder(
-                matrices,
-                consumers,
-                -MessagePanelConstants.PADDING_X,
-                -MessagePanelConstants.PADDING_Y,
-                panelWidth,
-                panelHeight,
-                1.0f,
-                takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(platformIconKey)
-            );
+            takeyourminestream.ijustseen.core.MessagePanelColors.bindEvent(message.getEventType());
+            try {
+                MessagePanelWorldRenderer.drawPanelWithBorder(
+                    matrices,
+                    consumers,
+                    -MessagePanelConstants.PADDING_X,
+                    -MessagePanelConstants.PADDING_Y,
+                    panelWidth,
+                    panelHeight,
+                    1.0f,
+                    takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(platformIconKey)
+                );
+            } finally {
+                takeyourminestream.ijustseen.core.MessagePanelColors.unbindEvent();
+            }
         }
         matrices.translate(0f, 0f, 0.1f);
         // Рендерим текст

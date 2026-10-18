@@ -55,6 +55,7 @@ public class MessageSpawner {
             var message = new Message(
                 messageText, position, tick, 0, 0, authorColor, Vec3d.ZERO, queued.emotes
             );
+            message.setEventType(queued.eventType);
             PinnedMessageStore.tagWithCurrentDimension(message, client);
             lifecycleManager.addMessage(message);
         } else {
@@ -72,6 +73,7 @@ public class MessageSpawner {
             var message = new Message(
                 messageText, position, tick, yaw, pitch, authorColor, worldOffset, queued.emotes
             );
+            message.setEventType(queued.eventType);
             PinnedMessageStore.tagWithCurrentDimension(message, client);
             lifecycleManager.addMessage(message);
         }
@@ -92,11 +94,22 @@ public class MessageSpawner {
     }
 
     public void enqueueMessage(String message, Integer authorColorRgb, java.util.List<MessageEmote> emotes, int readyAtTick) {
+        enqueueMessage(message, authorColorRgb, emotes, takeyourminestream.ijustseen.integration.chat.ChatEventType.CHAT, readyAtTick);
+    }
+
+    public void enqueueMessage(
+        String message,
+        Integer authorColorRgb,
+        java.util.List<MessageEmote> emotes,
+        takeyourminestream.ijustseen.integration.chat.ChatEventType eventType,
+        int readyAtTick
+    ) {
         if (!paused) {
             messageQueue.enqueueMessage(
                 message,
                 authorColorRgb,
                 emotes,
+                eventType,
                 readyAtTick,
                 readyAtTick + EMOTE_WAIT_TICKS
             );
@@ -130,11 +143,20 @@ public class MessageSpawner {
     }
 
     public void setCurrentMessage(String message, Integer authorColorRgb, java.util.List<MessageEmote> emotes) {
+        setCurrentMessage(message, authorColorRgb, emotes, takeyourminestream.ijustseen.integration.chat.ChatEventType.CHAT);
+    }
+
+    public void setCurrentMessage(
+        String message,
+        Integer authorColorRgb,
+        java.util.List<MessageEmote> emotes,
+        takeyourminestream.ijustseen.integration.chat.ChatEventType eventType
+    ) {
         if (message.isEmpty()) {
             messageQueue.clear();
             lifecycleManager.clearAllMessages();
         } else {
-            enqueueMessage(message, authorColorRgb, emotes, getTickCounter());
+            enqueueMessage(message, authorColorRgb, emotes, eventType, getTickCounter());
         }
     }
 

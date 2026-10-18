@@ -6,6 +6,8 @@ import takeyourminestream.ijustseen.core.MessagePanelConstants;
 import takeyourminestream.ijustseen.core.text.ChatMessageParser;
 import takeyourminestream.ijustseen.ui.gui.MessageCardLayout;
 
+import takeyourminestream.ijustseen.integration.chat.ChatEventType;
+
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -40,6 +42,7 @@ public class Message {
     private boolean blockCube;
     private Long historySourceId;
     private String dimensionKey;
+    private ChatEventType eventType = ChatEventType.CHAT;
 
     private volatile MessagePanelLayout.Dimensions cachedWorldLayout;
     private volatile List<EmoteTextLayout.LineContent> cachedEmoteLines;
@@ -166,6 +169,15 @@ public class Message {
     public void setHistorySourceId(Long historySourceId) { this.historySourceId = historySourceId; }
     public String getDimensionKey() { return dimensionKey; }
     public void setDimensionKey(String dimensionKey) { this.dimensionKey = dimensionKey; }
+    public ChatEventType getEventType() {
+        return eventType != null ? eventType : ChatEventType.CHAT;
+    }
+    public boolean isEvent() {
+        return getEventType().isEvent();
+    }
+    public void setEventType(ChatEventType eventType) {
+        this.eventType = eventType != null ? eventType : ChatEventType.CHAT;
+    }
     public boolean isInDimension(String currentDimensionKey) {
         return dimensionKey != null && dimensionKey.equals(currentDimensionKey);
     }

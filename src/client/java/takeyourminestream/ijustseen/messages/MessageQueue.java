@@ -14,6 +14,7 @@ public class MessageQueue {
         public final String text;
         public final Integer authorColorRgb;
         public final java.util.List<MessageEmote> emotes;
+        public final takeyourminestream.ijustseen.integration.chat.ChatEventType eventType;
         /** Тик, начиная с которого сообщение можно показать. */
         public final int readyAtTick;
         /** Не ждать текстуры дольше этого тика — иначе чат встанет на мёртвом CDN. */
@@ -24,6 +25,7 @@ public class MessageQueue {
             String text,
             Integer authorColorRgb,
             java.util.List<MessageEmote> emotes,
+            takeyourminestream.ijustseen.integration.chat.ChatEventType eventType,
             int readyAtTick,
             int textureDeadlineTick,
             long sequence
@@ -31,6 +33,9 @@ public class MessageQueue {
             this.text = text;
             this.authorColorRgb = authorColorRgb;
             this.emotes = emotes == null ? java.util.Collections.emptyList() : java.util.List.copyOf(emotes);
+            this.eventType = eventType != null
+                ? eventType
+                : takeyourminestream.ijustseen.integration.chat.ChatEventType.CHAT;
             this.readyAtTick = readyAtTick;
             this.textureDeadlineTick = textureDeadlineTick;
             this.sequence = sequence;
@@ -54,10 +59,22 @@ public class MessageQueue {
         int readyAtTick,
         int textureDeadlineTick
     ) {
+        enqueueMessage(message, authorColorRgb, emotes, takeyourminestream.ijustseen.integration.chat.ChatEventType.CHAT, readyAtTick, textureDeadlineTick);
+    }
+
+    public void enqueueMessage(
+        String message,
+        Integer authorColorRgb,
+        java.util.List<MessageEmote> emotes,
+        takeyourminestream.ijustseen.integration.chat.ChatEventType eventType,
+        int readyAtTick,
+        int textureDeadlineTick
+    ) {
         offerWithCap(new QueuedMessage(
             message,
             authorColorRgb,
             emotes,
+            eventType,
             readyAtTick,
             textureDeadlineTick,
             sequence.getAndIncrement()
