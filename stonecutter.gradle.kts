@@ -132,6 +132,7 @@ stonecutter parameters {
             replace("youtubeChannelField.setText(", "youtubeChannelField.setValue(")
             replace("kickChannelField.setText(", "kickChannelField.setValue(")
             replace("tiktokUsernameField.setText(", "tiktokUsernameField.setValue(")
+            replace("tiktokTargetIdcField.setText(", "tiktokTargetIdcField.setValue(")
             replace("field.setText(", "field.setValue(")
             replace("field.getText()", "field.getValue()")
             replace("streamKeyField.setText(", "streamKeyField.setValue(")
@@ -156,6 +157,7 @@ stonecutter parameters {
             replace("textRenderer.wrapLines(", "textRenderer.split(")
             replace("textRenderer.fontHeight", "textRenderer.lineHeight")
             replace("textRenderer.getWidth(", "textRenderer.width(")
+            replace("textRenderer.trimToWidth(", "textRenderer.plainSubstrByWidth(")
             replace("textRenderer.draw(", "textRenderer.drawInBatch(")
             replace("TextRenderer.TextLayerType.POLYGON_OFFSET", "Font.DisplayMode.POLYGON_OFFSET")
 

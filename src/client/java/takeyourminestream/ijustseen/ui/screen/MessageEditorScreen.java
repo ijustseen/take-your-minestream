@@ -3,6 +3,7 @@ package takeyourminestream.ijustseen.ui.screen;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
@@ -14,6 +15,7 @@ import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageEditorPreview;
 import takeyourminestream.ijustseen.messages.MessageLifecycleManager;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
+import takeyourminestream.ijustseen.ui.gui.ColorPickerPopup;
 import takeyourminestream.ijustseen.ui.gui.ConfigUiHelper;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
@@ -95,6 +97,7 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         rowButtons.clear();
         labelRefreshers.clear();
         colorRows.clear();
+        colorPopup.dismiss();
 
         addCycleRow("takeyourstreamchat.config.display_mode", this::displayModeText, this::toggleDisplayKind, () -> true);
         addCycleRow("takeyourstreamchat.editor.view_mode", this::viewModeText, this::toggleViewMode, this::isWorldMode);
@@ -141,6 +144,19 @@ public class MessageEditorScreen extends PreviewPointerScreen {
             .dimensions(0, 0, PANEL_WIDTH - PANEL_PADDING * 2, CONTROL_HEIGHT).build();
         this.addDrawableChild(doneButton);
 
+        hexField = new TextFieldWidget(
+            this.textRenderer,
+            0,
+            0,
+            ColorPickerPopup.HEX_WIDTH,
+            ColorPickerPopup.HEX_FIELD_HEIGHT,
+            Text.translatable("takeyourstreamchat.config.color_picker.hex")
+        );
+        hexField.visible = false;
+        hexField.active = false;
+        colorPopup.attach(hexField);
+        this.addDrawableChild(hexField);
+
         engage();
     }
 
@@ -185,15 +201,8 @@ public class MessageEditorScreen extends PreviewPointerScreen {
     }
 
     private void addColorRow(String labelKey, IntSupplier getter, IntConsumer setter, BooleanSupplier enabled) {
-        ButtonWidget button = ButtonWidget.builder(colorText(getter.getAsInt()), btn -> ScreenNavigationCompat.open(
-            this.client,
-            new ColorPickerScreen(
-                this,
-                Text.translatable("takeyourstreamchat.config.color_picker.title"),
-                getter.getAsInt(),
-                setter
-            )
-        )).dimensions(0, 0, controlWidth(), CONTROL_HEIGHT).build();
+        ButtonWidget button = ButtonWidget.builder(colorText(getter.getAsInt()), btn -> openColorPopup(btn, getter, setter))
+            .dimensions(0, 0, controlWidth(), CONTROL_HEIGHT).build();
         labelRefreshers.add(() -> button.setMessage(colorText(getter.getAsInt())));
         addButtonRow(labelKey, button, () -> true, enabled);
         colorRows.add(new ColorSwatch(button, getter));
@@ -202,6 +211,8 @@ public class MessageEditorScreen extends PreviewPointerScreen {
     private record ColorSwatch(ButtonWidget button, IntSupplier rgb) {}
 
     private final List<ColorSwatch> colorRows = new ArrayList<>();
+    private final ColorPickerPopup colorPopup = new ColorPickerPopup();
+    private TextFieldWidget hexField;
 
     private void addActionRow(String labelKey, Text text, Runnable action, BooleanSupplier visible) {
         ButtonWidget button = ButtonWidget.builder(text, btn -> action.run())
@@ -450,6 +461,50 @@ public class MessageEditorScreen extends PreviewPointerScreen {
 
     // --- Ввод ---
 
+    private void openColorPopup(ButtonWidget button, IntSupplier getter, IntConsumer setter) {
+        if (colorPopup.isOpen() && colorPopup.anchor() == button) {
+            dismissColorPopup();
+            return;
+        }
+        colorPopup.show(button, getter.getAsInt(), setter);
+        colorPopup.place(panelX(), PANEL_WIDTH, button.getY(), button.getHeight(), isPanelOnRight(), this.width, this.height);
+    }
+
+    private void dismissColorPopup() {
+        if (!colorPopup.isOpen() && (hexField == null || !hexField.visible)) {
+            colorPopup.dismiss();
+            return;
+        }
+        colorPopup.dismiss();
+        if (hexField != null && this.getFocused() == hexField) {
+            this.setFocused(null);
+        }
+    }
+
+    private void blurColorHex() {
+        if (hexField != null && this.getFocused() == hexField) {
+            hexField.setFocused(false);
+            this.setFocused(null);
+        }
+    }
+
+    private boolean isOnColorButton(double mouseX, double mouseY) {
+        if (mouseY < contentTop() || mouseY >= contentBottom()) {
+            return false;
+        }
+        for (ColorSwatch swatch : colorRows) {
+            ButtonWidget button = swatch.button();
+            if (!button.visible || !button.active) {
+                continue;
+            }
+            if (mouseX >= button.getX() && mouseX < button.getX() + button.getWidth()
+                && mouseY >= button.getY() && mouseY < button.getY() + button.getHeight()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean isOverPanel(double mouseX, double mouseY) {
         int x = panelX();
         return mouseX >= x && mouseX <= x + PANEL_WIDTH
@@ -458,21 +513,37 @@ public class MessageEditorScreen extends PreviewPointerScreen {
 
     @Override
     protected boolean onPriorityClicked(double mouseX, double mouseY, int pointer) {
-        if (pointer != POINTER_PRIMARY || doneButton == null) {
-            return false;
-        }
-        int x = doneButton.getX();
-        int y = doneButton.getY();
-        if (mouseX >= x && mouseX < x + doneButton.getWidth()
-            && mouseY >= y && mouseY < y + doneButton.getHeight()) {
-            this.close();
+        if (pointer == POINTER_PRIMARY && colorPopup.isOpen() && colorPopup.contains(mouseX, mouseY)) {
+            if (colorPopup.isOverHex(mouseX, mouseY)) {
+                return false;
+            }
+            blurColorHex();
+            colorPopup.beginDrag(mouseX, mouseY);
             return true;
+        }
+        if (pointer == POINTER_PRIMARY && doneButton != null) {
+            int x = doneButton.getX();
+            int y = doneButton.getY();
+            if (mouseX >= x && mouseX < x + doneButton.getWidth()
+                && mouseY >= y && mouseY < y + doneButton.getHeight()) {
+                this.close();
+                return true;
+            }
+        }
+        if (pointer == POINTER_PRIMARY && colorPopup.isOpen() && !isOnColorButton(mouseX, mouseY)) {
+            dismissColorPopup();
+            if (!isOverPanel(mouseX, mouseY)) {
+                return true;
+            }
         }
         return false;
     }
 
     @Override
     protected boolean isPointerBlocked(double mouseX, double mouseY) {
+        if (colorPopup.isOpen() && colorPopup.contains(mouseX, mouseY)) {
+            return false;
+        }
         if (!isOverPanel(mouseX, mouseY)) {
             return false;
         }
@@ -499,6 +570,9 @@ public class MessageEditorScreen extends PreviewPointerScreen {
 
     @Override
     protected boolean onPointerDragged(double mouseX, double mouseY, int pointer, double deltaX, double deltaY) {
+        if (pointer == POINTER_PRIMARY && colorPopup.mouseDragged(mouseX, mouseY)) {
+            return true;
+        }
         if (!dragging || pointer != POINTER_PRIMARY) {
             return false;
         }
@@ -518,11 +592,15 @@ public class MessageEditorScreen extends PreviewPointerScreen {
     protected void onPointerReleased(double mouseX, double mouseY, int pointer) {
         if (pointer == POINTER_PRIMARY) {
             dragging = false;
+            colorPopup.mouseReleased();
         }
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (colorPopup.isOpen() && colorPopup.contains(mouseX, mouseY)) {
+            return true;
+        }
         if (isOverPanel(mouseX, mouseY)) {
             scrollOffset = Math.max(0, Math.min(maxScroll(), scrollOffset - (int) (verticalAmount * SCROLL_STEP)));
             return true;
@@ -561,6 +639,11 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         return controlY + CONTROL_HEIGHT > contentTop() && controlY < contentBottom();
     }
 
+    /** Строка видна, если в область прокрутки попадает подпись или сам контрол. */
+    private boolean rowIntersectsContent(int rowTop) {
+        return rowTop + LABEL_GAP + CONTROL_HEIGHT > contentTop() && rowTop < contentBottom();
+    }
+
     private int visibleRowCount() {
         int count = 0;
         for (Row row : rows) {
@@ -587,9 +670,9 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         for (Row row : rows) {
             boolean shown = row.visible().getAsBoolean();
             int controlY = y + LABEL_GAP;
-            // Кликабельна только кнопка, целиком лежащая в области прокрутки —
-            // иначе хитбокс заходит на «Done» и клик проваливается в строку под ней.
-            boolean clickable = shown && controlY >= contentTop() && controlY + CONTROL_HEIGHT <= contentBottom();
+            // Виджет остаётся на экране, пока пересекает область прокрутки: ножницы обрезают край,
+            // а клик вне полосы съедается в isPointerBlocked / onPriorityClicked и не попадает в Done.
+            boolean clickable = shown && controlIntersectsContent(controlY);
             setWidgetState(row.widget(), x, controlY, clickable, row.enabled().getAsBoolean());
             if (shown) {
                 y += ROW_HEIGHT;
@@ -617,8 +700,13 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         }
         syncPreview();
         layoutRows();
+        syncColorPopup();
 
         java.util.Set<ButtonWidget> hiddenButtons = ScreenUiHelper.hideButtons(this);
+        boolean hexVisible = hexField != null && hexField.visible;
+        if (hexVisible) {
+            hexField.visible = false;
+        }
         List<ConfigIntSliderWidget> hiddenSliders = new ArrayList<>();
         for (Row row : rows) {
             if (row.widget() instanceof ConfigIntSliderWidget slider && slider.visible) {
@@ -627,6 +715,9 @@ public class MessageEditorScreen extends PreviewPointerScreen {
             }
         }
         super.render(context, mouseX, mouseY, delta);
+        if (hexVisible) {
+            hexField.visible = true;
+        }
         ScreenUiHelper.restoreButtons(hiddenButtons);
         for (ConfigIntSliderWidget slider : hiddenSliders) {
             slider.visible = true;
@@ -650,18 +741,22 @@ public class MessageEditorScreen extends PreviewPointerScreen {
                 continue;
             }
             if (row.widget() instanceof ButtonWidget button) {
-                if (!controlIntersectsContent(button.getY())) {
+                if (!rowIntersectsContent(button.getY() - LABEL_GAP)) {
                     continue;
                 }
                 drawRowLabel(context, row, button.getX(), button.getY());
-                visibleButtons.add(button);
+                if (button.visible) {
+                    visibleButtons.add(button);
+                }
             } else if (row.widget() instanceof ConfigIntSliderWidget widget) {
-                if (!controlIntersectsContent(widget.getY())) {
+                if (!rowIntersectsContent(widget.getY() - LABEL_GAP)) {
                     continue;
                 }
                 drawRowLabel(context, row, widget.getX(), widget.getY());
-                ModUiTheme.drawInputFrame(context, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), false);
-                widget.render(context, mouseX, mouseY, delta);
+                if (widget.visible) {
+                    ModUiTheme.drawInputFrame(context, widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), false);
+                    widget.render(context, mouseX, mouseY, delta);
+                }
             }
         }
         ScreenUiHelper.renderButtons(context, pointerInContent ? mouseX : -1, pointerInContent ? mouseY : -1, visibleButtons, null);
@@ -688,6 +783,19 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         if (engaged) {
             drawHint(context);
         }
+        colorPopup.draw(context, mouseX, mouseY, delta);
+    }
+
+    private void syncColorPopup() {
+        if (!colorPopup.isOpen()) {
+            return;
+        }
+        ButtonWidget anchor = colorPopup.anchor();
+        if (anchor == null || !anchor.visible || !anchor.active) {
+            dismissColorPopup();
+            return;
+        }
+        colorPopup.place(panelX(), PANEL_WIDTH, anchor.getY(), anchor.getHeight(), isPanelOnRight(), this.width, this.height);
     }
 
     private void drawRowLabel(DrawContext context, Row row, int controlX, int controlY) {
