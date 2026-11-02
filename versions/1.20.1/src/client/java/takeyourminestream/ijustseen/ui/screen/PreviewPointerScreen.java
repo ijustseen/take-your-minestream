@@ -32,6 +32,18 @@ public abstract class PreviewPointerScreen extends Screen {
         return false;
     }
 
+    protected boolean onKeyShortcut(int keyCode, int modifiers) {
+        return false;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (onKeyShortcut(keyCode, modifiers)) {
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (onPriorityClicked(mouseX, mouseY, toPointer(button))) {

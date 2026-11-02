@@ -402,6 +402,19 @@ public class ModConfigScreen extends DimScreen {
             ModConfig::setPANEL_BORDER_COLOR_RGB
         ).enabledWhen(() -> ModConfig.isSHOW_MESSAGE_BACKGROUND() && !ModConfig.isPANEL_BORDER_FROM_PLATFORM());
 
+        ButtonWidget textureButton = ButtonWidget.builder(
+            Text.translatable("takeyourstreamchat.config.message_texture.button"),
+            btn -> ScreenNavigationCompat.open(this.client, new MessageTextureEditorScreen(this))
+        ).dimensions(0, 0, CONTROL_WIDTH, 20).build();
+        this.addDrawableChild(textureButton);
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.message_texture",
+            "takeyourstreamchat.config.message_texture.desc",
+            ConfigEntryType.BUTTON,
+            textureButton,
+            ConfigCategory.MESSAGES
+        )).enabledWhen(ModConfig::isSHOW_MESSAGE_BACKGROUND);
+
         addToggleEntry(
             "takeyourstreamchat.config.show_role_badges",
             "takeyourstreamchat.config.show_role_badges.desc",

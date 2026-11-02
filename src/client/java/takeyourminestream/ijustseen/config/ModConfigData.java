@@ -92,7 +92,7 @@ public class ModConfigData {
     public static final String ROLE_MODS = "mods";
 
     /** 100% — прежний пресет «Обычные». */
-    public static final int MIN_SIZE_PERCENT = 25;
+    public static final int MIN_SIZE_PERCENT = 5;
     public static final int MAX_SIZE_PERCENT = 300;
     public static final int SIZE_PERCENT_STEP = 5;
     /** Ширина строки до переноса, в пикселях шрифта. */

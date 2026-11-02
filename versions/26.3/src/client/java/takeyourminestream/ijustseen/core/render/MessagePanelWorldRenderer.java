@@ -38,7 +38,7 @@ public final class MessagePanelWorldRenderer {
             SubmitGeometryHelper.submitPanel(
                 collector,
                 poseStack,
-                MessagePanelConstants.PANEL_TEXTURE,
+                takeyourminestream.ijustseen.core.render.MessagePanelTextures.panel(),
                 x,
                 y,
                 width,
@@ -56,7 +56,7 @@ public final class MessagePanelWorldRenderer {
             SubmitGeometryHelper.submitPanel(
                 collector,
                 poseStack,
-                MessagePanelConstants.PANEL_BORDER_TEXTURE,
+                takeyourminestream.ijustseen.core.render.MessagePanelTextures.border(),
                 x,
                 y,
                 width,

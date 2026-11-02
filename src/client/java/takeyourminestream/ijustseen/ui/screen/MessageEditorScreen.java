@@ -125,6 +125,12 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         addColorRow("takeyourstreamchat.config.panel_border_color", ModConfig::getPANEL_BORDER_COLOR_RGB,
             ModConfig::setPANEL_BORDER_COLOR_RGB,
             () -> ModConfig.isSHOW_MESSAGE_BACKGROUND() && !ModConfig.isPANEL_BORDER_FROM_PLATFORM());
+        addActionRow(
+            "takeyourstreamchat.config.message_texture",
+            Text.translatable("takeyourstreamchat.config.message_texture.button"),
+            () -> ScreenNavigationCompat.open(this.client, new MessageTextureEditorScreen(this)),
+            ModConfig::isSHOW_MESSAGE_BACKGROUND
+        );
         addToggleRow("takeyourstreamchat.config.show_role_badges", ModConfig::isSHOW_ROLE_BADGES,
             ModConfig::setSHOW_ROLE_BADGES, () -> true);
 
@@ -141,7 +147,7 @@ public class MessageEditorScreen extends PreviewPointerScreen {
             () -> ModConfig.setHUD_ANCHOR(ModConfig.getHUD_ANCHOR().next()), this::isHudMode);
 
         doneButton = ButtonWidget.builder(Text.translatable("gui.done"), btn -> this.close())
-            .dimensions(0, 0, PANEL_WIDTH - PANEL_PADDING * 2, CONTROL_HEIGHT).build();
+            .dimensions(0, 0, controlWidth(), CONTROL_HEIGHT).build();
         this.addDrawableChild(doneButton);
 
         hexField = new TextFieldWidget(
@@ -239,8 +245,8 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         return Text.literal(String.format("#%06X", rgb & 0xFFFFFF));
     }
 
-    private static int controlWidth() {
-        return PANEL_WIDTH - PANEL_PADDING * 2 - SCROLLBAR_WIDTH - 3;
+    private int controlWidth() {
+        return Math.max(40, panelWidth() - PANEL_PADDING * 2 - SCROLLBAR_WIDTH - 3);
     }
 
     // --- Режимы ---
@@ -440,7 +446,7 @@ public class MessageEditorScreen extends PreviewPointerScreen {
 
     /** Центр свободной от панели области в долях полуширины экрана (для сдвига сообщения вбок). */
     private double previewScreenOffset() {
-        int areaLeft = panelX() + PANEL_WIDTH;
+        int areaLeft = panelX() + panelWidth();
         int areaRight = this.width;
         if (isPanelOnRight()) {
             areaLeft = 0;
@@ -467,7 +473,7 @@ public class MessageEditorScreen extends PreviewPointerScreen {
             return;
         }
         colorPopup.show(button, getter.getAsInt(), setter);
-        colorPopup.place(panelX(), PANEL_WIDTH, button.getY(), button.getHeight(), isPanelOnRight(), this.width, this.height);
+        colorPopup.place(panelX(), panelWidth(), button.getY(), button.getHeight(), isPanelOnRight(), this.width, this.height);
     }
 
     private void dismissColorPopup() {
@@ -507,7 +513,7 @@ public class MessageEditorScreen extends PreviewPointerScreen {
 
     private boolean isOverPanel(double mouseX, double mouseY) {
         int x = panelX();
-        return mouseX >= x && mouseX <= x + PANEL_WIDTH
+        return mouseX >= x && mouseX <= x + panelWidth()
             && mouseY >= PANEL_MARGIN && mouseY <= this.height - PANEL_MARGIN;
     }
 
@@ -619,8 +625,25 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         return isHudMode() && !anchor.isRight();
     }
 
+    private int panelWidth() {
+        int available = Math.max(1, this.width - PANEL_MARGIN * 2);
+        int reserve = Math.min(120, Math.max(0, available / 3));
+        int fitted = Math.min(PANEL_WIDTH, available - reserve);
+        if (fitted < 128) {
+            fitted = Math.min(PANEL_WIDTH, available);
+        }
+        return Math.max(96, Math.min(PANEL_WIDTH, fitted));
+    }
+
     private int panelX() {
-        return isPanelOnRight() ? this.width - PANEL_WIDTH - PANEL_MARGIN : PANEL_MARGIN;
+        int x = isPanelOnRight() ? this.width - panelWidth() - PANEL_MARGIN : PANEL_MARGIN;
+        if (x < 0) {
+            x = 0;
+        }
+        if (x + panelWidth() > this.width) {
+            x = Math.max(0, this.width - panelWidth());
+        }
+        return x;
     }
 
     private int contentTop() {
@@ -628,11 +651,12 @@ public class MessageEditorScreen extends PreviewPointerScreen {
     }
 
     private int doneButtonY() {
-        return this.height - PANEL_MARGIN - PANEL_PADDING - CONTROL_HEIGHT;
+        int y = this.height - PANEL_MARGIN - CONTROL_HEIGHT;
+        return Math.max(contentTop(), Math.min(y, this.height - CONTROL_HEIGHT - 2));
     }
 
     private int contentBottom() {
-        return doneButtonY() - 4;
+        return Math.max(contentTop() + 8, doneButtonY() - 4);
     }
 
     private boolean controlIntersectsContent(int controlY) {
@@ -667,26 +691,30 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         scrollOffset = Math.max(0, Math.min(maxScroll(), scrollOffset));
         int x = panelX() + PANEL_PADDING;
         int y = contentTop() - scrollOffset;
+        int controlW = controlWidth();
         for (Row row : rows) {
             boolean shown = row.visible().getAsBoolean();
             int controlY = y + LABEL_GAP;
             // Виджет остаётся на экране, пока пересекает область прокрутки: ножницы обрезают край,
             // а клик вне полосы съедается в isPointerBlocked / onPriorityClicked и не попадает в Done.
             boolean clickable = shown && controlIntersectsContent(controlY);
-            setWidgetState(row.widget(), x, controlY, clickable, row.enabled().getAsBoolean());
+            setWidgetState(row.widget(), x, controlY, controlW, clickable, row.enabled().getAsBoolean());
             if (shown) {
                 y += ROW_HEIGHT;
             }
         }
+        doneButton.setWidth(controlW);
         doneButton.setPosition(x, doneButtonY());
     }
 
-    private static void setWidgetState(Object widget, int x, int y, boolean visible, boolean enabled) {
+    private static void setWidgetState(Object widget, int x, int y, int width, boolean visible, boolean enabled) {
         if (widget instanceof ButtonWidget button) {
+            button.setWidth(width);
             button.setPosition(x, y);
             button.visible = visible;
             button.active = enabled;
         } else if (widget instanceof ConfigIntSliderWidget slider) {
+            slider.setWidth(width);
             slider.setPosition(x, y);
             slider.visible = visible;
             slider.active = enabled;
@@ -724,16 +752,23 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         }
 
         int panelX = panelX();
-        ModUiTheme.drawBorderedPanel(context, panelX, PANEL_MARGIN, PANEL_WIDTH, this.height - PANEL_MARGIN * 2);
-        context.drawTextWithShadow(this.textRenderer, this.title, panelX + PANEL_PADDING, PANEL_MARGIN + 8, ModUiTheme.TEXT_PRIMARY);
-        context.fill(panelX + PANEL_PADDING, PANEL_MARGIN + 19, panelX + PANEL_WIDTH - PANEL_PADDING, PANEL_MARGIN + 20, ModUiTheme.ACCENT);
+        int panelWidth = panelWidth();
+        int panelTop = Math.min(PANEL_MARGIN, Math.max(0, this.height / 2));
+        int panelHeight = Math.max(CONTROL_HEIGHT + 8, this.height - panelTop * 2);
+        ModUiTheme.drawBorderedPanel(context, panelX, panelTop, panelWidth, panelHeight);
+        String title = ModUiTheme.fit(this.textRenderer, this.title.getString(), panelWidth - PANEL_PADDING * 2);
+        context.drawTextWithShadow(this.textRenderer, title, panelX + PANEL_PADDING, panelTop + 6, ModUiTheme.TEXT_PRIMARY);
+        context.fill(panelX + PANEL_PADDING, panelTop + 17, panelX + panelWidth - PANEL_PADDING, panelTop + 18, ModUiTheme.ACCENT);
 
         if (!engaged) {
             context.drawTextWithShadow(this.textRenderer, Text.translatable("takeyourstreamchat.editor.no_world"),
                 panelX + PANEL_PADDING, contentTop() + 4, ModUiTheme.TEXT_MUTED);
         }
 
-        context.enableScissor(panelX + 1, contentTop(), panelX + PANEL_WIDTH - 1, contentBottom());
+        boolean clipRows = contentBottom() > contentTop() + 1;
+        if (clipRows) {
+            context.enableScissor(panelX + 1, contentTop(), panelX + panelWidth - 1, contentBottom());
+        }
         List<ButtonWidget> visibleButtons = new ArrayList<>();
         boolean pointerInContent = mouseY >= contentTop() && mouseY < contentBottom();
         for (Row row : rows) {
@@ -772,10 +807,12 @@ public class MessageEditorScreen extends PreviewPointerScreen {
             int alpha = button.active ? 0xFF000000 : 0x60000000;
             context.fill(sx, sy, sx + SWATCH_SIZE, sy + SWATCH_SIZE, alpha | (swatch.rgb().getAsInt() & 0xFFFFFF));
         }
-        context.disableScissor();
+        if (clipRows) {
+            context.disableScissor();
+        }
 
-        if (maxScroll() > 0) {
-            GuiScrollbar.draw(context, panelX + PANEL_WIDTH - PANEL_PADDING - SCROLLBAR_WIDTH,
+        if (maxScroll() > 0 && contentBottom() > contentTop()) {
+            GuiScrollbar.draw(context, panelX + panelWidth - PANEL_PADDING - SCROLLBAR_WIDTH,
                 contentTop(), contentBottom(), scrollOffset, totalContentHeight());
         }
         ScreenUiHelper.renderButtons(context, mouseX, mouseY, List.of(doneButton), null);
@@ -795,12 +832,13 @@ public class MessageEditorScreen extends PreviewPointerScreen {
             dismissColorPopup();
             return;
         }
-        colorPopup.place(panelX(), PANEL_WIDTH, anchor.getY(), anchor.getHeight(), isPanelOnRight(), this.width, this.height);
+        colorPopup.place(panelX(), panelWidth(), anchor.getY(), anchor.getHeight(), isPanelOnRight(), this.width, this.height);
     }
 
     private void drawRowLabel(DrawContext context, Row row, int controlX, int controlY) {
         int color = row.enabled().getAsBoolean() ? ModUiTheme.TEXT_SECONDARY : ModUiTheme.TEXT_DIM;
-        context.drawTextWithShadow(this.textRenderer, Text.translatable(row.labelKey()), controlX, controlY - LABEL_GAP, color);
+        String label = ModUiTheme.fit(this.textRenderer, Text.translatable(row.labelKey()).getString(), controlWidth());
+        context.drawTextWithShadow(this.textRenderer, label, controlX, controlY - LABEL_GAP, color);
     }
 
     private void drawHint(DrawContext context) {
@@ -813,13 +851,31 @@ public class MessageEditorScreen extends PreviewPointerScreen {
             key = "takeyourstreamchat.editor.hint.message";
         }
         Text hint = Text.translatable(key);
-        int areaLeft = isPanelOnRight() ? 0 : panelX() + PANEL_WIDTH;
+        int areaLeft = isPanelOnRight() ? 0 : panelX() + panelWidth();
         int areaRight = isPanelOnRight() ? panelX() : this.width;
-        int textWidth = this.textRenderer.getWidth(hint);
-        int x = (areaLeft + areaRight - textWidth) / 2;
-        int y = this.height - PANEL_MARGIN - 14;
-        context.fill(x - 4, y - 3, x + textWidth + 4, y + 11, ModUiTheme.OVERLAY_DIM);
-        context.drawTextWithShadow(this.textRenderer, hint, x, y, ModUiTheme.TEXT_SECONDARY);
+        int areaW = areaRight - areaLeft - 16;
+        if (areaW < 48) {
+            return;
+        }
+        List<net.minecraft.text.OrderedText> lines = this.textRenderer.wrapLines(hint, areaW);
+        int lineH = this.textRenderer.fontHeight + 1;
+        int shown = Math.min(2, lines.size());
+        if (shown == 0) {
+            return;
+        }
+        int blockH = shown * lineH;
+        int y = this.height - PANEL_MARGIN - blockH - 2;
+        int x = areaLeft + 8;
+        context.fill(areaLeft + 4, y - 3, areaRight - 4, y + blockH + 2, ModUiTheme.OVERLAY_DIM);
+        int drawn = 0;
+        for (net.minecraft.text.OrderedText line : lines) {
+            if (drawn >= shown) {
+                break;
+            }
+            context.drawTextWithShadow(this.textRenderer, line, x, y, ModUiTheme.TEXT_SECONDARY);
+            y += lineH;
+            drawn++;
+        }
     }
 
     @Override

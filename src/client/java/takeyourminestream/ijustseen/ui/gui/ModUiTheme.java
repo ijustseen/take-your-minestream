@@ -170,14 +170,28 @@ public final class ModUiTheme {
             }
         }
         int textColor = enabled ? (hovered || selected ? TEXT_PRIMARY : TEXT_SECONDARY) : TEXT_HINT;
-        int labelWidth = textRenderer.getWidth(label);
-        int textX = x + Math.max(6, (width - labelWidth) / 2);
+        String fitted = fit(textRenderer, label.getString(), Math.max(4, width - 8));
+        int labelWidth = textRenderer.getWidth(fitted);
+        int textX = x + Math.max(4, (width - labelWidth) / 2);
         int textY = centeredTextY(y, height, textRenderer.fontHeight);
-        if (label.getStyle().getColor() != null) {
-            context.drawTextWithShadow(textRenderer, label, textX, textY, 0xFFFFFFFF);
-        } else {
-            context.drawTextWithShadow(textRenderer, label, textX, textY, textColor);
+        int color = label.getStyle().getColor() != null ? 0xFFFFFFFF : textColor;
+        context.drawTextWithShadow(textRenderer, fitted, textX, textY, color);
+    }
+
+    /** Обрезает строку по ширине, чтобы подпись не вылезала из кнопки на крупном GUI scale. */
+    public static String fit(TextRenderer textRenderer, String text, int maxWidth) {
+        if (text == null || text.isEmpty() || maxWidth <= 0) {
+            return "";
         }
+        if (textRenderer.getWidth(text) <= maxWidth) {
+            return text;
+        }
+        String ellipsis = "...";
+        int ellipsisWidth = textRenderer.getWidth(ellipsis);
+        if (maxWidth <= ellipsisWidth) {
+            return textRenderer.trimToWidth(text, maxWidth);
+        }
+        return textRenderer.trimToWidth(text, maxWidth - ellipsisWidth) + ellipsis;
     }
 
     public static void drawConnectionToggleButton(

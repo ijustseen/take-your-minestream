@@ -30,7 +30,7 @@ public final class MessagePanelGuiRenderer {
         int baseRgb = takeyourminestream.ijustseen.core.MessagePanelColors.baseRgb();
         drawSlices(
             context,
-            MessagePanelConstants.PANEL_TEXTURE,
+            takeyourminestream.ijustseen.core.render.MessagePanelTextures.panel(),
             x,
             y,
             width,
@@ -44,7 +44,7 @@ public final class MessagePanelGuiRenderer {
         float red = ((resolvedBorderRgb >> 16) & 0xFF) / 255.0f;
         float green = ((resolvedBorderRgb >> 8) & 0xFF) / 255.0f;
         float blue = (resolvedBorderRgb & 0xFF) / 255.0f;
-        drawSlices(context, MessagePanelConstants.PANEL_BORDER_TEXTURE, x, y, width, height, red, green, blue, alpha);
+        drawSlices(context, takeyourminestream.ijustseen.core.render.MessagePanelTextures.border(), x, y, width, height, red, green, blue, alpha);
     }
 
     private static void drawSlices(
@@ -63,7 +63,8 @@ public final class MessagePanelGuiRenderer {
         if (tinted) {
             RenderSystem.setShaderColor(red, green, blue, alpha);
         }
-        for (MessagePanel9Slice.GuiSlice slice : MessagePanel9Slice.guiSlices(x, y, width, height)) {
+        int texSize = takeyourminestream.ijustseen.core.render.MessagePanelTextures.sizeOf(texture);
+        for (MessagePanel9Slice.GuiSlice slice : MessagePanel9Slice.guiSlices(x, y, width, height, texSize)) {
             context.drawTexture(
                 texture,
                 slice.x(),
@@ -74,8 +75,8 @@ public final class MessagePanelGuiRenderer {
                 slice.texV(),
                 slice.regionWidth(),
                 slice.regionHeight(),
-                MessagePanelConstants.TEX_SIZE,
-                MessagePanelConstants.TEX_SIZE
+                texSize,
+                texSize
             );
         }
         if (tinted) {

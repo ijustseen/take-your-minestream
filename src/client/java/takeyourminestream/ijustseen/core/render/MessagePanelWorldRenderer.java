@@ -65,7 +65,7 @@ public final class MessagePanelWorldRenderer {
             }
         } else {
             // Классический плоский 2D-режим (как было до этого)
-            VertexConsumer base = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_TEXTURE);
+            VertexConsumer base = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelTextures.panel());
             drawPanel(
                 matrices,
                 base,
@@ -82,7 +82,7 @@ public final class MessagePanelWorldRenderer {
             float red = ((resolvedBorderRgb >> 16) & 0xFF) / 255.0f;
             float green = ((resolvedBorderRgb >> 8) & 0xFF) / 255.0f;
             float blue = (resolvedBorderRgb & 0xFF) / 255.0f;
-            VertexConsumer border = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.PANEL_BORDER_TEXTURE);
+            VertexConsumer border = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelTextures.border());
             matrices.push();
             matrices.translate(0f, 0f, 0.02f);
             drawPanel(matrices, border, x, y, width, height, alpha, red, green, blue);

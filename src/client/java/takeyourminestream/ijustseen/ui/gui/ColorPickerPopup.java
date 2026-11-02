@@ -42,6 +42,7 @@ public final class ColorPickerPopup {
     private int svLeft;
     private int svTop;
     private int hueLeft;
+    private int svSize = SV_SIZE;
 
     public void attach(TextFieldWidget field) {
         this.field = field;
@@ -100,6 +101,7 @@ public final class ColorPickerPopup {
         if (!open) {
             return;
         }
+        svSize = fittedSv(screenWidth, screenHeight);
         int popupW = width();
         int popupH = height();
         int gap = 4;
@@ -117,10 +119,20 @@ public final class ColorPickerPopup {
         this.y = py;
         this.svLeft = px + PADDING;
         this.svTop = py + PADDING;
-        this.hueLeft = svLeft + SV_SIZE + GAP;
+        this.hueLeft = svLeft + svSize + GAP;
         if (field != null) {
+            field.setWidth(Math.max(32, svSize + GAP + HUE_WIDTH));
             field.setPosition(svLeft, hexTop());
         }
+    }
+
+    /** Квадрат оттенка уменьшается, если палитра иначе не влезает в окно. */
+    private static int fittedSv(int screenWidth, int screenHeight) {
+        int chromeW = PADDING * 2 + GAP + HUE_WIDTH;
+        int chromeH = PADDING + PREVIEW_GAP + PREVIEW_HEIGHT + HEX_GAP + HEX_HEIGHT + PADDING;
+        int byWidth = screenWidth - 8 - chromeW;
+        int byHeight = screenHeight - 8 - chromeH;
+        return Math.max(32, Math.min(SV_SIZE, Math.min(byWidth, byHeight)));
     }
 
     public boolean contains(double mouseX, double mouseY) {
@@ -161,23 +173,42 @@ public final class ColorPickerPopup {
         if (!open) {
             return;
         }
-        ModUiTheme.drawBorderedPanel(context, x, y, width(), height());
+        GuiLayerFlush.renderOverlay(context, () -> drawBody(context, mouseX, mouseY, delta), mouseX, mouseY, delta);
+    }
+
+    private void drawBody(DrawContext context, int mouseX, int mouseY, float delta) {
+        int right = x + width();
+        int bottom = y + height();
+        fill(context, x, y, right, bottom, ModUiTheme.POPUP_PANEL_BG);
+        fill(context, x, y, right, y + 1, ModUiTheme.PANEL_BORDER);
+        fill(context, x, bottom - 1, right, bottom, ModUiTheme.PANEL_BORDER);
+        fill(context, x, y, x + 1, bottom, ModUiTheme.PANEL_BORDER);
+        fill(context, right - 1, y, right, bottom, ModUiTheme.PANEL_BORDER);
         drawSvSquare(context);
         drawHueBar(context);
         drawSvCursor(context);
         drawHueCursor(context);
 
-        int previewTop = svTop + SV_SIZE + PREVIEW_GAP;
+        int previewTop = svTop + svSize + PREVIEW_GAP;
         int previewRight = hueLeft + HUE_WIDTH;
-        context.fill(svLeft, previewTop, previewRight, previewTop + PREVIEW_HEIGHT, 0xFF000000 | currentRgb());
-        context.fill(svLeft, previewTop, previewRight, previewTop + 1, ModUiTheme.PANEL_BORDER);
-        context.fill(svLeft, previewTop + PREVIEW_HEIGHT - 1, previewRight, previewTop + PREVIEW_HEIGHT, ModUiTheme.PANEL_BORDER);
+        fill(context, svLeft, previewTop, previewRight, previewTop + PREVIEW_HEIGHT, 0xFF000000 | currentRgb());
+        fill(context, svLeft, previewTop, previewRight, previewTop + 1, ModUiTheme.PANEL_BORDER);
+        fill(context, svLeft, previewTop + PREVIEW_HEIGHT - 1, previewRight, previewTop + PREVIEW_HEIGHT, ModUiTheme.PANEL_BORDER);
 
         if (field != null) {
-            ModUiTheme.drawInputFrame(context, field.getX(), field.getY(), field.getWidth(), field.getHeight(), field.isFocused());
+            int frame = field.isFocused() ? ModUiTheme.ACCENT : ModUiTheme.PANEL_BORDER;
+            fill(context, field.getX(), field.getY(), field.getX() + field.getWidth(), field.getY() + field.getHeight(), 0xFF1C1828);
+            fill(context, field.getX(), field.getY(), field.getX() + field.getWidth(), field.getY() + 1, frame);
+            fill(context, field.getX(), field.getY() + field.getHeight() - 1, field.getX() + field.getWidth(), field.getY() + field.getHeight(), frame);
+            fill(context, field.getX(), field.getY(), field.getX() + 1, field.getY() + field.getHeight(), frame);
+            fill(context, field.getX() + field.getWidth() - 1, field.getY(), field.getX() + field.getWidth(), field.getY() + field.getHeight(), frame);
             TextFieldWidget widget = field;
             widget.render(context, mouseX, mouseY, delta);
         }
+    }
+
+    private static void fill(DrawContext context, int x1, int y1, int x2, int y2, int color) {
+        PopupGuiRenderer.fill(context, x1, y1, x2, y2, color);
     }
 
     private void onHexTyped(String raw) {
@@ -199,10 +230,10 @@ public final class ColorPickerPopup {
 
     private void applyPointer(double mouseX, double mouseY) {
         if (draggingSv) {
-            saturation = (float) Math.max(0.0, Math.min(1.0, (mouseX - svLeft) / (double) (SV_SIZE - 1)));
-            value = (float) Math.max(0.0, Math.min(1.0, 1.0 - (mouseY - svTop) / (double) (SV_SIZE - 1)));
+            saturation = (float) Math.max(0.0, Math.min(1.0, (mouseX - svLeft) / (double) (svSize - 1)));
+            value = (float) Math.max(0.0, Math.min(1.0, 1.0 - (mouseY - svTop) / (double) (svSize - 1)));
         } else if (draggingHue) {
-            hue = (float) Math.max(0.0, Math.min(360.0, 360.0 * (mouseY - svTop) / (double) (SV_SIZE - 1)));
+            hue = (float) Math.max(0.0, Math.min(360.0, 360.0 * (mouseY - svTop) / (double) (svSize - 1)));
         }
         publish(false);
     }
@@ -239,66 +270,66 @@ public final class ColorPickerPopup {
             float v = 1f - iy / (float) (cells - 1);
             for (int ix = 0; ix < cells; ix++) {
                 float s = ix / (float) (cells - 1);
-                int x0 = svLeft + ix * SV_SIZE / cells;
-                int x1 = svLeft + (ix + 1) * SV_SIZE / cells;
-                int y0 = svTop + iy * SV_SIZE / cells;
-                int y1 = svTop + (iy + 1) * SV_SIZE / cells;
-                context.fill(x0, y0, x1, y1, 0xFF000000 | ColorHsv.toRgb(hue, s, v));
+                int x0 = svLeft + ix * svSize / cells;
+                int x1 = svLeft + (ix + 1) * svSize / cells;
+                int y0 = svTop + iy * svSize / cells;
+                int y1 = svTop + (iy + 1) * svSize / cells;
+                fill(context, x0, y0, x1, y1, 0xFF000000 | ColorHsv.toRgb(hue, s, v));
             }
         }
-        outline(context, svLeft, svTop, SV_SIZE, SV_SIZE);
+        outline(context, svLeft, svTop, svSize, svSize);
     }
 
     private void drawHueBar(DrawContext context) {
         int steps = 52;
         for (int i = 0; i < steps; i++) {
             float h = 360f * i / (float) (steps - 1);
-            int y0 = svTop + i * SV_SIZE / steps;
-            int y1 = svTop + (i + 1) * SV_SIZE / steps;
-            context.fill(hueLeft, y0, hueLeft + HUE_WIDTH, y1, 0xFF000000 | ColorHsv.toRgb(h, 1f, 1f));
+            int y0 = svTop + i * svSize / steps;
+            int y1 = svTop + (i + 1) * svSize / steps;
+            fill(context, hueLeft, y0, hueLeft + HUE_WIDTH, y1, 0xFF000000 | ColorHsv.toRgb(h, 1f, 1f));
         }
-        outline(context, hueLeft, svTop, HUE_WIDTH, SV_SIZE);
+        outline(context, hueLeft, svTop, HUE_WIDTH, svSize);
     }
 
     private void outline(DrawContext context, int left, int top, int w, int h) {
-        context.fill(left, top, left + w, top + 1, ModUiTheme.PANEL_BORDER);
-        context.fill(left, top + h - 1, left + w, top + h, ModUiTheme.PANEL_BORDER);
-        context.fill(left, top, left + 1, top + h, ModUiTheme.PANEL_BORDER);
-        context.fill(left + w - 1, top, left + w, top + h, ModUiTheme.PANEL_BORDER);
+        fill(context, left, top, left + w, top + 1, ModUiTheme.PANEL_BORDER);
+        fill(context, left, top + h - 1, left + w, top + h, ModUiTheme.PANEL_BORDER);
+        fill(context, left, top, left + 1, top + h, ModUiTheme.PANEL_BORDER);
+        fill(context, left + w - 1, top, left + w, top + h, ModUiTheme.PANEL_BORDER);
     }
 
     private void drawSvCursor(DrawContext context) {
-        int cx = svLeft + Math.round(saturation * (SV_SIZE - 1));
-        int cy = svTop + Math.round((1f - value) * (SV_SIZE - 1));
-        context.fill(cx - 3, cy - 1, cx + 4, cy + 2, 0xFFFFFFFF);
-        context.fill(cx - 1, cy - 3, cx + 2, cy + 4, 0xFFFFFFFF);
-        context.fill(cx - 2, cy, cx + 3, cy + 1, 0xFF000000);
-        context.fill(cx, cy - 2, cx + 1, cy + 3, 0xFF000000);
+        int cx = svLeft + Math.round(saturation * (svSize - 1));
+        int cy = svTop + Math.round((1f - value) * (svSize - 1));
+        fill(context, cx - 3, cy - 1, cx + 4, cy + 2, 0xFFFFFFFF);
+        fill(context, cx - 1, cy - 3, cx + 2, cy + 4, 0xFFFFFFFF);
+        fill(context, cx - 2, cy, cx + 3, cy + 1, 0xFF000000);
+        fill(context, cx, cy - 2, cx + 1, cy + 3, 0xFF000000);
     }
 
     private void drawHueCursor(DrawContext context) {
-        int cy = svTop + Math.round((hue / 360f) * (SV_SIZE - 1));
-        context.fill(hueLeft - 2, cy - 2, hueLeft + HUE_WIDTH + 2, cy + 3, 0xFFFFFFFF);
-        context.fill(hueLeft, cy - 1, hueLeft + HUE_WIDTH, cy + 2, 0xFF000000);
+        int cy = svTop + Math.round((hue / 360f) * (svSize - 1));
+        fill(context, hueLeft - 2, cy - 2, hueLeft + HUE_WIDTH + 2, cy + 3, 0xFFFFFFFF);
+        fill(context, hueLeft, cy - 1, hueLeft + HUE_WIDTH, cy + 2, 0xFF000000);
     }
 
     private boolean isInSv(double mouseX, double mouseY) {
-        return mouseX >= svLeft && mouseX < svLeft + SV_SIZE && mouseY >= svTop && mouseY < svTop + SV_SIZE;
+        return mouseX >= svLeft && mouseX < svLeft + svSize && mouseY >= svTop && mouseY < svTop + svSize;
     }
 
     private boolean isInHue(double mouseX, double mouseY) {
-        return mouseX >= hueLeft && mouseX < hueLeft + HUE_WIDTH && mouseY >= svTop && mouseY < svTop + SV_SIZE;
+        return mouseX >= hueLeft && mouseX < hueLeft + HUE_WIDTH && mouseY >= svTop && mouseY < svTop + svSize;
     }
 
     private int hexTop() {
-        return svTop + SV_SIZE + PREVIEW_GAP + PREVIEW_HEIGHT + HEX_GAP;
+        return svTop + svSize + PREVIEW_GAP + PREVIEW_HEIGHT + HEX_GAP;
     }
 
     private int width() {
-        return PADDING * 2 + SV_SIZE + GAP + HUE_WIDTH;
+        return PADDING * 2 + svSize + GAP + HUE_WIDTH;
     }
 
     private int height() {
-        return PADDING + SV_SIZE + PREVIEW_GAP + PREVIEW_HEIGHT + HEX_GAP + HEX_HEIGHT + PADDING;
+        return PADDING + svSize + PREVIEW_GAP + PREVIEW_HEIGHT + HEX_GAP + HEX_HEIGHT + PADDING;
     }
 }

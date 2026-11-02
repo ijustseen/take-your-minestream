@@ -19,28 +19,40 @@ public final class MessagePanel9Slice {
         return Math.max(size, MessagePanelConstants.MIN);
     }
 
-    public static GuiSlice[] guiSlices(int x, int y, int width, int height) {
+    /**
+     * Углы на экране всегда {@link MessagePanelConstants#CORNER} пикселей.
+     * В текстуре разрезы стоят на четверти и трёх четвертях стороны, поэтому 32, 64 и 128
+     * режутся одинаково: угловой кусок не растягивается, середина тянется.
+     */
+    public static GuiSlice[] guiSlices(int x, int y, int width, int height, int texSize) {
         width = clampSize(width);
         height = clampSize(height);
-
-        int x0 = x;
-        int x1 = x + MessagePanelConstants.CORNER;
-        int x2 = x + width - MessagePanelConstants.CORNER;
-        int y0 = y;
-        int y1 = y + MessagePanelConstants.CORNER;
-        int y2 = y + height - MessagePanelConstants.CORNER;
+        int tex = Math.max(4, texSize);
+        int srcC = tex / 4;
+        int srcM = tex - srcC * 2;
         int c = MessagePanelConstants.CORNER;
 
+        int x0 = x;
+        int x1 = x + c;
+        int x2 = x + width - c;
+        int y0 = y;
+        int y1 = y + c;
+        int y2 = y + height - c;
+        int u1 = srcC;
+        int u2 = srcC + srcM;
+        int v1 = srcC;
+        int v2 = srcC + srcM;
+
         return new GuiSlice[] {
-            new GuiSlice(x0, y0, c, c, 0, 0, c, c),
-            new GuiSlice(x2, y0, c, c, 24, 0, c, c),
-            new GuiSlice(x0, y2, c, c, 0, 24, c, c),
-            new GuiSlice(x2, y2, c, c, 24, 24, c, c),
-            new GuiSlice(x1, y0, x2 - x1, c, c, 0, 16, c),
-            new GuiSlice(x1, y2, x2 - x1, c, c, 24, 16, c),
-            new GuiSlice(x0, y1, c, y2 - y1, 0, c, c, 16),
-            new GuiSlice(x2, y1, c, y2 - y1, 24, c, c, 16),
-            new GuiSlice(x1, y1, x2 - x1, y2 - y1, c, c, 16, 16),
+            new GuiSlice(x0, y0, c, c, 0, 0, srcC, srcC),
+            new GuiSlice(x2, y0, c, c, u2, 0, srcC, srcC),
+            new GuiSlice(x0, y2, c, c, 0, v2, srcC, srcC),
+            new GuiSlice(x2, y2, c, c, u2, v2, srcC, srcC),
+            new GuiSlice(x1, y0, x2 - x1, c, u1, 0, srcM, srcC),
+            new GuiSlice(x1, y2, x2 - x1, c, u1, v2, srcM, srcC),
+            new GuiSlice(x0, y1, c, y2 - y1, 0, v1, srcC, srcM),
+            new GuiSlice(x2, y1, c, y2 - y1, u2, v1, srcC, srcM),
+            new GuiSlice(x1, y1, x2 - x1, y2 - y1, u1, v1, srcM, srcM),
         };
     }
 

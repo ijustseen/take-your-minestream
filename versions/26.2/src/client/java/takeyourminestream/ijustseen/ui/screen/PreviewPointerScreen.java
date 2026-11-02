@@ -2,6 +2,7 @@ package takeyourminestream.ijustseen.ui.screen;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
@@ -32,6 +33,18 @@ public abstract class PreviewPointerScreen extends Screen {
     /** Клик обрабатывается раньше дочерних виджетов (закреплённая кнопка поверх прокрутки). */
     protected boolean onPriorityClicked(double mouseX, double mouseY, int pointer) {
         return false;
+    }
+
+    protected boolean onKeyShortcut(int keyCode, int modifiers) {
+        return false;
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent input) {
+        if (onKeyShortcut(input.key(), input.modifiers())) {
+            return true;
+        }
+        return super.keyPressed(input);
     }
 
     @Override
