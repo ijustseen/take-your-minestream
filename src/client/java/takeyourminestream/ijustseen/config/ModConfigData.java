@@ -14,6 +14,11 @@ public class ModConfigData {
     private String kickChannel = "";
     private boolean tiktokEnabled = false;
     private String tiktokUsername = "";
+    /** Старое общее поле. После миграции пустое, значения лежат в двух полях ниже. */
+    private String tiktokSessionCookies = "";
+    private boolean tiktokSessionCookiesMigrated = false;
+    private String tiktokSessionId = "";
+    private String tiktokTargetIdc = "";
     // Старые поля для обратной совместимости (тики)
     private int messageLifetimeTicks = 80;
     private int messageFallTicks = 20;
@@ -110,6 +115,10 @@ public class ModConfigData {
     public String getKickChannel() { return kickChannel; }
     public boolean isTiktokEnabled() { return tiktokEnabled; }
     public String getTiktokUsername() { return tiktokUsername; }
+    public String getTiktokSessionCookies() { return tiktokSessionCookies != null ? tiktokSessionCookies : ""; }
+    public boolean isTiktokSessionCookiesMigrated() { return tiktokSessionCookiesMigrated; }
+    public String getTiktokSessionId() { return tiktokSessionId != null ? tiktokSessionId : ""; }
+    public String getTiktokTargetIdc() { return tiktokTargetIdc != null ? tiktokTargetIdc : ""; }
     public int getMessageLifetimeTicks() { return messageLifetimeTicks; }
     public int getMessageFallTicks() { return messageFallTicks; }
     public double getMessageLifetimeSeconds() { return messageLifetimeSeconds; }
@@ -170,6 +179,34 @@ public class ModConfigData {
     public void setKickChannel(String kickChannel) { this.kickChannel = kickChannel != null ? kickChannel : ""; }
     public void setTiktokEnabled(boolean tiktokEnabled) { this.tiktokEnabled = tiktokEnabled; }
     public void setTiktokUsername(String tiktokUsername) { this.tiktokUsername = tiktokUsername != null ? tiktokUsername : ""; }
+    public void setTiktokSessionCookies(String tiktokSessionCookies) {
+        this.tiktokSessionCookies = tiktokSessionCookies != null ? tiktokSessionCookies : "";
+    }
+    public void setTiktokSessionCookiesMigrated(boolean tiktokSessionCookiesMigrated) {
+        this.tiktokSessionCookiesMigrated = tiktokSessionCookiesMigrated;
+    }
+    public void setTiktokSessionId(String tiktokSessionId) {
+        this.tiktokSessionId = tiktokSessionId != null ? tiktokSessionId : "";
+    }
+    public void setTiktokTargetIdc(String tiktokTargetIdc) {
+        this.tiktokTargetIdc = tiktokTargetIdc != null ? tiktokTargetIdc : "";
+    }
+
+    /** Один раз раскладывает старую строку Cookie на sessionid и tt-target-idc. */
+    public void migrateTikTokSessionCookies() {
+        if (tiktokSessionCookiesMigrated) {
+            return;
+        }
+        tiktokSessionCookiesMigrated = true;
+        boolean hasSplit = (tiktokSessionId != null && !tiktokSessionId.isEmpty())
+            || (tiktokTargetIdc != null && !tiktokTargetIdc.isEmpty());
+        if (!hasSplit && tiktokSessionCookies != null && !tiktokSessionCookies.isBlank()) {
+            tiktokSessionId = takeyourminestream.ijustseen.integration.tiktok.TikTokSessionCookies.sessionIdOf(tiktokSessionCookies);
+            String idc = takeyourminestream.ijustseen.integration.tiktok.TikTokSessionCookies.targetIdcFromBundle(tiktokSessionCookies);
+            tiktokTargetIdc = idc == null ? "" : idc;
+        }
+        tiktokSessionCookies = "";
+    }
     public void setMessageLifetimeTicks(int messageLifetimeTicks) { this.messageLifetimeTicks = messageLifetimeTicks; }
     public void setMessageFallTicks(int messageFallTicks) { this.messageFallTicks = messageFallTicks; }
     public void setMessageLifetimeSeconds(double messageLifetimeSeconds) { this.messageLifetimeSeconds = messageLifetimeSeconds; }

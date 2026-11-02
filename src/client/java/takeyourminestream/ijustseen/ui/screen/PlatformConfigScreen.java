@@ -10,9 +10,11 @@ import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.config.ConfigManager;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.integration.chat.ChatConnectionManager;
+import takeyourminestream.ijustseen.integration.chat.ChatHttp;
 import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
 import takeyourminestream.ijustseen.integration.chat.PlatformEventKind;
 import takeyourminestream.ijustseen.integration.chat.PlatformRoleKind;
+import takeyourminestream.ijustseen.integration.tiktok.TikTokSessionCookies;
 import takeyourminestream.ijustseen.ui.gui.ConfigUiHelper;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.MessageEmoteGuiRenderer;
@@ -42,6 +44,8 @@ public class PlatformConfigScreen extends DimScreen {
     private static final int ENTRY_SPACING = 6;
     private static final int CONTROL_WIDTH = 170;
     private static final int CONTROL_HEIGHT = 20;
+    private static final int HELP_BUTTON_SIZE = 20;
+    private static final int HELP_BUTTON_GAP = 6;
     private static final int DESCRIPTION_HEIGHT = 20;
     private static final int DESCRIPTION_TO_BUTTON_GAP = 3;
     private static final int SCROLL_TO_DESCRIPTION_GAP = 4;
@@ -57,6 +61,8 @@ public class PlatformConfigScreen extends DimScreen {
     private ButtonWidget enabledToggle;
     private Text hoveredDescription;
     private int scrollOffset;
+    private boolean applyingSecretMask;
+    private TextFieldWidget tiktokTargetIdcField;
 
     private static class Entry {
         String labelKey;
@@ -77,6 +83,17 @@ public class PlatformConfigScreen extends DimScreen {
 
         boolean isEnabled() {
             return enabledWhen == null || enabledWhen.getAsBoolean();
+        }
+    }
+
+    /** Поле ввода и квадратная кнопка «?» справа от него. */
+    private static final class FieldWithHelp {
+        final TextFieldWidget field;
+        final ButtonWidget help;
+
+        FieldWithHelp(TextFieldWidget field, ButtonWidget help) {
+            this.field = field;
+            this.help = help;
         }
     }
 
@@ -138,6 +155,93 @@ public class PlatformConfigScreen extends DimScreen {
         });
         this.addDrawableChild(field);
         entries.add(new Entry(labelKey, labelKey + ".desc", field));
+        if (platform == ChatPlatform.TIKTOK) {
+            createTikTokCookiesEntry();
+        }
+    }
+
+    private void createTikTokCookiesEntry() {
+        String idcKey = "takeyourstreamchat.config.tiktok_target_idc";
+        tiktokTargetIdcField = new TextFieldWidget(
+            this.textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH,
+            CONTROL_HEIGHT,
+            Text.translatable(idcKey)
+        );
+        tiktokTargetIdcField.setMaxLength(64);
+        tiktokTargetIdcField.setText(ModConfig.getTIKTOK_TARGET_IDC());
+        tiktokTargetIdcField.setChangedListener(value -> {
+            String idc = TikTokSessionCookies.targetIdcOf(value);
+            ModConfig.setTIKTOK_TARGET_IDC(idc);
+            applyTikTokLoginCookies();
+            if (!idc.equals(value == null ? "" : value)) {
+                tiktokTargetIdcField.setText(idc);
+            }
+        });
+        this.addDrawableChild(tiktokTargetIdcField);
+
+        String sessionKey = "takeyourstreamchat.config.tiktok_session_id";
+        TextFieldWidget session = new TextFieldWidget(
+            this.textRenderer,
+            0,
+            0,
+            CONTROL_WIDTH - HELP_BUTTON_SIZE - HELP_BUTTON_GAP,
+            CONTROL_HEIGHT,
+            Text.translatable(sessionKey)
+        );
+        session.setMaxLength(2048);
+        showSecretValue(session, ModConfig.getTIKTOK_SESSION_ID());
+        session.setChangedListener(value -> {
+            if (applyingSecretMask || isSecretMask(value)) {
+                return;
+            }
+            String raw = value == null ? "" : value.replace("*", "").trim();
+            String sessionId = TikTokSessionCookies.sessionIdOf(raw);
+            ModConfig.setTIKTOK_SESSION_ID(sessionId);
+            String idc = TikTokSessionCookies.targetIdcFromBundle(raw);
+            if (idc != null && tiktokTargetIdcField != null && !idc.equals(ModConfig.getTIKTOK_TARGET_IDC())) {
+                ModConfig.setTIKTOK_TARGET_IDC(idc);
+                tiktokTargetIdcField.setText(idc);
+            }
+            applyTikTokLoginCookies();
+            showSecretValue(session, sessionId);
+        });
+        this.addDrawableChild(session);
+
+        ButtonWidget help = ButtonWidget.builder(
+            Text.literal("?"),
+            btn -> ScreenNavigationCompat.open(this.client, new TikTokCookieHelpScreen(this))
+        ).dimensions(0, 0, HELP_BUTTON_SIZE, CONTROL_HEIGHT).build();
+        this.addDrawableChild(help);
+        entries.add(new Entry(sessionKey, sessionKey + ".desc", new FieldWithHelp(session, help)));
+        entries.add(new Entry(idcKey, idcKey + ".desc", tiktokTargetIdcField));
+    }
+
+    private void applyTikTokLoginCookies() {
+        ChatHttp.applyTikTokSessionCookies(TikTokSessionCookies.compose(
+            ModConfig.getTIKTOK_SESSION_ID(),
+            ModConfig.getTIKTOK_TARGET_IDC()
+        ));
+    }
+
+    private void showSecretValue(TextFieldWidget field, String stored) {
+        applyingSecretMask = true;
+        field.setText(stored == null || stored.isEmpty() ? "" : "*".repeat(16));
+        applyingSecretMask = false;
+    }
+
+    private static boolean isSecretMask(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            if (value.charAt(i) != '*') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void createPlatformToggles() {
@@ -262,6 +366,9 @@ public class PlatformConfigScreen extends DimScreen {
             if (entry.widget instanceof TextFieldWidget w && w.visible) {
                 w.visible = false;
                 temporarilyHidden.add(w);
+            } else if (entry.widget instanceof FieldWithHelp row && row.field.visible) {
+                row.field.visible = false;
+                temporarilyHidden.add(row);
             }
         }
 
@@ -382,7 +489,9 @@ public class PlatformConfigScreen extends DimScreen {
                     entry.isEnabled() ? ModUiTheme.TEXT_PRIMARY : ModUiTheme.TEXT_HINT
                 );
                 if (rowHovered) {
-                    hoveredDescription = Text.translatable(entry.descriptionKey);
+                    hoveredDescription = helpButtonHovered(entry, mouseX, mouseY)
+                        ? Text.translatable("takeyourstreamchat.config.tiktok_cookie_help.desc")
+                        : Text.translatable(entry.descriptionKey);
                 }
             }
             y += ENTRY_HEIGHT + ENTRY_SPACING;
@@ -424,15 +533,32 @@ public class PlatformConfigScreen extends DimScreen {
                 }
             } else if (entry.widget instanceof TextFieldWidget widget) {
                 if (widget.visible && isElementVisible(widget.getY(), contentTop, contentBottom)) {
-                    ModUiTheme.drawInputFrame(
-                        context,
-                        widget.getX(),
-                        widget.getY(),
-                        widget.getWidth(),
-                        widget.getHeight(),
-                        widget.isFocused()
+                    drawTextField(context, widget, mouseX, mouseY, delta);
+                }
+            } else if (entry.widget instanceof FieldWithHelp row) {
+                if (row.field.visible && isElementVisible(row.field.getY(), contentTop, contentBottom)) {
+                    drawTextField(context, row.field, mouseX, mouseY, delta);
+                    boolean hovered = ModUiTheme.isHovered(
+                        mouseX,
+                        mouseY,
+                        row.help.getX(),
+                        row.help.getY(),
+                        row.help.getWidth(),
+                        row.help.getHeight()
                     );
-                    widget.render(context, mouseX, mouseY, delta);
+                    ModUiTheme.drawButton(
+                        context,
+                        this.textRenderer,
+                        row.help.getX(),
+                        row.help.getY(),
+                        row.help.getWidth(),
+                        row.help.getHeight(),
+                        row.help.getMessage(),
+                        hovered,
+                        row.help.active,
+                        false,
+                        true
+                    );
                 }
             }
         }
@@ -516,6 +642,9 @@ public class PlatformConfigScreen extends DimScreen {
             button.active = enabled;
         } else if (widget instanceof TextFieldWidget field) {
             field.setEditable(enabled);
+        } else if (widget instanceof FieldWithHelp row) {
+            row.field.setEditable(enabled);
+            row.help.active = enabled;
         }
     }
 
@@ -524,6 +653,9 @@ public class PlatformConfigScreen extends DimScreen {
             ((ButtonWidget) widget).visible = visible;
         } else if (widget instanceof TextFieldWidget) {
             ((TextFieldWidget) widget).visible = visible;
+        } else if (widget instanceof FieldWithHelp row) {
+            row.field.visible = visible;
+            row.help.visible = visible;
         }
     }
 
@@ -533,7 +665,36 @@ public class PlatformConfigScreen extends DimScreen {
             ((ButtonWidget) widget).setPosition(x, centeredY);
         } else if (widget instanceof TextFieldWidget) {
             ((TextFieldWidget) widget).setPosition(x, centeredY);
+        } else if (widget instanceof FieldWithHelp row) {
+            row.field.setPosition(x, centeredY);
+            row.help.setPosition(x + CONTROL_WIDTH - HELP_BUTTON_SIZE, centeredY);
         }
+    }
+
+    private void drawTextField(DrawContext context, TextFieldWidget widget, int mouseX, int mouseY, float delta) {
+        ModUiTheme.drawInputFrame(
+            context,
+            widget.getX(),
+            widget.getY(),
+            widget.getWidth(),
+            widget.getHeight(),
+            widget.isFocused()
+        );
+        widget.render(context, mouseX, mouseY, delta);
+    }
+
+    private static boolean helpButtonHovered(Entry entry, int mouseX, int mouseY) {
+        if (!(entry.widget instanceof FieldWithHelp row) || !row.help.visible) {
+            return false;
+        }
+        return ModUiTheme.isHovered(
+            mouseX,
+            mouseY,
+            row.help.getX(),
+            row.help.getY(),
+            row.help.getWidth(),
+            row.help.getHeight()
+        );
     }
 
     @Override

@@ -50,6 +50,25 @@ public final class MessageEmoteGuiRenderer {
         return x + size + 2;
     }
 
+    /** Растягивает GUI-текстуру в прямоугольник (скриншоты в справке). */
+    public static void drawGuiImage(DrawContext context, Identifier texture, int x, int y, int width, int height) {
+        context.drawTexture(
+            RenderPipelines.GUI_TEXTURED,
+            texture,
+            x,
+            y,
+            0,
+            0,
+            width,
+            height,
+            width,
+            height,
+            width,
+            height,
+            0xFFFFFFFF
+        );
+    }
+
     public static List<MessageEmote> remapEmotesToBody(String rawText, List<MessageEmote> emotes) {
         if (emotes == null || emotes.isEmpty()) {
             return List.of();

@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.text.Text;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.integration.chat.ChatConnection;
 import takeyourminestream.ijustseen.integration.chat.ChatEventType;
 import takeyourminestream.ijustseen.integration.chat.ChatHttp;
@@ -59,6 +60,10 @@ public class TikTokChatClient implements ChatConnection {
                     takeyourminestream.ijustseen.integration.chat.ChatErrorReporter.clear(ChatPlatform.TIKTOK);
                 }
 
+                ChatHttp.applyTikTokSessionCookies(TikTokSessionCookies.compose(
+                    ModConfig.getTIKTOK_SESSION_ID(),
+                    ModConfig.getTIKTOK_TARGET_IDC()
+                ));
                 String ttwid = ChatHttp.fetchTtwidCookie(username);
                 connectWebSocket(ttwid);
 

@@ -71,6 +71,7 @@ public class ConfigManager implements IConfigManager {
                     this.configData.migrateLegacyMessageScale();
                     this.configData.migrateLegacyProMode();
                     this.configData.migratePlatformEventFilters();
+                    this.configData.migrateTikTokSessionCookies();
                     updateConfigCache();
                     LOGGER.info("Configuration loaded");
                 }
@@ -86,7 +87,7 @@ public class ConfigManager implements IConfigManager {
 
     /**
      * Сбрасывает JSON-конфиг к значениям {@link ModConfigData} по умолчанию.
-     * Имена каналов платформ и списки банвордов/ников/regexp не трогает.
+     * Имена каналов платформ, cookie TikTok и списки банвордов/ников/regexp не трогает.
      */
     public void resetToDefaults() {
         ModConfigData previous = this.configData;
@@ -96,11 +97,16 @@ public class ConfigManager implements IConfigManager {
             this.configData.setYoutubeChannel(previous.getYoutubeChannel());
             this.configData.setKickChannel(previous.getKickChannel());
             this.configData.setTiktokUsername(previous.getTiktokUsername());
+            this.configData.setTiktokSessionCookies(previous.getTiktokSessionCookies());
+            this.configData.setTiktokSessionCookiesMigrated(previous.isTiktokSessionCookiesMigrated());
+            this.configData.setTiktokSessionId(previous.getTiktokSessionId());
+            this.configData.setTiktokTargetIdc(previous.getTiktokTargetIdc());
         }
         this.configData.migrateLegacyRoleFilter();
         this.configData.migrateLegacyMessageScale();
         this.configData.migrateLegacyProMode();
         this.configData.migratePlatformEventFilters();
+        this.configData.migrateTikTokSessionCookies();
         saveConfig();
         LOGGER.info("Configuration reset to defaults");
     }
@@ -159,6 +165,12 @@ public class ConfigManager implements IConfigManager {
                 break;
             case "tiktokUsername":
                 configData.setTiktokUsername((String) value);
+                break;
+            case "tiktokSessionId":
+                configData.setTiktokSessionId(value instanceof String s ? s : "");
+                break;
+            case "tiktokTargetIdc":
+                configData.setTiktokTargetIdc(value instanceof String s ? s : "");
                 break;
             case "messageLifetimeTicks":
                 configData.setMessageLifetimeTicks((Integer) value);
@@ -315,6 +327,8 @@ public class ConfigManager implements IConfigManager {
         configCache.put("kickChannel", configData.getKickChannel());
         configCache.put("tiktokEnabled", configData.isTiktokEnabled());
         configCache.put("tiktokUsername", configData.getTiktokUsername());
+        configCache.put("tiktokSessionId", configData.getTiktokSessionId());
+        configCache.put("tiktokTargetIdc", configData.getTiktokTargetIdc());
         configCache.put("messageLifetimeTicks", configData.getMessageLifetimeTicks());
         configCache.put("messageFallTicks", configData.getMessageFallTicks());
         configCache.put("messageLifetimeSeconds", configData.getMessageLifetimeSeconds());

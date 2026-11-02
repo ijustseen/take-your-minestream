@@ -8,6 +8,7 @@
 - **Separate HUD widget size** — HUD cards have their own size slider (shown in HUD mode), world messages keep theirs (shown in world mode)
 - **Reset to defaults keeps channel names** — Twitch / YouTube / Kick channels and the TikTok username survive a reset; everything else (including which platforms are enabled) goes back to defaults
 - **Twitch connects by channel name only** — the stream-key option is gone. It never unlocked extra events, only resolved the same nick, so the field is just a channel name again. Old keys are dropped from the config on the next save
+- **TikTok session cookies** — optional `sessionid` and `tt-target-idc` are separate fields on the TikTok page (`sessionid` stays masked). A `?` next to `sessionid` opens a help screen with screenshots at their own aspect ratio. Logged-in webcast sees more comments than a guest; leave both empty to stay anonymous. An older combined cookie string is split once on load
 
 ### Fixed
 

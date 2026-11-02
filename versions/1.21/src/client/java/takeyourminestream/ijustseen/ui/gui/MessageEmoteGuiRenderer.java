@@ -35,6 +35,10 @@ public final class MessageEmoteGuiRenderer {
         return x + size + 2;
     }
 
+    public static void drawGuiImage(DrawContext context, Identifier texture, int x, int y, int width, int height) {
+        context.drawTexture(texture, x, y, width, height, 0f, 0f, width, height, width, height);
+    }
+
     public static List<MessageEmote> remapEmotesToBody(String rawText, List<MessageEmote> emotes) {
         if (emotes == null || emotes.isEmpty()) {
             return List.of();

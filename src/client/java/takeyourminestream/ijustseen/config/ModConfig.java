@@ -85,6 +85,24 @@ public class ModConfig {
         ConfigManager.getInstance().setConfigValue("tiktokUsername", value);
     }
 
+    public static String getTIKTOK_SESSION_ID() {
+        Object value = ConfigManager.getInstance().getConfigValue("tiktokSessionId");
+        return value instanceof String s ? s : "";
+    }
+
+    public static void setTIKTOK_SESSION_ID(String value) {
+        ConfigManager.getInstance().setConfigValue("tiktokSessionId", value != null ? value : "");
+    }
+
+    public static String getTIKTOK_TARGET_IDC() {
+        Object value = ConfigManager.getInstance().getConfigValue("tiktokTargetIdc");
+        return value instanceof String s ? s : "";
+    }
+
+    public static void setTIKTOK_TARGET_IDC(String value) {
+        ConfigManager.getInstance().setConfigValue("tiktokTargetIdc", value != null ? value : "");
+    }
+
     public static int getMESSAGE_LIFETIME_TICKS() {
         // Приоритет секунд; fallback на тики
         Object sec = ConfigManager.getInstance().getConfigValue("messageLifetimeSeconds");

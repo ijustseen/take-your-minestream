@@ -59,13 +59,17 @@ public final class MessageCardRenderer {
             }
 
             int usernameX = drawIconRow(context, message, innerX, innerY);
+            Text blockedBadge = blocked
+                ? Text.translatable("takeyourstreamchat.history.blocked_badge").formatted(Formatting.RED)
+                : null;
+            int maxNameWidth = nameWidthLimit(x, layout.width(), usernameX, textRenderer, blockedBadge);
+            usernameLabel = fitUsername(textRenderer, usernameLabel, maxNameWidth);
 
             context.drawTextWithShadow(textRenderer, usernameLabel, usernameX, innerY, visibleInWorld ? 0xFFFFFFFF : 0xFF888888);
             int usernameWidth = textRenderer.getWidth(usernameLabel);
             usernameHitbox = new UsernameHitbox(usernameX, innerY, usernameWidth, MessageCardLayout.USERNAME_ROW_HEIGHT);
 
-            if (blocked) {
-                Text blockedBadge = Text.translatable("takeyourstreamchat.history.blocked_badge").formatted(Formatting.RED);
+            if (blockedBadge != null) {
                 context.drawTextWithShadow(
                     textRenderer,
                     blockedBadge,
@@ -158,10 +162,17 @@ public final class MessageCardRenderer {
                 usernameLabel.formatted(Formatting.DARK_RED, Formatting.STRIKETHROUGH);
             }
             int usernameX = drawIconRow(context, message, innerX, innerY);
+            Text blockedBadge = blocked
+                ? Text.translatable("takeyourstreamchat.history.blocked_badge").formatted(Formatting.RED)
+                : null;
+            usernameLabel = fitUsername(
+                textRenderer,
+                usernameLabel,
+                nameWidthLimit(x, layout.width(), usernameX, textRenderer, blockedBadge)
+            );
             int usernameColor = usernameColor(message, alpha);
             context.drawTextWithShadow(textRenderer, usernameLabel, usernameX, innerY, usernameColor);
-            if (blocked) {
-                Text blockedBadge = Text.translatable("takeyourstreamchat.history.blocked_badge").formatted(Formatting.RED);
+            if (blockedBadge != null) {
                 context.drawTextWithShadow(
                     textRenderer,
                     blockedBadge,
@@ -214,6 +225,35 @@ public final class MessageCardRenderer {
                 innerY += textRenderer.fontHeight;
             }
         }
+    }
+
+    /** Обрезает ник, который не влезает в карточку, и ставит многоточие. */
+    private static MutableText fitUsername(TextRenderer textRenderer, MutableText label, int maxWidth) {
+        if (maxWidth <= 0) {
+            return Text.empty();
+        }
+        if (textRenderer.getWidth(label) <= maxWidth) {
+            return label;
+        }
+        String ellipsis = "...";
+        int budget = maxWidth - textRenderer.getWidth(ellipsis);
+        String source = label.getString();
+        String trimmed = budget > 0 ? textRenderer.trimToWidth(source, budget) : "";
+        if (budget <= 0) {
+            trimmed = textRenderer.trimToWidth(source, maxWidth);
+            ellipsis = "";
+        }
+        MutableText fitted = Text.literal(trimmed + ellipsis);
+        fitted.setStyle(label.getStyle());
+        return fitted;
+    }
+
+    private static int nameWidthLimit(int cardX, int cardWidth, int usernameX, TextRenderer textRenderer, Text blockedBadge) {
+        int limit = cardX + cardWidth - MessagePanelConstants.PADDING_X - usernameX;
+        if (blockedBadge != null) {
+            limit -= 4 + textRenderer.getWidth(blockedBadge);
+        }
+        return Math.max(0, limit);
     }
 
     /** Иконка платформы и бейджи ролей перед ником; возвращает X начала ника. */

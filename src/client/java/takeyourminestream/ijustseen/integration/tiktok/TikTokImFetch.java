@@ -101,6 +101,9 @@ final class TikTokImFetch {
         params.put("version_code", "180800");
         params.put("webcast_language", "en");
         params.put("identity", "audience");
+        if (ChatHttp.hasTikTokSessionCookie()) {
+            params.put("user_is_login", "true");
+        }
 
         StringBuilder query = new StringBuilder();
         for (Map.Entry<String, String> entry : params.entrySet()) {

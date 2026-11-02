@@ -1,5 +1,7 @@
 package takeyourminestream.ijustseen.integration.tiktok;
 
+import takeyourminestream.ijustseen.integration.chat.ChatHttp;
+
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
@@ -47,6 +49,9 @@ final class TikTokWssUrl {
         params.put("client_enter", "1");
         params.put("room_id", roomId);
         params.put("identity", "audience");
+        if (ChatHttp.hasTikTokSessionCookie()) {
+            params.put("user_is_login", "true");
+        }
         params.put("history_comment_count", "36");
         params.put("last_rtt", lastRtt);
         params.put("heartbeat_duration", Long.toString(HEARTBEAT_INTERVAL_MS));

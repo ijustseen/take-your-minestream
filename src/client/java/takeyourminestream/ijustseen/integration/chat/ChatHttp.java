@@ -1,6 +1,7 @@
 package takeyourminestream.ijustseen.integration.chat;
 
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
+import takeyourminestream.ijustseen.integration.tiktok.TikTokSessionCookies;
 
 import java.io.IOException;
 import java.net.CookieManager;
@@ -13,6 +14,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -70,6 +73,39 @@ public final class ChatHttp {
         cookie.setPath("/");
         cookie.setMaxAge(60L * 60 * 24 * 365 * 10);
         COOKIE_MANAGER.getCookieStore().add(URI.create(url), cookie);
+    }
+
+    /**
+     * Кладёт в jar сессию TikTok из поля настроек (или чистит её, если строка пустая).
+     * Нужно вызывать до room/fetch/WSS.
+     */
+    public static void applyTikTokSessionCookies(String raw) {
+        clearTikTokSessionCookies();
+        for (Map.Entry<String, String> entry : TikTokSessionCookies.parse(raw).entrySet()) {
+            addCookie("https://www.tiktok.com", ".tiktok.com", entry.getKey(), entry.getValue());
+        }
+    }
+
+    public static boolean hasTikTokSessionCookie() {
+        for (HttpCookie cookie : COOKIE_MANAGER.getCookieStore().getCookies()) {
+            String name = cookie.getName();
+            if (("sessionid".equalsIgnoreCase(name) || "sessionid_ss".equalsIgnoreCase(name))
+                && cookie.getValue() != null
+                && !cookie.getValue().isBlank()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void clearTikTokSessionCookies() {
+        List<HttpCookie> snapshot = new ArrayList<>(COOKIE_MANAGER.getCookieStore().getCookies());
+        URI tiktok = URI.create("https://www.tiktok.com");
+        for (HttpCookie cookie : snapshot) {
+            if (TikTokSessionCookies.isSessionName(cookie.getName())) {
+                COOKIE_MANAGER.getCookieStore().remove(tiktok, cookie);
+            }
+        }
     }
 
     /** Cookie-заголовок из jar для указанного URL (все подходящие пары name=value). */
