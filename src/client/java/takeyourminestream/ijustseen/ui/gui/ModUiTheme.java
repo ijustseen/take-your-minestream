@@ -174,7 +174,11 @@ public final class ModUiTheme {
         int labelWidth = textRenderer.getWidth(fitted);
         int textX = x + Math.max(4, (width - labelWidth) / 2);
         int textY = centeredTextY(y, height, textRenderer.fontHeight);
-        int color = label.getStyle().getColor() != null ? 0xFFFFFFFF : textColor;
+        // getString() снимает стиль, поэтому цвет ON/OFF берём из стиля и красим им строку.
+        int color = textColor;
+        if (label.getStyle().getColor() != null) {
+            color = 0xFF000000 | label.getStyle().getColor().getRgb();
+        }
         context.drawTextWithShadow(textRenderer, fitted, textX, textY, color);
     }
 

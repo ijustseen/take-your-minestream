@@ -26,6 +26,7 @@ stonecutter parameters {
             replace("net.minecraft.text.OrderedText", "net.minecraft.util.FormattedCharSequence")
             replace("net.minecraft.text.Style", "net.minecraft.network.chat.Style")
             replace("net.minecraft.text.TextColor", "net.minecraft.network.chat.TextColor")
+            replace(".getColor().getRgb()", ".getColor().getValue()")
             replace("net.minecraft.util.Identifier", "net.minecraft.resources.Identifier")
             replace("net.minecraft.util.math.Vec3d", "net.minecraft.world.phys.Vec3")
             replace("net.minecraft.util.Formatting", "net.minecraft.ChatFormatting")

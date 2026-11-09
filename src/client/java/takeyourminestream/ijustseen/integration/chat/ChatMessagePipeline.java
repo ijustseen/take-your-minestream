@@ -204,34 +204,36 @@ public final class ChatMessagePipeline {
         }
 
         String colorPrefix = toNearestSectionColor(rgb);
-        String coloredName = isEvent
-            ? colorPrefix + displayName + "§r "
-            : colorPrefix + displayName + ":§r ";
+        String eventMark = isEvent ? message.eventType().decoratedLabel() : "";
+        String coloredName = colorPrefix + displayName + (isEvent ? "§r " : ":§r ");
+        boolean showGift = isEvent && hasGiftImage(message);
+        String shownText = !isEvent || showGift ? filteredText : "";
+        int bodyOffset = coloredName.length() + eventMark.length();
         List<MessageEmote> parsedEmotes = new ArrayList<>();
 
-        boolean twitchRangesIntact = message.platform() == ChatPlatform.TWITCH
+        boolean twitchRangesIntact = !isEvent
+            && message.platform() == ChatPlatform.TWITCH
             && filteredText.length() == rawText.length();
         if (twitchRangesIntact && message.twitchEmotesTag() != null) {
             parsedEmotes = new ArrayList<>(parseTwitchEmotes(
                 message.twitchEmotesTag(),
                 filteredText,
-                coloredName.length()
+                bodyOffset
             ));
         }
         if (twitchRangesIntact && hasTwitchGifs) {
             List<MessageEmote> twitchGifs = parseTwitchGifs(
                 message.twitchGifsTag(),
                 filteredText,
-                coloredName.length()
+                bodyOffset
             );
             parsedEmotes = new ArrayList<>(UnicodeEmojiParser.mergeNonOverlapping(twitchGifs, parsedEmotes));
         }
-        if (!parsedEmotes.isEmpty()) {
+        if ((!isEvent || showGift) && !parsedEmotes.isEmpty()) {
             for (MessageEmote emote : parsedEmotes) {
                 TwitchEmoteTextureCache.preload(emote.getProvider(), emote.getEmoteId());
             }
-        } else if (!message.emotes().isEmpty()) {
-            int bodyOffset = coloredName.length();
+        } else if ((!isEvent || showGift) && !message.emotes().isEmpty()) {
             for (MessageEmote emote : message.emotes()) {
                 parsedEmotes.add(new MessageEmote(
                     emote.getProvider(),
@@ -244,8 +246,8 @@ public final class ChatMessagePipeline {
             }
         }
 
-        String fullText = coloredName + filteredText;
-        if (message.platform() == ChatPlatform.TWITCH) {
+        String fullText = coloredName + eventMark + shownText;
+        if (!isEvent && message.platform() == ChatPlatform.TWITCH) {
             List<MessageEmote> sevenTvEmotes = SevenTVEmoteProvider.scanForEmotes(fullText, parsedEmotes);
             if (!sevenTvEmotes.isEmpty()) {
                 List<MessageEmote> allEmotes = new ArrayList<>(parsedEmotes);
@@ -254,7 +256,7 @@ public final class ChatMessagePipeline {
             }
         }
 
-        if (ModConfig.isENABLE_COLOR_EMOJIS()) {
+        if (!isEvent && ModConfig.isENABLE_COLOR_EMOJIS()) {
             List<MessageEmote> emojiEmotes = UnicodeEmojiParser.parse(fullText, parsedEmotes);
             if (!emojiEmotes.isEmpty()) {
                 parsedEmotes = UnicodeEmojiParser.mergeNonOverlapping(parsedEmotes, emojiEmotes);
@@ -291,6 +293,15 @@ public final class ChatMessagePipeline {
         }
 
         return new PreparedSpawn(fullText, rgb, emotesWithIcon, message.eventType());
+    }
+
+    private static boolean hasGiftImage(IncomingChatMessage message) {
+        for (MessageEmote emote : message.emotes()) {
+            if (emote.isGif()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean shouldShowEvent(IncomingChatMessage message) {

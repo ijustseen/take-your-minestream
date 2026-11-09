@@ -43,8 +43,9 @@ public final class MessageEditorPreview {
 
     public static Message create(MinecraftClient client, Sample sample, Vec3d position, float yaw, float pitch, Vec3d offsetFromEye) {
         boolean event = sample.eventType() != null && sample.eventType().isEvent();
+        String eventMark = event ? sample.eventType().decoratedLabel() : "";
         String text = event
-            ? sample.colorCode() + sample.name() + "§r " + Text.translatable(sample.textKey()).getString()
+            ? sample.colorCode() + sample.name() + "§r " + eventMark
             : sample.colorCode() + sample.name() + ":§r " + Text.translatable(sample.textKey()).getString();
         List<MessageEmote> markers = new ArrayList<>();
         markers.add(new MessageEmote("platform", sample.platformKey(), "", -1, -1));

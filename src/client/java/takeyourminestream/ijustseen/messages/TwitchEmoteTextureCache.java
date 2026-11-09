@@ -186,9 +186,14 @@ public final class TwitchEmoteTextureCache {
                 return null;
             }
 
+            String contentType = connection.getContentType();
+            if (contentType != null && contentType.toLowerCase(Locale.ROOT).contains("json")) {
+                TakeYourMineStreamClient.LOGGER.warn("Rejected JSON body for {} emote {}", provider, emoteId);
+                return null;
+            }
             try (InputStream stream = connection.getInputStream()) {
                 byte[] bytes = stream.readAllBytes();
-                if (bytes.length == 0) {
+                if (bytes.length == 0 || bytes[0] == '{' || bytes[0] == '<') {
                     return null;
                 }
                 return bytes;

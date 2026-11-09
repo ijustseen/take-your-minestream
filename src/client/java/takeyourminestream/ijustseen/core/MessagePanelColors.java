@@ -28,7 +28,7 @@ public final class MessagePanelColors {
         if (eventType == null || !eventType.isEvent()) {
             return base;
         }
-        return mix(base, eventType.accentRgb(), 0.28f);
+        return mix(base, eventType.accentRgb(), 0.62f);
     }
 
     /** Цвет бортика: фирменный цвет платформы или заданный вручную. */

@@ -33,11 +33,14 @@ final class TikTokWebSocket {
             List<MessageEmote> emotes);
 
         /** Подарок; {@code giftName} может быть пустым, если TikTok не прислал детали. */
-        void onGift(long msgId, String uniqueId, String displayName, String giftName, int repeatCount);
+        void onGift(long msgId, String uniqueId, String displayName, String giftName, int repeatCount, String imageUrl);
 
         void onFollow(long msgId, String uniqueId, String displayName);
 
         void onSubscribe(long msgId, String uniqueId, String displayName);
+
+        /** Подаренная подписка на эфир, не обычный подарок. */
+        void onGiftedSubscribe(long msgId, String uniqueId, String displayName);
 
         void onLiveEnded();
     }
@@ -259,6 +262,8 @@ final class TikTokWebSocket {
                 handleGift(payload, message.getVarint(3));
             } else if (methodEndsWith(method, "WebcastSocialMessage")) {
                 handleSocial(payload, message.getVarint(3));
+            } else if (methodEndsWith(method, "WebcastSubNotifyMessage")) {
+                handleSubNotify(payload, message.getVarint(3));
             } else if (methodEndsWith(method, "WebcastControlMessage")) {
                 TikTokProto.ProtoMap control = TikTokProto.decode(payload);
                 if (control.getInt(2) == 3) {
@@ -275,12 +280,12 @@ final class TikTokWebSocket {
         String text = extractChatText(chat);
         List<MessageEmote> emotes;
         if (text.isBlank()) {
-            MessageEmote standalone = TikTokEmoteParser.firstStandaloneEmote(chat);
-            if (standalone == null) {
+            TikTokEmoteParser.Stickers stickers = TikTokEmoteParser.imagesOnly(chat);
+            if (stickers == null) {
                 return;
             }
-            text = TikTokEmoteParser.standaloneEmoteText();
-            emotes = List.of(standalone);
+            text = stickers.text();
+            emotes = stickers.emotes();
         } else {
             emotes = TikTokEmoteParser.parseChatEmotes(chat, text);
         }
@@ -298,9 +303,8 @@ final class TikTokWebSocket {
 
     private void handleEmoteChat(byte[] payload, long wrapperMsgId) {
         TikTokProto.ProtoMap chat = TikTokProto.decode(payload);
-        TikTokProto.ProtoMap emoteDetails = chat.getMessage(3);
-        MessageEmote emote = TikTokEmoteParser.parseStandaloneEmote(emoteDetails);
-        if (emote == null) {
+        TikTokEmoteParser.Stickers stickers = TikTokEmoteParser.parseStickers(chat);
+        if (stickers == null) {
             return;
         }
 
@@ -309,9 +313,9 @@ final class TikTokWebSocket {
             resolveMsgId(chat, wrapperMsgId),
             user.uniqueId(),
             user.displayName(),
-            TikTokEmoteParser.standaloneEmoteText(),
+            stickers.text(),
             user.roles(),
-            List.of(emote)
+            stickers.emotes()
         );
     }
 
@@ -329,21 +333,38 @@ final class TikTokWebSocket {
             user.uniqueId(),
             user.displayName(),
             readableText(details.getString(16)),
-            (int) Math.max(1L, gift.getVarint(5))
+            (int) Math.max(1L, gift.getVarint(5)),
+            TikTokEmoteParser.giftImageUrl(details)
         );
+    }
+
+    /** Платная подписка на эфир. {@code gift_source != 0} — её подарили. */
+    private void handleSubNotify(byte[] payload, long wrapperMsgId) {
+        TikTokProto.ProtoMap sub = TikTokProto.decode(payload);
+        UserIdentity user = extractUserSafe(sub, 2);
+        long msgId = resolveMsgId(sub, wrapperMsgId);
+        if (sub.getVarint(11) != 0L) {
+            handler.onGiftedSubscribe(msgId, user.uniqueId(), user.displayName());
+            return;
+        }
+        handler.onSubscribe(msgId, user.uniqueId(), user.displayName());
     }
 
     /** WebcastSocialMessage приходит и на подписку, и на «поделиться» — различаем по displayType. */
     private void handleSocial(byte[] payload, long wrapperMsgId) {
         TikTokProto.ProtoMap social = TikTokProto.decode(payload);
         TikTokProto.ProtoMap eventDetails = social.getMessage(1).getMessage(8);
-        String hint = (eventDetails.getString(1) + ' ' + eventDetails.getString(2))
-            .toLowerCase(java.util.Locale.ROOT);
+        String hint = (
+            eventDetails.getString(1) + ' ' + eventDetails.getString(2) + ' ' + social.getString(15)
+        ).toLowerCase(java.util.Locale.ROOT);
+        if (hint.contains("share")) {
+            return;
+        }
         UserIdentity user = extractUserSafe(social, 2);
         long msgId = resolveMsgId(social, wrapperMsgId);
         if (hint.contains("follow")) {
             handler.onFollow(msgId, user.uniqueId(), user.displayName());
-        } else if (hint.contains("subscribe")) {
+        } else if (hint.contains("subscribe") || hint.contains("superfan")) {
             handler.onSubscribe(msgId, user.uniqueId(), user.displayName());
         }
     }

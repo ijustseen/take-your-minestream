@@ -35,4 +35,39 @@ public enum ChatEventType {
             default -> 0xFFFFFF;
         };
     }
+
+    public String labelKey() {
+        return switch (this) {
+            case FOLLOW -> "takeyourstreamchat.event.kind.follow";
+            case SUBSCRIBE -> "takeyourstreamchat.event.kind.subscribe";
+            case GIFT -> "takeyourstreamchat.event.kind.gift";
+            case RAID -> "takeyourstreamchat.event.kind.raid";
+            case BITS -> "takeyourstreamchat.event.kind.bits";
+            default -> "";
+        };
+    }
+
+    /** Короткая плашка события: {@code §a§l[FOLLOW]§r}. */
+    public String decoratedLabel() {
+        if (!isEvent()) {
+            return "";
+        }
+        String color = switch (this) {
+            case FOLLOW -> "§a";
+            case SUBSCRIBE -> "§d";
+            case GIFT -> "§6";
+            case RAID -> "§9";
+            case BITS -> "§5";
+            default -> "§f";
+        };
+        String tag = switch (this) {
+            case FOLLOW -> "FOLLOW";
+            case SUBSCRIBE -> "SUB";
+            case GIFT -> "GIFT";
+            case RAID -> "RAID";
+            case BITS -> "DONATION";
+            default -> "";
+        };
+        return color + "§l[" + tag + "]§r";
+    }
 }

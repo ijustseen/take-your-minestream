@@ -117,14 +117,11 @@ public class TikTokChatClient implements ChatConnection {
             }
 
             @Override
-            public void onGift(long msgId, String uniqueId, String displayName, String giftName, int repeatCount) {
+            public void onGift(long msgId, String uniqueId, String displayName, String giftName, int repeatCount, String imageUrl) {
                 if (!markSeen(msgId)) {
                     return;
                 }
-                Text text = giftName == null || giftName.isBlank()
-                    ? Text.translatable("takeyourstreamchat.event.tiktok.gift_unknown")
-                    : Text.translatable("takeyourstreamchat.event.tiktok.gift", giftName, repeatCount);
-                submitEvent(uniqueId, displayName, text, ChatEventType.GIFT);
+                submitEvent(uniqueId, displayName, Text.literal(giftLabel(giftName, repeatCount)), ChatEventType.GIFT, imageUrl);
             }
 
             @Override
@@ -136,7 +133,8 @@ public class TikTokChatClient implements ChatConnection {
                     uniqueId,
                     displayName,
                     Text.translatable("takeyourstreamchat.event.tiktok.follow"),
-                    ChatEventType.FOLLOW
+                    ChatEventType.FOLLOW,
+                    null
                 );
             }
 
@@ -149,15 +147,51 @@ public class TikTokChatClient implements ChatConnection {
                     uniqueId,
                     displayName,
                     Text.translatable("takeyourstreamchat.event.tiktok.subscribe"),
-                    ChatEventType.SUBSCRIBE
+                    ChatEventType.SUBSCRIBE,
+                    null
                 );
             }
 
-            private void submitEvent(String uniqueId, String displayName, Text text, ChatEventType eventType) {
+            @Override
+            public void onGiftedSubscribe(long msgId, String uniqueId, String displayName) {
+                if (!markSeen(msgId)) {
+                    return;
+                }
+                submitEvent(
+                    uniqueId,
+                    displayName,
+                    Text.translatable("takeyourstreamchat.event.tiktok.subgift"),
+                    ChatEventType.GIFT,
+                    null
+                );
+            }
+
+            private void submitEvent(String uniqueId, String displayName, Text text, ChatEventType eventType, String imageUrl) {
+                String body = text.getString();
+                java.util.List<takeyourminestream.ijustseen.messages.MessageEmote> emotes = java.util.List.of();
+                if (imageUrl != null && !imageUrl.isBlank()) {
+                    String token = "·";
+                    int start;
+                    if (body.isBlank()) {
+                        body = token;
+                        start = 0;
+                    } else {
+                        start = body.length() + 1;
+                        body = body + " " + token;
+                    }
+                    emotes = java.util.List.of(new takeyourminestream.ijustseen.messages.MessageEmote(
+                        takeyourminestream.ijustseen.messages.MessageEmote.GIF_PROVIDER,
+                        imageUrl,
+                        token,
+                        start,
+                        start + token.length() - 1
+                    ));
+                }
                 pipeline.process(IncomingChatMessage.builder(ChatPlatform.TIKTOK)
                     .authorLogin(uniqueId)
                     .displayName(displayName)
-                    .text(text.getString())
+                    .text(body)
+                    .emotes(emotes)
                     .eventType(eventType)
                     .build());
             }
@@ -350,5 +384,14 @@ public class TikTokChatClient implements ChatConnection {
     @Override
     public boolean isConnected() {
         return running;
+    }
+
+    private static String giftLabel(String giftName, int repeatCount) {
+        int count = Math.max(repeatCount, 1);
+        boolean named = giftName != null && !giftName.isBlank();
+        if (!named) {
+            return count > 1 ? "x" + count : "";
+        }
+        return count > 1 ? giftName + " x" + count : giftName;
     }
 }
