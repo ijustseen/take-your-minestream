@@ -112,9 +112,9 @@ public class MessageParticleSpawner {
     }
 
     private static Color getBorderColor(Message message) {
-        int platformRgb = takeyourminestream.ijustseen.integration.chat.ChatPlatform
-            .accentColorForIconKey(message.getPlatformIconKey());
-        int rgb = MessagePanelColors.borderRgb(platformRgb);
+        int rgb = MessagePanelColors.borderRgb(
+            takeyourminestream.ijustseen.messages.ModAuthor.borderRgb(message)
+        );
         return rgbToColor(rgb, 220);
     }
 

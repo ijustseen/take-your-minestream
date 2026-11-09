@@ -205,7 +205,10 @@ public final class ChatMessagePipeline {
 
         String colorPrefix = toNearestSectionColor(rgb);
         String eventMark = isEvent ? message.eventType().decoratedLabel() : "";
-        String coloredName = colorPrefix + displayName + (isEvent ? "§r " : ":§r ");
+        String devPrefix = takeyourminestream.ijustseen.messages.ModAuthor.matches(
+            message.platform(), userLogin, displayName
+        ) ? takeyourminestream.ijustseen.messages.ModAuthor.NAME_PREFIX : "";
+        String coloredName = devPrefix + colorPrefix + displayName + (isEvent ? "§r " : ":§r ");
         boolean showGift = isEvent && hasGiftImage(message);
         String shownText = !isEvent || showGift ? filteredText : "";
         int bodyOffset = coloredName.length() + eventMark.length();

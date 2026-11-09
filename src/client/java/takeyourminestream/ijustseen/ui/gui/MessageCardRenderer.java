@@ -285,8 +285,7 @@ public final class MessageCardRenderer {
     }
 
     private static int borderColorFor(Message message) {
-        return takeyourminestream.ijustseen.integration.chat.ChatPlatform
-            .accentColorForIconKey(message.getPlatformIconKey());
+        return takeyourminestream.ijustseen.messages.ModAuthor.borderRgb(message);
     }
 
     private static int applyAlpha(int color, float alpha) {

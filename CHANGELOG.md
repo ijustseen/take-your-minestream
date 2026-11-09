@@ -27,6 +27,7 @@
 
 ### Added
 
+- **Author mark** — messages from the mod author show a `[dev]` tag in front of the name and a thin rainbow border on Twitch, Kick and TikTok
 - **Visible spawn** — world setting, on by default. Messages are not placed inside blocks or behind walls. If the min/max range has no clear line of sight, a closer or farther open spot is used
 - **Chat history key** — `\` opens message history from the game (rebind it in Controls). Settings stay on `]`, connect / disconnect stays on `[`
 - **Twitch GIFs** — official GIPHY keyboard messages from the IRC `gifs` tag (`start-end|id|url`) are downloaded from the URL Twitch sends and drawn on their own line under the username, sized to the name+badges row, centered, with a small gap. Animated Twitch emotes are fetched from the `animated` CDN template and played as GIFs, same as 7TV; static emotes fall back to `static`

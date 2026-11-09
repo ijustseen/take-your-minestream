@@ -180,7 +180,7 @@ public class MessageRenderer {
                     panelWidth,
                     panelHeight,
                     1.0f,
-                    takeyourminestream.ijustseen.integration.chat.ChatPlatform.accentColorForIconKey(platformIconKey)
+                    takeyourminestream.ijustseen.messages.ModAuthor.borderRgb(message)
                 );
             } finally {
                 takeyourminestream.ijustseen.core.MessagePanelColors.unbindEvent();

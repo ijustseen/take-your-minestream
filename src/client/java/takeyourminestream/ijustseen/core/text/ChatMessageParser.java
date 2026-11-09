@@ -19,6 +19,9 @@ public final class ChatMessageParser {
             String usernamePart = rawText.substring(0, separatorIndex);
             String bodyPart = rawText.substring(separatorIndex + SEPARATOR.length());
             String username = stripFormatting(usernamePart);
+            if (username.startsWith("[dev] ")) {
+                username = username.substring("[dev] ".length()).trim();
+            }
             return new ParsedMessage(
                 username.isBlank() ? null : username,
                 Text.literal(usernamePart + ":"),

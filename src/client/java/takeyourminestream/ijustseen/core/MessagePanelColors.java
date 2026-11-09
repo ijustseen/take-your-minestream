@@ -38,6 +38,9 @@ public final class MessagePanelColors {
     }
 
     public static int borderRgb(int platformRgb, ChatEventType eventType) {
+        if ((platformRgb & takeyourminestream.ijustseen.messages.ModAuthor.FORCE_BORDER_BIT) != 0) {
+            return platformRgb & 0xFFFFFF;
+        }
         if (eventType != null && eventType.isEvent()) {
             return eventType.accentRgb();
         }
