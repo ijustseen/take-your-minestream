@@ -196,6 +196,9 @@ public class ConfigManager implements IConfigManager {
             case "messageSpawnMaxDistance":
                 configData.setMessageSpawnMaxDistance((Integer) value);
                 break;
+            case "spawnOnlyVisible":
+                configData.setSpawnOnlyVisible((Boolean) value);
+                break;
             case "messagesInFrontOfPlayerOnly":
                 configData.setMessagesInFrontOfPlayerOnly((Boolean) value);
                 break;
@@ -337,6 +340,7 @@ public class ConfigManager implements IConfigManager {
         configCache.put("maxFreezeDistance", configData.getMaxFreezeDistance());
         configCache.put("messageSpawnMinDistance", configData.getMessageSpawnMinDistance());
         configCache.put("messageSpawnMaxDistance", configData.getMessageSpawnMaxDistance());
+        configCache.put("spawnOnlyVisible", configData.isSpawnOnlyVisible());
         configCache.put("messagesInFrontOfPlayerOnly", configData.isMessagesInFrontOfPlayerOnly());
         configCache.put("messageSpawnMode", configData.getMessageSpawnMode());
         configCache.put("enableAutomoderation", configData.isEnableAutomoderation());

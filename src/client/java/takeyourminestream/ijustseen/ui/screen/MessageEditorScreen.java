@@ -140,6 +140,8 @@ public class MessageEditorScreen extends PreviewPointerScreen {
             value -> Text.translatable("takeyourstreamchat.editor.blocks", value), this::isAroundView, () -> true);
         addSliderRow("takeyourstreamchat.config.spawn_max_distance", "messageSpawnMaxDistance", 1, 64, 1, 5,
             value -> Text.translatable("takeyourstreamchat.editor.blocks", value), this::isAroundView, () -> true);
+        addToggleRow("takeyourstreamchat.config.spawn_only_visible", ModConfig::isSPAWN_ONLY_VISIBLE,
+            ModConfig::setSPAWN_ONLY_VISIBLE, this::isWorldMode, () -> true);
         addActionRow("takeyourstreamchat.editor.regenerate", Text.translatable("takeyourstreamchat.editor.regenerate.button"),
             this::rebuildPreview, this::isAroundView);
 
@@ -391,7 +393,8 @@ public class MessageEditorScreen extends PreviewPointerScreen {
         }
         String signature = ModConfig.getMESSAGE_SPAWN_MODE() + "|" + viewMode + "|" + sampleIndex
             + "|" + ModConfig.isSHOW_ROLE_BADGES()
-            + "|" + ModConfig.getMESSAGE_SPAWN_MIN_DISTANCE() + "|" + ModConfig.getMESSAGE_SPAWN_MAX_DISTANCE();
+            + "|" + ModConfig.getMESSAGE_SPAWN_MIN_DISTANCE() + "|" + ModConfig.getMESSAGE_SPAWN_MAX_DISTANCE()
+            + "|" + ModConfig.isSPAWN_ONLY_VISIBLE();
         if (!signature.equals(previewSignature)) {
             previewSignature = signature;
             applyCamera();

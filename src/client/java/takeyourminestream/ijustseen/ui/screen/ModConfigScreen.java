@@ -561,6 +561,16 @@ public class ModConfigScreen extends DimScreen {
             ConfigCategory.LAYOUT
         )).visibleWhen(ModConfigScreen::isWorldMode);
 
+        ButtonWidget spawnOnlyVisibleButton = createToggleButton(ModConfig::isSPAWN_ONLY_VISIBLE, ModConfig::setSPAWN_ONLY_VISIBLE);
+        this.addDrawableChild(spawnOnlyVisibleButton);
+        addEntry(new ConfigEntry(
+            "takeyourstreamchat.config.spawn_only_visible",
+            "takeyourstreamchat.config.spawn_only_visible.desc",
+            ConfigEntryType.TOGGLE,
+            spawnOnlyVisibleButton,
+            ConfigCategory.LAYOUT
+        )).visibleWhen(ModConfigScreen::isWorldMode);
+
         ButtonWidget freezingButton = createToggleButton(ModConfig::isENABLE_FREEZING_ON_VIEW, ModConfig::setENABLE_FREEZING_ON_VIEW);
         this.addDrawableChild(freezingButton);
         addEntry(new ConfigEntry(
@@ -1124,11 +1134,17 @@ public class ModConfigScreen extends DimScreen {
             : Text.translatable(hoveredDescriptionKey);
 
         int descTop = getDescriptionTop();
-        context.drawTextWithShadow(
+        int descLeft = CONTENT_PADDING + 8;
+        int descWidth = this.width - CONTENT_PADDING * 2 - 16;
+        ModUiTheme.drawMarqueeLine(
+            context,
             this.textRenderer,
             description,
-            CONTENT_PADDING + 10,
+            descLeft,
             descTop + (DESCRIPTION_HEIGHT - this.textRenderer.fontHeight) / 2,
+            descWidth,
+            descTop,
+            descTop + DESCRIPTION_HEIGHT,
             ModUiTheme.TEXT_SECONDARY
         );
 

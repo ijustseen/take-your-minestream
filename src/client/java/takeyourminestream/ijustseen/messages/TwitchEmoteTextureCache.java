@@ -48,7 +48,8 @@ public final class TwitchEmoteTextureCache {
         CACHE_DIR = modRoot.resolve("emote-cache");
     }
 
-    private static final String TWITCH_URL = "https://static-cdn.jtvnw.net/emoticons/v2/%s/default/dark/1.0";
+    private static final String TWITCH_URL_ANIMATED = "https://static-cdn.jtvnw.net/emoticons/v2/%s/animated/dark/1.0";
+    private static final String TWITCH_URL_STATIC = "https://static-cdn.jtvnw.net/emoticons/v2/%s/static/dark/1.0";
     private static final String SEVENTV_URL_PNG = "https://cdn.7tv.app/emote/%s/1x.png";
     private static final String SEVENTV_URL_GIF = "https://cdn.7tv.app/emote/%s/1x.gif";
 
@@ -127,7 +128,8 @@ public final class TwitchEmoteTextureCache {
         }
         return switch (provider) {
             case "7tv" -> String.format(SEVENTV_URL_PNG, emoteId);
-            default -> String.format(TWITCH_URL, emoteId);
+            case "twitch" -> String.format(TWITCH_URL_STATIC, emoteId);
+            default -> String.format(TWITCH_URL_STATIC, emoteId);
         };
     }
 
@@ -148,17 +150,24 @@ public final class TwitchEmoteTextureCache {
             }
             return EmojiTextureCache.rasterizeToPng(sequence);
         }
+        if ("twitch".equals(provider)) {
+            byte[] animated = downloadFromUrl(String.format(TWITCH_URL_ANIMATED, emoteId), provider, emoteId, false);
+            if (animated != null) {
+                return animated;
+            }
+            return downloadFromUrl(String.format(TWITCH_URL_STATIC, emoteId), provider, emoteId, true);
+        }
         if (!"7tv".equals(provider)) {
-            return downloadFromUrl(getEmoteUrl(provider, emoteId), provider, emoteId);
+            return downloadFromUrl(getEmoteUrl(provider, emoteId), provider, emoteId, true);
         }
 
-        byte[] pngBytes = downloadFromUrl(String.format(SEVENTV_URL_PNG, emoteId), provider, emoteId);
+        byte[] pngBytes = downloadFromUrl(String.format(SEVENTV_URL_PNG, emoteId), provider, emoteId, false);
         if (pngBytes != null) return pngBytes;
 
-        return downloadFromUrl(String.format(SEVENTV_URL_GIF, emoteId), provider, emoteId);
+        return downloadFromUrl(String.format(SEVENTV_URL_GIF, emoteId), provider, emoteId, true);
     }
 
-    private static byte[] downloadFromUrl(String url, String provider, String emoteId) {
+    private static byte[] downloadFromUrl(String url, String provider, String emoteId, boolean logHttpError) {
         HttpURLConnection connection = null;
         try {
             URI emoteUri = URI.create(url);
@@ -168,7 +177,7 @@ public final class TwitchEmoteTextureCache {
             connection.setReadTimeout(6000);
             connection.setInstanceFollowRedirects(true);
             connection.setRequestProperty("User-Agent", BROWSER_USER_AGENT);
-            connection.setRequestProperty("Accept", "image/png,image/jpeg,image/webp,image/*;q=0.8");
+            connection.setRequestProperty("Accept", "image/gif,image/png,image/webp,image/*;q=0.8");
             if (url.contains("ggpht.com") || url.contains("googleusercontent.com")
                 || url.contains("youtube.com") || url.contains("ytimg.com")) {
                 connection.setRequestProperty("Referer", "https://www.youtube.com/");
@@ -182,7 +191,9 @@ public final class TwitchEmoteTextureCache {
 
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
-                TakeYourMineStreamClient.LOGGER.warn("HTTP {} for {} emote {} url={}", responseCode, provider, emoteId, url);
+                if (logHttpError) {
+                    TakeYourMineStreamClient.LOGGER.warn("HTTP {} for {} emote {} url={}", responseCode, provider, emoteId, url);
+                }
                 return null;
             }
 
@@ -350,7 +361,8 @@ public final class TwitchEmoteTextureCache {
     }
 
     private static Path diskCachePath(String provider, String emoteId) {
-        String suffix = "twitch".equals(provider) ? ".default.bin" : ".png";
+        // v2: старый кэш хранил статичный кадр с шаблона default.
+        String suffix = "twitch".equals(provider) ? ".v2.bin" : ".png";
         String fileName = emoteId.matches("[a-zA-Z0-9._-]+")
             ? emoteId + suffix
             : getSafeTexturePathPart(emoteId) + suffix;

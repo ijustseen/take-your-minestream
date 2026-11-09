@@ -3,7 +3,9 @@ package takeyourminestream.ijustseen.ui.screen;
 import net.minecraft.client.gui.screen.Screen;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
+import takeyourminestream.ijustseen.ui.widget.ConfigIntTextFieldWidget;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
@@ -29,7 +31,11 @@ import java.util.List;
 public class MessageHistoryScreen extends DimScreen {
     private static final int LIST_PADDING = 10;
     private static final int HEADER_HEIGHT = 36;
-    private static final int FOOTER_HEIGHT = 36;
+    private static final int FOOTER_HEIGHT = 58;
+    private static final int HISTORY_SIZE_FIELD_WIDTH = 48;
+    private static final int SCROLL_NONE = 0;
+    private static final int SCROLL_HISTORY = 1;
+    private static final int SCROLL_PINNED = 2;
     private static final int CARD_SPACING = 6;
     private static final int COLUMN_GAP = 12;
     private static final int SCROLLBAR_WIDTH = 6;
@@ -54,6 +60,11 @@ public class MessageHistoryScreen extends DimScreen {
 
     private HistoryCard selectedCard;
     private HistoryCard hoveredCard;
+    private ConfigIntTextFieldWidget historySizeField;
+    private int historySizeLabelX;
+    private int historySizeLabelY;
+    private int draggingColumn = SCROLL_NONE;
+    private int dragThumbGrab;
     private String feedbackKey;
     private Object[] feedbackArgs;
     private long feedbackUntilMs;
@@ -77,9 +88,23 @@ public class MessageHistoryScreen extends DimScreen {
         updateLayout();
 
         int centerX = this.width / 2;
-        int buttonY = this.height - FOOTER_HEIGHT + 8;
+        int buttonY = this.height - 28;
         int buttonWidth = 100;
         int buttonSpacing = 10;
+
+        historySizeField = new ConfigIntTextFieldWidget(
+            this.textRenderer,
+            0,
+            0,
+            HISTORY_SIZE_FIELD_WIDTH,
+            20,
+            Text.translatable("takeyourstreamchat.config.message_history_max"),
+            "messageHistoryMaxSize",
+            10,
+            500
+        );
+        this.addDrawableChild(historySizeField);
+        placeHistorySizeField();
 
         this.addDrawableChild(ButtonWidget.builder(
             Text.translatable("takeyourstreamchat.history.clear"),
@@ -186,6 +211,7 @@ public class MessageHistoryScreen extends DimScreen {
         } else {
             pinnedScrollOffset = GuiScrollbar.clampScroll(pinnedScrollOffset, pinnedHeight, visibleHeight);
         }
+        placeHistorySizeField();
     }
 
     private void buildCardList(List<Message> messages, int listLeft, List<HistoryCard> target) {
@@ -208,8 +234,14 @@ public class MessageHistoryScreen extends DimScreen {
         }
 
         var hiddenButtons = ScreenUiHelper.hideButtons(this);
+        if (historySizeField != null) {
+            historySizeField.visible = false;
+        }
         super.render(context, mouseX, mouseY, delta);
         ScreenUiHelper.restoreButtons(hiddenButtons);
+        if (historySizeField != null) {
+            historySizeField.visible = true;
+        }
 
         ModUiTheme.drawTitle(context, this.textRenderer, this.title, this.width);
 
@@ -241,11 +273,11 @@ public class MessageHistoryScreen extends DimScreen {
         renderColumn(context, mouseX, mouseY, historyPanelLeft, historyCards, historyScrollOffset);
         renderColumn(context, mouseX, mouseY, pinnedPanelLeft, pinnedCards, pinnedScrollOffset);
 
-        renderFooterHint(context);
         updateHoverState(mouseX, mouseY);
         renderTooltip(context, mouseX, mouseY);
 
         renderFeedback(context);
+        renderHistorySizeField(context, mouseX, mouseY, delta);
         ScreenUiHelper.renderAllButtons(context, mouseX, mouseY, this);
 
         if (actionPopup.isOpen()) {
@@ -365,7 +397,7 @@ public class MessageHistoryScreen extends DimScreen {
 
     private void updateHoverState(int mouseX, int mouseY) {
         hoveredCard = null;
-        if (actionPopup.isOpen()) {
+        if (actionPopup.isOpen() || draggingColumn != SCROLL_NONE) {
             return;
         }
 
@@ -421,19 +453,6 @@ public class MessageHistoryScreen extends DimScreen {
         );
     }
 
-    private void renderFooterHint(DrawContext context) {
-        Text helpText = Text.translatable("takeyourstreamchat.history.scroll_hint").formatted(Formatting.DARK_GRAY);
-        int textWidth = this.textRenderer.getWidth(helpText);
-        context.drawText(
-            this.textRenderer,
-            helpText,
-            groupLeft + (groupWidth - textWidth) / 2,
-            this.height - FOOTER_HEIGHT - 12,
-            ModUiTheme.TEXT_DIM,
-            false
-        );
-    }
-
     private boolean handleHistoryMouseClicked(double mouseX, double mouseY, int button) {
         int mx = (int) mouseX;
         int my = (int) mouseY;
@@ -451,6 +470,10 @@ public class MessageHistoryScreen extends DimScreen {
                 actionPopup.dismiss();
                 selectedCard = null;
             }
+            return true;
+        }
+
+        if (beginScrollbarDrag(mouseX, mouseY, button)) {
             return true;
         }
 
@@ -473,10 +496,29 @@ public class MessageHistoryScreen extends DimScreen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        blurHistorySizeFieldIfOutside(mouseX, mouseY);
         if (handleHistoryMouseClicked(mouseX, mouseY, button)) {
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (dragScrollbar(mouseY, button)) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (draggingColumn != SCROLL_NONE && button == 0) {
+            draggingColumn = SCROLL_NONE;
+            setDragging(false);
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private void handleAction(HistoryMessageActionPopup.Entry entry, HistoryCard card) {
@@ -557,6 +599,130 @@ public class MessageHistoryScreen extends DimScreen {
     @Override
     public boolean shouldPause() {
         return false;
+    }
+
+    private void placeHistorySizeField() {
+        if (historySizeField == null || this.textRenderer == null) {
+            return;
+        }
+        Text label = Text.translatable("takeyourstreamchat.config.message_history_max");
+        int labelWidth = this.textRenderer.getWidth(label);
+        int total = labelWidth + 6 + HISTORY_SIZE_FIELD_WIDTH;
+        int x = groupLeft + Math.max(0, (groupWidth - total) / 2);
+        int fieldY = this.height - 52;
+        historySizeLabelX = x;
+        historySizeLabelY = fieldY + (20 - this.textRenderer.fontHeight) / 2;
+        historySizeField.setX(x + labelWidth + 6);
+        historySizeField.setY(fieldY);
+    }
+
+    private void renderHistorySizeField(DrawContext context, int mouseX, int mouseY, float delta) {
+        if (historySizeField == null) {
+            return;
+        }
+        placeHistorySizeField();
+        Text label = Text.translatable("takeyourstreamchat.config.message_history_max");
+        context.drawText(
+            this.textRenderer,
+            label,
+            historySizeLabelX,
+            historySizeLabelY,
+            ModUiTheme.TEXT_SECONDARY,
+            false
+        );
+        ModUiTheme.drawInputFrame(
+            context,
+            historySizeField.getX(),
+            historySizeField.getY(),
+            historySizeField.getWidth(),
+            historySizeField.getHeight(),
+            historySizeField.isFocused()
+        );
+        TextFieldWidget widget = historySizeField;
+        widget.render(context, mouseX, mouseY, delta);
+    }
+
+    private boolean beginScrollbarDrag(double mouseX, double mouseY, int button) {
+        if (button != 0) {
+            return false;
+        }
+        int column = scrollbarColumnAt(mouseX, mouseY);
+        if (column == SCROLL_NONE) {
+            return false;
+        }
+        draggingColumn = column;
+        int top = contentTop + LIST_PADDING;
+        int bottom = contentBottom - LIST_PADDING;
+        List<HistoryCard> cards = column == SCROLL_HISTORY ? historyCards : pinnedCards;
+        int offset = column == SCROLL_HISTORY ? historyScrollOffset : pinnedScrollOffset;
+        int total = getTotalContentHeight(cards);
+        int thumbY = GuiScrollbar.thumbTop(top, bottom, offset, total);
+        int thumb = GuiScrollbar.thumbHeight(bottom - top, total);
+        int my = (int) mouseY;
+        dragThumbGrab = my >= thumbY && my < thumbY + thumb ? my - thumbY : thumb / 2;
+        applyScrollbarDrag(mouseY);
+        setDragging(true);
+        return true;
+    }
+
+    private boolean dragScrollbar(double mouseY, int button) {
+        if (draggingColumn == SCROLL_NONE) {
+            return false;
+        }
+        if (button != 0) {
+            return false;
+        }
+        applyScrollbarDrag(mouseY);
+        return true;
+    }
+
+    private void blurHistorySizeFieldIfOutside(double mouseX, double mouseY) {
+        if (historySizeField == null || !historySizeField.isFocused()) {
+            return;
+        }
+        if (mouseX >= historySizeField.getX()
+            && mouseX < historySizeField.getX() + historySizeField.getWidth()
+            && mouseY >= historySizeField.getY()
+            && mouseY < historySizeField.getY() + historySizeField.getHeight()) {
+            return;
+        }
+        setFocused(null);
+    }
+
+    private void applyScrollbarDrag(double mouseY) {
+        int top = contentTop + LIST_PADDING;
+        int bottom = contentBottom - LIST_PADDING;
+        List<HistoryCard> cards = draggingColumn == SCROLL_HISTORY ? historyCards : pinnedCards;
+        int total = getTotalContentHeight(cards);
+        int scroll = GuiScrollbar.scrollForThumbTop(top, bottom, (int) mouseY - dragThumbGrab, total);
+        scroll = GuiScrollbar.clampScroll(scroll, total, Math.max(0, bottom - top));
+        if (draggingColumn == SCROLL_HISTORY) {
+            historyScrollOffset = scroll;
+        } else {
+            pinnedScrollOffset = scroll;
+        }
+    }
+
+    private int scrollbarColumnAt(double mouseX, double mouseY) {
+        if (hitColumnScrollbar(historyPanelLeft, historyCards, mouseX, mouseY)) {
+            return SCROLL_HISTORY;
+        }
+        if (hitColumnScrollbar(pinnedPanelLeft, pinnedCards, mouseX, mouseY)) {
+            return SCROLL_PINNED;
+        }
+        return SCROLL_NONE;
+    }
+
+    private boolean hitColumnScrollbar(int panelLeft, List<HistoryCard> cards, double mouseX, double mouseY) {
+        int top = contentTop + LIST_PADDING;
+        int bottom = contentBottom - LIST_PADDING;
+        int track = bottom - top;
+        if (track <= 0 || getTotalContentHeight(cards) <= track) {
+            return false;
+        }
+        int x = panelLeft + panelWidth - LIST_PADDING - SCROLLBAR_WIDTH;
+        return mouseX >= x - 4 && mouseX < x + SCROLLBAR_WIDTH + 4
+            && mouseY >= top && mouseY < bottom;
     }
 
     private int getVisibleListHeight() {

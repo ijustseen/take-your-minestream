@@ -138,6 +138,15 @@ public class ModConfig {
         return value instanceof Number number ? number.intValue() : 5;
     }
 
+    public static boolean isSPAWN_ONLY_VISIBLE() {
+        Object value = ConfigManager.getInstance().getConfigValue("spawnOnlyVisible");
+        return !(value instanceof Boolean visible) || visible;
+    }
+
+    public static void setSPAWN_ONLY_VISIBLE(boolean value) {
+        ConfigManager.getInstance().setConfigValue("spawnOnlyVisible", value);
+    }
+
     public static boolean isMESSAGES_IN_FRONT_OF_PLAYER_ONLY() {
         return (Boolean) ConfigManager.getInstance().getConfigValue("messagesInFrontOfPlayerOnly");
     }

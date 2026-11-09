@@ -101,7 +101,8 @@ public class PinnedMessageInteractionManager {
 
         Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
         Vec3d lookVec = client.player.getRotationVec(1.0f).normalize();
-        Vec3d newPos = cameraPos.add(lookVec.multiply(dragDistance));
+        double reach = BlockOcclusion.clearDistance(client, cameraPos, lookVec, dragDistance);
+        Vec3d newPos = cameraPos.add(lookVec.multiply(reach));
         draggedMessage.setPosition(newPos);
 
         Vec3d eyePos = client.player.getEyePos();

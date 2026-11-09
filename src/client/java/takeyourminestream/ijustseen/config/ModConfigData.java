@@ -29,6 +29,8 @@ public class ModConfigData {
     private double maxFreezeDistance = 15.0;
     private int messageSpawnMinDistance = 2;
     private int messageSpawnMaxDistance = 5;
+    /** null в старом конфиге значит «включено». */
+    private Boolean spawnOnlyVisible;
     private MessageSpawnMode messageSpawnMode = MessageSpawnMode.FRONT_OF_PLAYER;
     private boolean enableAutomoderation = false;
     private int particleMinCount = 10;
@@ -127,6 +129,7 @@ public class ModConfigData {
     public double getMaxFreezeDistance() { return maxFreezeDistance; }
     public int getMessageSpawnMinDistance() { return messageSpawnMinDistance; }
     public int getMessageSpawnMaxDistance() { return messageSpawnMaxDistance; }
+    public boolean isSpawnOnlyVisible() { return spawnOnlyVisible == null || spawnOnlyVisible; }
     public MessageSpawnMode getMessageSpawnMode() { return messageSpawnMode; }
     public boolean isEnableAutomoderation() { return enableAutomoderation; }
     public int getParticleMinCount() { return particleMinCount; }
@@ -215,6 +218,7 @@ public class ModConfigData {
     public void setMaxFreezeDistance(double maxFreezeDistance) { this.maxFreezeDistance = maxFreezeDistance; }
     public void setMessageSpawnMinDistance(int messageSpawnMinDistance) { this.messageSpawnMinDistance = Math.max(1, messageSpawnMinDistance); }
     public void setMessageSpawnMaxDistance(int messageSpawnMaxDistance) { this.messageSpawnMaxDistance = Math.max(1, messageSpawnMaxDistance); }
+    public void setSpawnOnlyVisible(boolean spawnOnlyVisible) { this.spawnOnlyVisible = spawnOnlyVisible; }
     public void setMessageSpawnMode(MessageSpawnMode messageSpawnMode) { this.messageSpawnMode = messageSpawnMode; }
     public void setEnableAutomoderation(boolean enableAutomoderation) { this.enableAutomoderation = enableAutomoderation; }
     public void setParticleMinCount(int particleMinCount) { this.particleMinCount = particleMinCount; }

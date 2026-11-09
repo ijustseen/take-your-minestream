@@ -24,6 +24,10 @@ public class MessagePosition {
             return Vec3d.ZERO;
         }
 
+        if (ModConfig.isSPAWN_ONLY_VISIBLE()) {
+            return pickVisible(client, false);
+        }
+
         Random random = client.world.random;
         for (int i = 0; i < 15; i++) {
             Vec3d point = sampleAroundPlayerPoint(client, random);
@@ -43,6 +47,10 @@ public class MessagePosition {
             return Vec3d.ZERO;
         }
 
+        if (ModConfig.isSPAWN_ONLY_VISIBLE()) {
+            return pickVisible(client, true);
+        }
+
         Random random = client.world.random;
         double halfHorizRad = getHorizontalHalfFovRad(client);
 
@@ -59,36 +67,91 @@ public class MessagePosition {
         return sampleFallbackInFov(client, random, halfHorizRad);
     }
 
-    private static Vec3d sampleAroundPlayerPoint(MinecraftClient client, Random random) {
-        Vec3d playerPos = client.player.getEyePos();
-        double angle = random.nextDouble() * 2 * Math.PI;
-        double radius = sampleSpawnRadius(random);
-        double xOffset = radius * Math.cos(angle);
-        double zOffset = radius * Math.sin(angle);
-        double yOffset = random.nextDouble() * 2 - 1;
+    private static final int VISIBLE_RANGE_ATTEMPTS = 24;
+    private static final int VISIBLE_RELAXED_ATTEMPTS = 40;
 
-        return new Vec3d(
-            playerPos.x + xOffset,
-            playerPos.y + client.player.getEyeHeight(client.player.getPose()) + yOffset + SPAWN_HEIGHT_OFFSET,
-            playerPos.z + zOffset
-        );
+    /** Сначала диапазон мин/макс, затем любая видимая дистанция, если рядом блоки. */
+    private static Vec3d pickVisible(MinecraftClient client, boolean frontOnly) {
+        Random random = client.world.random;
+        double halfHorizRad = frontOnly ? getHorizontalHalfFovRad(client) : Math.PI;
+        Vec3d inRange = findClear(client, random, frontOnly, halfHorizRad, VISIBLE_RANGE_ATTEMPTS, false);
+        if (inRange != null) {
+            return inRange;
+        }
+        Vec3d relaxed = findClear(client, random, frontOnly, halfHorizRad, VISIBLE_RELAXED_ATTEMPTS, true);
+        if (relaxed != null) {
+            return relaxed;
+        }
+        return frontOnly
+            ? sampleFallbackInFov(client, random, halfHorizRad)
+            : sampleAroundPlayerPoint(client, random);
+    }
+
+    private static Vec3d findClear(
+        MinecraftClient client,
+        Random random,
+        boolean frontOnly,
+        double halfHorizRad,
+        int attempts,
+        boolean relaxDistance
+    ) {
+        for (int i = 0; i < attempts; i++) {
+            Vec3d point = relaxDistance
+                ? sampleRelaxed(client, random, frontOnly, halfHorizRad)
+                : sampleAroundPlayerPoint(client, random);
+            if (frontOnly && !isWithinHorizontalFov(client, point, halfHorizRad)) {
+                continue;
+            }
+            if (isClearSpawn(client, point)) {
+                return point;
+            }
+        }
+        return null;
+    }
+
+    private static Vec3d sampleRelaxed(MinecraftClient client, Random random, boolean frontOnly, double halfHorizRad) {
+        double max = Math.max(ModConfig.getMESSAGE_SPAWN_MAX_DISTANCE(), 16);
+        double radius = 1.0 + (max - 1.0) * random.nextDouble();
+        if (frontOnly) {
+            return sampleInFov(client, random, halfHorizRad, radius);
+        }
+        return sampleAround(client, random, radius, random.nextDouble() * 2 * Math.PI);
+    }
+
+    private static boolean isClearSpawn(MinecraftClient client, Vec3d point) {
+        return isFreeSpot(client, point)
+            && !BlockOcclusion.isBlocked(client, client.player.getEyePos(), point);
+    }
+
+    private static Vec3d sampleAroundPlayerPoint(MinecraftClient client, Random random) {
+        return sampleAround(client, random, sampleSpawnRadius(random), random.nextDouble() * 2 * Math.PI);
     }
 
     /** Точка в FOV-конусе на горизонте, если rejection sampling не нашёл свободное место. */
     private static Vec3d sampleFallbackInFov(MinecraftClient client, Random random, double halfHorizRad) {
+        return sampleInFov(client, random, halfHorizRad, sampleSpawnRadius(random));
+    }
+
+    private static Vec3d sampleInFov(MinecraftClient client, Random random, double halfHorizRad, double radius) {
         Vec3d playerPos = client.player.getEyePos();
         float yaw = client.player.getYaw();
-        double radius = sampleSpawnRadius(random);
         double yawOffset = (random.nextDouble() * 2.0 - 1.0) * halfHorizRad;
         double yawRad = Math.toRadians(yaw) + yawOffset;
-        double xOffset = radius * -Math.sin(yawRad);
-        double zOffset = radius * Math.cos(yawRad);
         double yOffset = random.nextDouble() * 2 - 1;
-
         return new Vec3d(
-            playerPos.x + xOffset,
+            playerPos.x + radius * -Math.sin(yawRad),
             playerPos.y + client.player.getEyeHeight(client.player.getPose()) + yOffset + SPAWN_HEIGHT_OFFSET,
-            playerPos.z + zOffset
+            playerPos.z + radius * Math.cos(yawRad)
+        );
+    }
+
+    private static Vec3d sampleAround(MinecraftClient client, Random random, double radius, double angle) {
+        Vec3d playerPos = client.player.getEyePos();
+        double yOffset = random.nextDouble() * 2 - 1;
+        return new Vec3d(
+            playerPos.x + radius * Math.cos(angle),
+            playerPos.y + client.player.getEyeHeight(client.player.getPose()) + yOffset + SPAWN_HEIGHT_OFFSET,
+            playerPos.z + radius * Math.sin(angle)
         );
     }
 

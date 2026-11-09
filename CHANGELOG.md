@@ -18,11 +18,18 @@
 - **Message collision fix** - fix an error of killing the wrong message caused by wrong counting order
 - **Chat history opens immediately** — card layouts are prepared when a message arrives, and the history column no longer starts scrolled past its content (pinned messages were visible, history looked empty until the next refresh)
 - **History footer clicks** — Clear and Close no longer open the message tucked under them. Card clicks follow the visible list, the same area the scissor already draws
+- **Messages ignore clicks through blocks** — a block between you and the panel blocks pin, drag and remove. Dragging a message stops at the wall instead of passing through it
+- **7TV 404 is logged once** — a channel with no 7TV emote set is not requested again on every chat line
+- **Long setting hints scroll** — a description wider than the panel loops sideways instead of running past the edge
+- **Chat history hint** — the “Scroll · Click a message” line under the history columns is gone
+- **History scrollbar drag** — the history and pinned columns scroll by dragging their bars, not only the mouse wheel
+- **History length on the history screen** — the max message count (10–500) can be edited under the columns; the same value as in settings
 
 ### Added
 
+- **Visible spawn** — world setting, on by default. Messages are not placed inside blocks or behind walls. If the min/max range has no clear line of sight, a closer or farther open spot is used
 - **Chat history key** — `\` opens message history from the game (rebind it in Controls). Settings stay on `]`, connect / disconnect stays on `[`
-- **Twitch GIFs** — official GIPHY keyboard messages from the IRC `gifs` tag (`start-end|id|url`) are downloaded from the URL Twitch sends and drawn on their own line under the username, sized to the name+badges row, centered, with a small gap. Animated Twitch emotes now use the `default` CDN template instead of `static`
+- **Twitch GIFs** — official GIPHY keyboard messages from the IRC `gifs` tag (`start-end|id|url`) are downloaded from the URL Twitch sends and drawn on their own line under the username, sized to the name+badges row, centered, with a small gap. Animated Twitch emotes are fetched from the `animated` CDN template and played as GIFs, same as 7TV; static emotes fall back to `static`
 - **Message width** — line width before wrapping (60–400 px, default 120) for world messages and the HUD widget. Chat history keeps its fixed width
 - **3D message frames** — world messages can use a raised picture-frame (rounded corners, beveled rim, back wall) instead of the flat 9-slice panel. Choose **2D** or **3D** in Settings → Messages or the visual editor (3D by default; HUD cards stay 2D). Textures can be replaced with a resource pack (`message_panel.png`, `message_panel_border.png`, `message_frame_back.png`)
 - **Visual message editor** — opened from the highlighted card at the top of the Appearance tab while in a world. A settings panel over the live game shows sample messages from every platform, rendered exactly as real ones, and updates instantly when size, width, colors, background, 3D/2D frame, borders or role badges change. Two views: **Message only** (one sample in front of the camera — drag to rotate, scroll to move the camera, right-click to reset; the sample sits inside a 1×1×1 wireframe cube, so its real size stays clear while zooming) and **Around the player** (third-person camera you can orbit; samples spawn at the real positions for the current placement and min/max distance). In HUD mode the preview appears in the chosen HUD corner. Real chat messages are hidden while the editor is open and come back afterwards; camera perspective and view direction are restored on close

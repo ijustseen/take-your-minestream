@@ -136,7 +136,7 @@ public class MessageLifecycleManager {
         int removeAfter,
         boolean hudMode
     ) {
-        if (hudMode || particleManager == null || spawnedParticlesForMessages.contains(message)) {
+        if (previewActive || hudMode || particleManager == null || spawnedParticlesForMessages.contains(message)) {
             return;
         }
         // Партиклы — в конце падения, когда панель «разбивается» (последний кадр fall-анимации).
@@ -285,11 +285,17 @@ public class MessageLifecycleManager {
             previewMessages.add(message);
         }
         previewActive = true;
+        if (particleManager != null) {
+            particleManager.setHidden(true);
+        }
     }
 
     public void stopPreview() {
         previewActive = false;
         previewMessages.clear();
+        if (particleManager != null) {
+            particleManager.setHidden(false);
+        }
     }
 
     public boolean isPreviewActive() {

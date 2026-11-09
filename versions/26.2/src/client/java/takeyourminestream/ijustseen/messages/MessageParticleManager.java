@@ -16,14 +16,29 @@ import java.util.List;
 /** Партиклы при удалении сообщений (Minecraft 26.2). */
 public class MessageParticleManager {
     private final List<MessageParticle> particles = new ArrayList<>();
+    /** Редактор сообщений: осколки реальных сообщений не рисуются и не копятся. */
+    private boolean hidden;
     private static final Identifier PARTICLE_TEXTURE =
         Identifier.fromNamespaceAndPath("take-your-stream-chat", "textures/particles/particle_texture.png");
 
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+        if (hidden) {
+            particles.clear();
+        }
+    }
+
     public void addParticle(MessageParticle particle) {
+        if (hidden) {
+            return;
+        }
         particles.add(particle);
     }
 
     public void addParticles(List<MessageParticle> newParticles) {
+        if (hidden || newParticles == null || newParticles.isEmpty()) {
+            return;
+        }
         particles.addAll(newParticles);
     }
 
@@ -39,7 +54,7 @@ public class MessageParticleManager {
     }
 
     public void render(Minecraft client, PoseStack poseStack, SubmitNodeCollector collector) {
-        if (particles.isEmpty()) {
+        if (hidden || particles.isEmpty()) {
             return;
         }
 

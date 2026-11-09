@@ -145,6 +145,11 @@ public class MessageClickHandler {
             return null;
         }
 
+        Vec3d hitWorld = rayOrigin.add(rayDir.multiply(t));
+        if (BlockOcclusion.isBlocked(client, rayOrigin, hitWorld)) {
+            return null;
+        }
+
         return new MessageHit(message, t, insidePinIcon);
     }
 }

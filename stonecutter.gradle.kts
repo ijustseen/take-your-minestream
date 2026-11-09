@@ -253,6 +253,7 @@ stonecutter parameters {
             replace("this.close();", "this.onClose();")
             replace("toTarget.multiply(", "toTarget.scale(")
             replace("lookVec.multiply(", "lookVec.scale(")
+            replace("rayDir.multiply(", "rayDir.scale(")
             replace("localDir.multiply(", "localDir.scale(")
             replace("dir.multiply(", "dir.scale(")
             replace("localYAxisWorld.multiply(", "localYAxisWorld.scale(")

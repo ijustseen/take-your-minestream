@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,6 +37,10 @@ public final class SevenTVEmoteProvider {
     private static final AtomicBoolean GLOBALS_LOADING = new AtomicBoolean(false);
     private static volatile String currentChannelName = null;
     private static volatile String currentTwitchRoomId = null;
+    /** Канал без набора 7TV (404) или уже запрошенный: не долбить API на каждое сообщение. */
+    private static final Set<String> CHANNEL_GIVEN_UP = ConcurrentHashMap.newKeySet();
+    private static final Set<String> CHANNEL_IN_FLIGHT = ConcurrentHashMap.newKeySet();
+    private static final Set<String> LOGGED_HTTP = ConcurrentHashMap.newKeySet();
 
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(2, r -> {
         Thread t = new Thread(r, "TYMS-7TV-Loader");
@@ -109,7 +114,8 @@ public final class SevenTVEmoteProvider {
     public static void loadChannelEmotes(String channelName) {
         if (channelName == null || channelName.isBlank()) return;
         String lower = channelName.toLowerCase();
-        if (lower.equals(currentChannelName) && !CHANNEL_EMOTES.isEmpty()) return; // Уже загружено
+        if (lower.equals(currentChannelName)) return;
+        if (!beginChannelLoad("login:" + lower)) return;
 
         EXECUTOR.execute(() -> {
             try {
@@ -148,6 +154,8 @@ public final class SevenTVEmoteProvider {
                 currentTwitchRoomId = null;
             } catch (Exception e) {
                 TakeYourMineStreamClient.LOGGER.warn("Failed to load channel 7TV emotes for {}: {}", lower, e.getMessage());
+            } finally {
+                finishChannelLoad("login:" + lower, true);
             }
         });
     }
@@ -163,11 +171,13 @@ public final class SevenTVEmoteProvider {
             return;
         }
 
-        if (twitchRoomId.equals(currentTwitchRoomId) && !CHANNEL_EMOTES.isEmpty()) {
+        if (twitchRoomId.equals(currentTwitchRoomId)) {
             return;
         }
 
         String lower = channelName == null ? "" : channelName.toLowerCase();
+        String loadKey = "room:" + twitchRoomId;
+        if (!beginChannelLoad(loadKey)) return;
         EXECUTOR.execute(() -> {
             try {
                 Map<String, String> freshChannelEmotes = new java.util.HashMap<>();
@@ -213,8 +223,24 @@ public final class SevenTVEmoteProvider {
                 if (!lower.isBlank()) {
                     loadChannelEmotes(lower);
                 }
+            } finally {
+                finishChannelLoad(loadKey, true);
             }
         });
+    }
+
+    private static boolean beginChannelLoad(String key) {
+        if (CHANNEL_GIVEN_UP.contains(key)) {
+            return false;
+        }
+        return CHANNEL_IN_FLIGHT.add(key);
+    }
+
+    private static void finishChannelLoad(String key, boolean giveUp) {
+        CHANNEL_IN_FLIGHT.remove(key);
+        if (giveUp) {
+            CHANNEL_GIVEN_UP.add(key);
+        }
     }
 
     /**
@@ -327,7 +353,9 @@ public final class SevenTVEmoteProvider {
 
             int code = connection.getResponseCode();
             if (code != 200) {
-                TakeYourMineStreamClient.LOGGER.warn("7TV HTTP {} for {}", code, url);
+                if (LOGGED_HTTP.add(code + " " + url)) {
+                    TakeYourMineStreamClient.LOGGER.warn("7TV HTTP {} for {}", code, url);
+                }
                 return null;
             }
 

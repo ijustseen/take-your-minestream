@@ -405,11 +405,16 @@ public class PlatformConfigScreen extends DimScreen {
         Text description = hoveredDescription == null
             ? Text.translatable("takeyourstreamchat.config.hint_default")
             : hoveredDescription;
-        context.drawTextWithShadow(
+        int descTop = getDescriptionTop();
+        ModUiTheme.drawMarqueeLine(
+            context,
             this.textRenderer,
             description,
-            CONTENT_PADDING + 10,
-            getDescriptionTop() + (DESCRIPTION_HEIGHT - this.textRenderer.fontHeight) / 2,
+            CONTENT_PADDING + 8,
+            descTop + (DESCRIPTION_HEIGHT - this.textRenderer.fontHeight) / 2,
+            this.width - CONTENT_PADDING * 2 - 16,
+            descTop,
+            descTop + DESCRIPTION_HEIGHT,
             ModUiTheme.TEXT_SECONDARY
         );
 

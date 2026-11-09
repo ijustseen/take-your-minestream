@@ -49,7 +49,51 @@ public final class ModUiTheme {
         ACCENT
     }
 
+    private static String marqueeKey = "";
+    private static long marqueeHoldUntilMs;
+
     private ModUiTheme() {}
+
+    /**
+     * Одна строка подсказки. Если она шире окна, после короткой паузы едет влево
+     * и появляется снова справа, не выходя за край.
+     */
+    public static void drawMarqueeLine(
+        DrawContext context,
+        TextRenderer textRenderer,
+        Text text,
+        int x,
+        int y,
+        int maxWidth,
+        int clipTop,
+        int clipBottom,
+        int color
+    ) {
+        if (maxWidth <= 0 || clipBottom <= clipTop) {
+            return;
+        }
+        int textWidth = textRenderer.getWidth(text);
+        if (textWidth <= maxWidth) {
+            context.drawTextWithShadow(textRenderer, text, x, y, color);
+            return;
+        }
+        String key = text.getString();
+        long now = System.currentTimeMillis();
+        if (!key.equals(marqueeKey)) {
+            marqueeKey = key;
+            marqueeHoldUntilMs = now + 900L;
+        }
+        int gap = 32;
+        int cycle = textWidth + gap;
+        int offset = 0;
+        if (now > marqueeHoldUntilMs) {
+            offset = (int) (((now - marqueeHoldUntilMs) * 36L) / 1000L) % cycle;
+        }
+        context.enableScissor(x, clipTop, x + maxWidth, clipBottom);
+        context.drawTextWithShadow(textRenderer, text, x - offset, y, color);
+        context.drawTextWithShadow(textRenderer, text, x - offset + cycle, y, color);
+        context.disableScissor();
+    }
 
     /** Затемнение мира без анимации blur — иначе экраны вспыхивают при открытии и смене. */
     public static void drawWorldDim(DrawContext context, int width, int height) {

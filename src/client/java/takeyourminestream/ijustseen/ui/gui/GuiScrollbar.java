@@ -14,11 +14,41 @@ public final class GuiScrollbar {
             return;
         }
 
-        int thumbHeight = Math.max(16, (trackHeight * trackHeight) / totalContentHeight);
-        int maxThumbY = bottom - thumbHeight;
-        int thumbY = top + (scrollOffset * (trackHeight - thumbHeight)) / (totalContentHeight - trackHeight);
-        thumbY = Math.max(top, Math.min(maxThumbY, thumbY));
-        context.fill(x, thumbY, x + 6, thumbY + thumbHeight, ModUiTheme.SCROLL_THUMB);
+        int thumb = thumbHeight(trackHeight, totalContentHeight);
+        int thumbY = thumbTop(top, bottom, scrollOffset, totalContentHeight);
+        context.fill(x, thumbY, x + 6, thumbY + thumb, ModUiTheme.SCROLL_THUMB);
+    }
+
+    public static int thumbHeight(int trackHeight, int totalContentHeight) {
+        if (trackHeight <= 0 || totalContentHeight <= trackHeight) {
+            return Math.max(0, trackHeight);
+        }
+        return Math.max(16, (trackHeight * trackHeight) / totalContentHeight);
+    }
+
+    public static int thumbTop(int top, int bottom, int scrollOffset, int totalContentHeight) {
+        int trackHeight = bottom - top;
+        int thumb = thumbHeight(trackHeight, totalContentHeight);
+        if (totalContentHeight <= trackHeight || trackHeight <= thumb) {
+            return top;
+        }
+        int travel = trackHeight - thumb;
+        int maxScroll = totalContentHeight - trackHeight;
+        int clamped = Math.max(0, Math.min(maxScroll, scrollOffset));
+        return top + (clamped * travel) / maxScroll;
+    }
+
+    /** scrollOffset для бегунка, чей верх стоит в thumbTop. */
+    public static int scrollForThumbTop(int top, int bottom, int thumbTop, int totalContentHeight) {
+        int trackHeight = bottom - top;
+        int thumb = thumbHeight(trackHeight, totalContentHeight);
+        int travel = trackHeight - thumb;
+        if (travel <= 0 || totalContentHeight <= trackHeight) {
+            return 0;
+        }
+        int maxScroll = totalContentHeight - trackHeight;
+        int local = Math.max(0, Math.min(travel, thumbTop - top));
+        return (local * maxScroll) / travel;
     }
 
     public static int clampScroll(int scrollOffset, int totalContentHeight, int viewportHeight) {
