@@ -22,6 +22,8 @@
 - **7TV 404 is logged once** — a channel with no 7TV emote set is not requested again on every chat line
 - **Long setting hints scroll** — a description wider than the panel loops sideways instead of running past the edge
 - **Chat history hint** — the “Scroll · Click a message” line under the history columns is gone
+- **Look-to-freeze hitbox** — a flat card stays up only while the crosshair is on the card itself. The old look test used a larger, tilted rectangle, so a card below the crosshair still counted as watched
+- **3D look-to-freeze** — a raised frame stays up while the crosshair is on any part of the model: the front, the sides or the back. A 2D card still uses only its face
 - **History scrollbar drag** — the history and pinned columns scroll by dragging their bars, not only the mouse wheel
 - **History length on the history screen** — the max message count (10–500) can be edited under the columns; the same value as in settings
 

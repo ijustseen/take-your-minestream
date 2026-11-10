@@ -12,6 +12,9 @@ import java.util.List;
  */
 public final class MessageFrame3DModel {
     private static final MessageFrame3DModel INSTANCE = new MessageFrame3DModel();
+    /** Передняя грань бортика и задняя стенка, в пикселях панели до мирового масштаба. */
+    public static final float Z_FRONT = 0.6f;
+    public static final float Z_BACK = -1.4f;
 
     private List<FrameQuad> cachedQuads;
     private int cachedX;
@@ -88,8 +91,8 @@ public final class MessageFrame3DModel {
         float borderB = (borderRgb & 0xFF) / 255.0f;
 
         float zFrontCanvas = 0.0f;
-        float zFrontBorder = 0.6f;
-        float zBack = -1.4f;
+        float zFrontBorder = Z_FRONT;
+        float zBack = Z_BACK;
 
         MessagePanel9Slice.WorldSlice[] slices = MessagePanel9Slice.worldSlices(ix, iy, iw, ih);
 

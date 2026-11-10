@@ -5,6 +5,8 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import takeyourminestream.ijustseen.core.MessagePanelConstants;
+import takeyourminestream.ijustseen.core.render.MessageFrame3DModel;
 import takeyourminestream.ijustseen.utils.CameraPositionCompat;
 
 import java.util.Collection;
@@ -80,7 +82,20 @@ public class MessageClickHandler {
         return dotProduct >= angleThreshold;
     }
 
-    private static MessageHit findHit(MinecraftClient client, Message message, int tickCounter) {
+    static MessageHit findHit(MinecraftClient client, Message message, int tickCounter, double maxDistance) {
+        return findHit(client, message, tickCounter, maxDistance, false);
+    }
+
+    /**
+     * @param modelVolume в 3D-рамке луч проверяется по всему объёму модели, а не только по лицевой плоскости
+     */
+    static MessageHit findHit(
+        MinecraftClient client,
+        Message message,
+        int tickCounter,
+        double maxDistance,
+        boolean modelVolume
+    ) {
         if (client.player == null) {
             return null;
         }
@@ -90,7 +105,7 @@ public class MessageClickHandler {
 
         Vec3d panelCenter = message.getPosition();
 
-        if (rayOrigin.distanceTo(panelCenter) > CLICK_DISTANCE) {
+        if (rayOrigin.distanceTo(panelCenter) > maxDistance) {
             return null;
         }
 
@@ -121,13 +136,25 @@ public class MessageClickHandler {
             localRayEndV.z - localOriginV.z
         ).normalize();
 
+        if (modelVolume) {
+            double tVolume = intersectFrameVolume(localOrigin, localDir, dimensions, finalScale, fallOffsetY);
+            if (Double.isNaN(tVolume) || tVolume > maxDistance) {
+                return null;
+            }
+            Vec3d hitWorld = rayOrigin.add(rayDir.multiply(tVolume));
+            if (BlockOcclusion.isBlocked(client, rayOrigin, hitWorld)) {
+                return null;
+            }
+            return new MessageHit(message, tVolume, false);
+        }
+
         double denom = localDir.z;
         if (Math.abs(denom) < 1e-6) {
             return null;
         }
 
         double t = -localOrigin.z / denom;
-        if (t < 0 || t > CLICK_DISTANCE) {
+        if (t < 0 || t > maxDistance) {
             return null;
         }
 
@@ -151,5 +178,60 @@ public class MessageClickHandler {
         }
 
         return new MessageHit(message, t, insidePinIcon);
+    }
+
+    private static MessageHit findHit(MinecraftClient client, Message message, int tickCounter) {
+        return findHit(client, message, tickCounter, CLICK_DISTANCE);
+    }
+
+    /** Ближайшее попадание луча в объём 3D-рамки. NaN — мимо. */
+    private static double intersectFrameVolume(
+        Vec3d origin,
+        Vec3d dir,
+        MessagePanelLayout.Dimensions dimensions,
+        float scale,
+        float fallOffsetY
+    ) {
+        double halfWidth = dimensions.maxTextWidth() / 2.0;
+        double halfHeight = dimensions.totalTextHeight() / 2.0;
+        double minX = (-MessagePanelConstants.PADDING_X - halfWidth) * scale;
+        double maxX = (halfWidth + MessagePanelConstants.PADDING_X) * scale;
+        double yAtTop = (MessagePanelConstants.PADDING_Y + halfHeight - fallOffsetY) * scale;
+        double yAtBottom = -(halfHeight + MessagePanelConstants.PADDING_Y + fallOffsetY) * scale;
+        double minY = Math.min(yAtTop, yAtBottom);
+        double maxY = Math.max(yAtTop, yAtBottom);
+        double minZ = MessageFrame3DModel.Z_BACK * scale;
+        double maxZ = MessageFrame3DModel.Z_FRONT * scale;
+
+        double tMin = Double.NEGATIVE_INFINITY;
+        double tMax = Double.POSITIVE_INFINITY;
+        double[] originAxis = {origin.x, origin.y, origin.z};
+        double[] dirAxis = {dir.x, dir.y, dir.z};
+        double[] boxMin = {minX, minY, minZ};
+        double[] boxMax = {maxX, maxY, maxZ};
+        for (int axis = 0; axis < 3; axis++) {
+            if (Math.abs(dirAxis[axis]) < 1e-8) {
+                if (originAxis[axis] < boxMin[axis] || originAxis[axis] > boxMax[axis]) {
+                    return Double.NaN;
+                }
+                continue;
+            }
+            double enter = (boxMin[axis] - originAxis[axis]) / dirAxis[axis];
+            double exit = (boxMax[axis] - originAxis[axis]) / dirAxis[axis];
+            if (enter > exit) {
+                double swap = enter;
+                enter = exit;
+                exit = swap;
+            }
+            tMin = Math.max(tMin, enter);
+            tMax = Math.min(tMax, exit);
+            if (tMin > tMax) {
+                return Double.NaN;
+            }
+        }
+        if (tMax < 0.0) {
+            return Double.NaN;
+        }
+        return Math.max(tMin, 0.0);
     }
 }
