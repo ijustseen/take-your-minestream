@@ -169,6 +169,7 @@
   "takeyourstreamchat.config.tiktok_cookie_help.desc": "Öffnet eine Schritt-für-Schritt-Anleitung mit Screenshots.",
   "takeyourstreamchat.config.tiktok_cookie_help.title": "TikTok-Cookies",
   "takeyourstreamchat.config.tiktok_cookie_help.intro": "Eine angemeldete TikTok-Sitzung sieht mehr Chat als ein Gast. Die Cookies sind ein Login — Fenster und Werte nicht im Stream zeigen.",
+  "takeyourstreamchat.config.tiktok_cookie_help.step0": "Mach das nur, wenn du nicht live bist. Läuft der Stream schon, zeig Bildschirm und Browser nicht.",
   "takeyourstreamchat.config.tiktok_cookie_help.step1": "Öffne tiktok.com im Browser und melde dich an.",
   "takeyourstreamchat.config.tiktok_cookie_help.step2": "Drücke F12 (Mac: Cmd+Option+I), um die Entwicklertools zu öffnen.",
   "takeyourstreamchat.config.tiktok_cookie_help.step3": "Tab Application (Chrome / Edge) oder Speicher (Firefox).",

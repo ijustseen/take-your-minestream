@@ -3,7 +3,9 @@ package takeyourminestream.ijustseen.integration.chat;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.integration.tiktok.TikTokSessionCookies;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.HttpCookie;
@@ -18,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * HTTP-утилиты чат-интеграций. Использует java.net.http.HttpClient:
@@ -130,6 +133,63 @@ public final class ChatHttp {
     public static String get(String url, String referer) throws IOException {
         HttpRequest.Builder builder = baseBuilder(url, referer).GET();
         return sendForBody(builder.build(), url);
+    }
+
+    /**
+     * Тот же GET через системный curl. У Java HttpClient другой TLS-отпечаток,
+     * и Kick иногда отвечает отказом именно на него, хотя curl с этой машины проходит.
+     */
+    public static String getWithSystemCurl(String url, String referer) throws IOException {
+        List<String> command = new ArrayList<>();
+        command.add("curl");
+        command.add("-sS");
+        command.add("-L");
+        command.add("--max-time");
+        command.add("20");
+        command.add("-A");
+        command.add(USER_AGENT);
+        command.add("-H");
+        command.add("Accept: application/json");
+        if (referer != null && !referer.isBlank()) {
+            command.add("-H");
+            command.add("Referer: " + referer);
+        }
+        command.add(url);
+
+        Process process;
+        try {
+            process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        } catch (IOException e) {
+            throw new IOException("curl is not available", e);
+        }
+
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        try (InputStream input = process.getInputStream()) {
+            byte[] chunk = new byte[8192];
+            int read;
+            while ((read = input.read(chunk)) >= 0) {
+                if (buffer.size() + read > 2_000_000) {
+                    process.destroyForcibly();
+                    throw new IOException("curl response is too large for " + url);
+                }
+                buffer.write(chunk, 0, read);
+            }
+        }
+        try {
+            if (!process.waitFor(25, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                throw new IOException("curl timed out for " + url);
+            }
+        } catch (InterruptedException e) {
+            process.destroyForcibly();
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while requesting " + url, e);
+        }
+        String body = buffer.toString(StandardCharsets.UTF_8);
+        if (process.exitValue() != 0 && body.isBlank()) {
+            throw new IOException("curl exit " + process.exitValue() + " for " + url);
+        }
+        return body;
     }
 
     /** Бинарный GET (protobuf TikTok IM fetch). Не гоняет тело через String. */

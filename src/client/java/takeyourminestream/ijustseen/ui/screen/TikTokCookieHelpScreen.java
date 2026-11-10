@@ -45,7 +45,16 @@ public class TikTokCookieHelpScreen extends DimScreen {
     private static final int INTRO_BG = 0x4025F4EE;
     private static final int STEP_BG = 0x402A2438;
     private static final int STEP_BORDER = 0xFF453465;
+    private static final int WARNING_BG = 0xC06A2428;
+    private static final int WARNING_ACCENT = 0xFFFF4D4D;
+    private static final int WARNING_BORDER = 0xFFFF7070;
 
+    private static final Step STEP_ZERO = new Step(
+        "takeyourstreamchat.config.tiktok_cookie_help.step0",
+        null,
+        0,
+        0
+    );
     private static final Step[] STEPS = {
         new Step("takeyourstreamchat.config.tiktok_cookie_help.step1", "cookie_step_1", 486, 172),
         new Step("takeyourstreamchat.config.tiktok_cookie_help.step2", "cookie_step_2", 2160, 1210),
@@ -186,8 +195,9 @@ public class TikTokCookieHelpScreen extends DimScreen {
             ModUiTheme.TEXT_SECONDARY
         ) + CARD_GAP;
 
+        y = drawStepCard(context, x, y, width, 0, STEP_ZERO, true) + CARD_GAP;
         for (int i = 0; i < STEPS.length; i++) {
-            y = drawStepCard(context, x, y, width, i + 1, STEPS[i]) + CARD_GAP;
+            y = drawStepCard(context, x, y, width, i + 1, STEPS[i], false) + CARD_GAP;
         }
 
         drawCallout(
@@ -202,18 +212,21 @@ public class TikTokCookieHelpScreen extends DimScreen {
         );
     }
 
-    private int drawStepCard(DrawContext context, int x, int y, int width, int number, Step step) {
+    private int drawStepCard(DrawContext context, int x, int y, int width, int number, Step step, boolean warning) {
         int height = measureStepCard(width, step);
-        context.fill(x, y, x + width, y + height, STEP_BG);
-        context.fill(x, y, x + 2, y + height, TIKTOK_ACCENT);
-        context.fill(x, y, x + width, y + 1, STEP_BORDER);
-        context.fill(x, y + height - 1, x + width, y + height, STEP_BORDER);
-        context.fill(x + width - 1, y, x + width, y + height, STEP_BORDER);
+        int background = warning ? WARNING_BG : STEP_BG;
+        int accent = warning ? WARNING_ACCENT : TIKTOK_ACCENT;
+        int border = warning ? WARNING_BORDER : STEP_BORDER;
+        context.fill(x, y, x + width, y + height, background);
+        context.fill(x, y, x + 2, y + height, accent);
+        context.fill(x, y, x + width, y + 1, border);
+        context.fill(x, y + height - 1, x + width, y + height, border);
+        context.fill(x + width - 1, y, x + width, y + height, border);
 
         int innerX = x + CARD_PAD + 2;
         int innerWidth = width - CARD_PAD * 2 - 2;
         int cursorY = y + CARD_PAD;
-        drawBadge(context, innerX, cursorY, number);
+        drawBadge(context, innerX, cursorY, number, warning);
         int textX = innerX + BADGE_SIZE + BADGE_TEXT_GAP;
         int textWidth = innerWidth - BADGE_SIZE - BADGE_TEXT_GAP;
         int textBottom = drawWrapped(
@@ -222,7 +235,7 @@ public class TikTokCookieHelpScreen extends DimScreen {
             textX,
             cursorY + Math.max(0, (BADGE_SIZE - this.textRenderer.fontHeight) / 2),
             textWidth,
-            ModUiTheme.TEXT_PRIMARY
+            warning ? 0xFFFFE8E8 : ModUiTheme.TEXT_PRIMARY
         );
         cursorY = Math.max(cursorY + BADGE_SIZE, textBottom);
 
@@ -252,8 +265,8 @@ public class TikTokCookieHelpScreen extends DimScreen {
         );
     }
 
-    private void drawBadge(DrawContext context, int x, int y, int number) {
-        context.fill(x, y, x + BADGE_SIZE, y + BADGE_SIZE, TIKTOK_ACCENT);
+    private void drawBadge(DrawContext context, int x, int y, int number, boolean warning) {
+        context.fill(x, y, x + BADGE_SIZE, y + BADGE_SIZE, warning ? WARNING_ACCENT : TIKTOK_ACCENT);
         String label = Integer.toString(number);
         int labelWidth = this.textRenderer.getWidth(label);
         context.drawTextWithShadow(
@@ -261,7 +274,7 @@ public class TikTokCookieHelpScreen extends DimScreen {
             label,
             x + (BADGE_SIZE - labelWidth) / 2,
             ModUiTheme.centeredTextY(y, BADGE_SIZE, this.textRenderer.fontHeight),
-            0xFF101018
+            warning ? 0xFFFFFFFF : 0xFF101018
         );
     }
 
@@ -301,6 +314,7 @@ public class TikTokCookieHelpScreen extends DimScreen {
         int innerWidth = width - CARD_PAD * 2 - 2;
         int y = wrappedHeight(Text.translatable("takeyourstreamchat.config.tiktok_cookie_help.intro"), innerWidth)
             + CARD_PAD * 2 + CARD_GAP;
+        y += measureStepCard(width, STEP_ZERO) + CARD_GAP;
         for (int i = 0; i < STEPS.length; i++) {
             y += measureStepCard(width, STEPS[i]) + CARD_GAP;
         }

@@ -4,6 +4,7 @@ import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 
 public final class SimpleWebSocket {
     private final String url;
+    private final java.util.Map<String, String> headers;
     private final MessageHandler messageHandler;
     private final Runnable onOpen;
     private volatile java.net.http.WebSocket webSocket;
@@ -13,17 +14,27 @@ public final class SimpleWebSocket {
         void onMessage(String message);
     }
 
-    public SimpleWebSocket(String url, Runnable onOpen, MessageHandler messageHandler) {
+    public SimpleWebSocket(
+        String url,
+        java.util.Map<String, String> headers,
+        Runnable onOpen,
+        MessageHandler messageHandler
+    ) {
         this.url = url;
+        this.headers = headers;
         this.onOpen = onOpen;
         this.messageHandler = messageHandler;
     }
 
     public void connect() {
         running = true;
-        java.net.http.HttpClient.newHttpClient()
-            .newWebSocketBuilder()
-            .buildAsync(java.net.URI.create(url), new java.net.http.WebSocket.Listener() {
+        java.net.http.WebSocket.Builder builder = java.net.http.HttpClient.newHttpClient().newWebSocketBuilder();
+        if (headers != null) {
+            for (java.util.Map.Entry<String, String> header : headers.entrySet()) {
+                builder.header(header.getKey(), header.getValue());
+            }
+        }
+        builder.buildAsync(java.net.URI.create(url), new java.net.http.WebSocket.Listener() {
                 private final StringBuilder buffer = new StringBuilder();
 
                 @Override
@@ -62,11 +73,13 @@ public final class SimpleWebSocket {
                     String reason
                 ) {
                     webSocket = null;
+                    running = false;
                     return null;
                 }
 
                 @Override
                 public void onError(java.net.http.WebSocket ws, Throwable error) {
+                    running = false;
                     TakeYourMineStreamClient.LOGGER.warn("WebSocket error: {}", error.getMessage());
                 }
             });

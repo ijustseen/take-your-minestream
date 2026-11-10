@@ -15,16 +15,20 @@ import takeyourminestream.ijustseen.integration.chat.ChatPlatform;
 import takeyourminestream.ijustseen.integration.chat.IncomingChatMessage;
 import takeyourminestream.ijustseen.integration.chat.SimpleWebSocket;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class KickChatClient implements ChatConnection {
     private static final Gson GSON = new Gson();
-    private static final String PUSHER_URL =
-        "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0&flash=false";
+    private static final String REALTIME_API = "https://web.kick.com/api/v1/realtime";
 
     private final String channelSlug;
     private final ChatMessagePipeline pipeline;
     private volatile boolean running;
     private volatile Thread workerThread;
     private SimpleWebSocket webSocket;
+    private final AtomicInteger nextCommandId = new AtomicInteger();
     private long channelId;
     private long chatroomId;
 
@@ -68,22 +72,103 @@ public class KickChatClient implements ChatConnection {
         }
     }
 
-    private void connectWebSocket() {
-        webSocket = new SimpleWebSocket(PUSHER_URL, () -> {
-            subscribePusher("chatrooms." + chatroomId + ".v2");
-            subscribePusher("chatrooms." + chatroomId);
-            if (channelId > 0) {
-                subscribePusher("channel." + channelId);
-            }
-        }, this::handleMessage);
+    private void connectWebSocket() throws java.io.IOException {
+        String clientId = UUID.randomUUID().toString();
+        String url = fetchRealtimeUrl(clientId);
+        String token = fetchRealtimeToken(clientId);
+        nextCommandId.set(0);
+        webSocket = new SimpleWebSocket(url, Map.of("Origin", "https://kick.com"), () -> sendCommand(
+            "\"connect\":{\"token\":" + GSON.toJson(token) + ",\"name\":\"js\"}"
+        ), this::handleSocketFrame);
         webSocket.connect();
     }
 
-    private void subscribePusher(String channel) {
-        webSocket.send(GSON.toJson(java.util.Map.of(
-            "event", "pusher:subscribe",
-            "data", java.util.Map.of("auth", "", "channel", channel)
-        )));
+    private void sendCommand(String body) {
+        SimpleWebSocket socket = webSocket;
+        if (socket == null || !running) {
+            return;
+        }
+        int id = nextCommandId.incrementAndGet();
+        socket.send("{\"id\":" + id + "," + body + "}");
+    }
+
+    private void subscribeChat(String channel) {
+        sendCommand("\"subscribe\":{\"channel\":" + GSON.toJson(channel) + "}");
+    }
+
+    /** Кадр Centrifugo: команды с id, пинг {@code {}} и публикации чата. */
+    private void handleSocketFrame(String raw) {
+        if (!running || raw == null || raw.isBlank()) {
+            return;
+        }
+        for (String line : raw.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            if ("{}".equals(trimmed)) {
+                SimpleWebSocket socket = webSocket;
+                if (socket != null) {
+                    socket.send("{}");
+                }
+                continue;
+            }
+            JsonObject message;
+            try {
+                message = JsonParser.parseString(trimmed).getAsJsonObject();
+            } catch (RuntimeException ignored) {
+                continue;
+            }
+            if (message.has("id") && message.get("id").isJsonPrimitive()) {
+                handleCommandReply(message);
+                continue;
+            }
+            if (message.has("push") && message.get("push").isJsonObject()) {
+                handlePush(message.getAsJsonObject("push"));
+            }
+        }
+    }
+
+    private void handleCommandReply(JsonObject message) {
+        if (message.has("error") && message.get("error").isJsonObject()) {
+            String reason = textOrEmpty(message.getAsJsonObject("error"), "message");
+            TakeYourMineStreamClient.LOGGER.warn("Kick realtime refused a command for {}: {}", channelSlug, reason);
+            SimpleWebSocket socket = webSocket;
+            if (socket != null) {
+                socket.disconnect();
+            }
+            return;
+        }
+        if (!message.has("connect")) {
+            return;
+        }
+        TakeYourMineStreamClient.LOGGER.info("Kick chat connected for {}", channelSlug);
+        takeyourminestream.ijustseen.integration.chat.ChatErrorReporter.clear(ChatPlatform.KICK);
+        subscribeChat("chatrooms." + chatroomId + ".v2");
+        subscribeChat("chatrooms." + chatroomId);
+        subscribeChat("chatroom_" + chatroomId);
+        if (channelId > 0) {
+            subscribeChat("channel." + channelId);
+        }
+    }
+
+    private void handlePush(JsonObject push) {
+        if (push.has("disconnect")) {
+            SimpleWebSocket socket = webSocket;
+            if (socket != null) {
+                socket.disconnect();
+            }
+            return;
+        }
+        if (!push.has("pub") || !push.get("pub").isJsonObject()) {
+            return;
+        }
+        JsonObject publication = push.getAsJsonObject("pub");
+        if (!publication.has("data") || publication.get("data").isJsonNull()) {
+            return;
+        }
+        JsonElement data = publication.get("data");
+        handleMessage(data.isJsonPrimitive() ? data.getAsString() : data.toString());
     }
 
     private void handleMessage(String raw) {
@@ -251,7 +336,39 @@ public class KickChatClient implements ChatConnection {
     private record KickIds(long channelId, long chatroomId) {}
 
     private static KickIds resolveIds(String slug) throws java.io.IOException {
-        String body = ChatHttp.get("https://kick.com/api/v2/channels/" + slug);
+        if (!slug.matches("[a-z0-9_-]{2,25}")) {
+            throw new takeyourminestream.ijustseen.integration.chat.ChatConnectException(
+                "takeyourstreamchat.chat.error.user_not_found",
+                "Kick channel not found or has no chatroom: " + slug,
+                "Kick", slug
+            );
+        }
+        String url = "https://kick.com/api/v2/channels/" + slug;
+        String referer = "https://kick.com/" + slug;
+        String body = null;
+        java.io.IOException javaError = null;
+        try {
+            body = ChatHttp.get(url, referer);
+        } catch (java.io.IOException e) {
+            javaError = e;
+        }
+        if (body == null || isBlockedChannelPayload(body)) {
+            try {
+                TakeYourMineStreamClient.LOGGER.info(
+                    "Kick channel lookup was blocked for {}, retrying with curl",
+                    slug
+                );
+                body = ChatHttp.getWithSystemCurl(url, referer);
+            } catch (java.io.IOException curlError) {
+                if (body != null) {
+                    // Java уже вернула отказ Kick — его и покажем игроку.
+                } else if (javaError != null) {
+                    throw javaError;
+                } else {
+                    throw curlError;
+                }
+            }
+        }
         JsonObject json = JsonParser.parseString(body).getAsJsonObject();
         if (!json.has("chatroom") || !json.get("chatroom").isJsonObject()) {
             if (json.has("error")) {
@@ -272,6 +389,85 @@ public class KickChatClient implements ChatConnection {
             ? json.get("id").getAsLong()
             : 0L;
         return new KickIds(channelId, chatroomId);
+    }
+
+    private String fetchRealtimeUrl(String clientId) throws java.io.IOException {
+        String endpoint = channelId > 0
+            ? REALTIME_API + "/channels/" + channelId + "/chat/connection"
+            : REALTIME_API + "/connection";
+        JsonObject data = realtimeData(ChatHttp.postJson(endpoint, clientBody(clientId), kickHeaders()));
+        if (data.has("connections") && data.get("connections").isJsonArray()) {
+            for (JsonElement element : data.getAsJsonArray("connections")) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject connection = element.getAsJsonObject();
+                if (!"centrifugo".equals(textOrEmpty(connection, "provider"))) {
+                    continue;
+                }
+                if (!connection.has("credentials") || !connection.get("credentials").isJsonObject()) {
+                    continue;
+                }
+                String url = textOrEmpty(connection.getAsJsonObject("credentials"), "url");
+                if (url.startsWith("wss://")) {
+                    return url;
+                }
+            }
+        }
+        throw new takeyourminestream.ijustseen.integration.chat.ChatConnectException(
+            "takeyourstreamchat.chat.error.generic",
+            "Kick realtime has no websocket url",
+            "Kick", "no chat socket"
+        );
+    }
+
+    private static String fetchRealtimeToken(String clientId) throws java.io.IOException {
+        JsonObject data = realtimeData(ChatHttp.postJson(
+            REALTIME_API + "/auth/connection",
+            GSON.toJson(Map.of("client_id", clientId)),
+            kickHeaders()
+        ));
+        String token = textOrEmpty(data, "token");
+        if (token.isBlank()) {
+            throw new takeyourminestream.ijustseen.integration.chat.ChatConnectException(
+                "takeyourstreamchat.chat.error.generic",
+                "Kick realtime token is missing",
+                "Kick", "no chat token"
+            );
+        }
+        return token;
+    }
+
+    private static String clientBody(String clientId) {
+        return GSON.toJson(Map.of(
+            "client", Map.of("id", clientId, "type", "web"),
+            "capabilities", Map.of("accepted_providers", java.util.List.of(Map.of("provider", "centrifugo")))
+        ));
+    }
+
+    private static Map<String, String> kickHeaders() {
+        return Map.of("Origin", "https://kick.com", "Referer", "https://kick.com/");
+    }
+
+    private static JsonObject realtimeData(String body) {
+        JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+        if (json.has("data") && json.get("data").isJsonObject()) {
+            return json.getAsJsonObject("data");
+        }
+        return json;
+    }
+
+    private static boolean isBlockedChannelPayload(String body) {
+        if (body == null || body.isBlank() || body.charAt(0) != '{') {
+            return false;
+        }
+        try {
+            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+            boolean hasChatroom = json.has("chatroom") && json.get("chatroom").isJsonObject();
+            return !hasChatroom && json.has("error");
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     private static JsonObject parseData(JsonObject envelope) {

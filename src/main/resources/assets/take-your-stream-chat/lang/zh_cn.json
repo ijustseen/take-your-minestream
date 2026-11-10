@@ -169,6 +169,7 @@
   "takeyourstreamchat.config.tiktok_cookie_help.desc": "打开带截图的分步说明。",
   "takeyourstreamchat.config.tiktok_cookie_help.title": "TikTok Cookie",
   "takeyourstreamchat.config.tiktok_cookie_help.intro": "登录后的 TikTok 会话比游客能看到更多聊天。这些 Cookie 等于登录信息，请勿在直播中展示本窗口或数值。",
+  "takeyourstreamchat.config.tiktok_cookie_help.step0": "只在未开播时操作。如果已经在直播，不要露出屏幕和浏览器。",
   "takeyourstreamchat.config.tiktok_cookie_help.step1": "在浏览器打开 tiktok.com 并登录账号。",
   "takeyourstreamchat.config.tiktok_cookie_help.step2": "按 F12（Mac：Cmd+Option+I）打开开发者工具。",
   "takeyourstreamchat.config.tiktok_cookie_help.step3": "打开 Application（Chrome / Edge）或“存储”（Firefox）标签。",

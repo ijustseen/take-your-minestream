@@ -169,6 +169,7 @@
   "takeyourstreamchat.config.tiktok_cookie_help.desc": "Открывает пошаговую инструкцию со скриншотами.",
   "takeyourstreamchat.config.tiktok_cookie_help.title": "Cookie TikTok",
   "takeyourstreamchat.config.tiktok_cookie_help.intro": "Залогиненная сессия TikTok видит больше чата, чем гость. Эти cookie — вход в аккаунт: не показывай это окно и значения на стриме.",
+  "takeyourstreamchat.config.tiktok_cookie_help.step0": "Делай это только без стрима. Если эфир уже идёт — не показывай экран и браузер.",
   "takeyourstreamchat.config.tiktok_cookie_help.step1": "Открой tiktok.com в браузере и войди в аккаунт.",
   "takeyourstreamchat.config.tiktok_cookie_help.step2": "Нажми F12 (на Mac: Cmd+Option+I), чтобы открыть инструменты разработчика.",
   "takeyourstreamchat.config.tiktok_cookie_help.step3": "Вкладка Application (Chrome / Edge) или Хранилище (Firefox).",
