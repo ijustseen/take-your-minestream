@@ -115,12 +115,17 @@ public class BanwordConfigScreen extends DimScreen {
         int bottom = this.height - LIST_BOTTOM_OFFSET;
         ModUiTheme.drawBorderedPanel(context, PADDING, top, this.width - PADDING * 2, bottom - top);
 
+        int clipLeft = PADDING + 1;
+        int clipTop = top + 1;
+        int clipRight = this.width - PADDING - 1;
+        int clipBottom = bottom - 1;
         int rowLeft = PADDING + 2;
         int rowRight = this.width - PADDING - 2;
         int y = top + PADDING - scrollOffset;
         int textX = PADDING * 2;
+        context.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
         for (String word : banwordList) {
-            if (y + LINE_HEIGHT > top + PADDING && y < bottom - PADDING) {
+            if (y + LINE_HEIGHT > clipTop && y < clipBottom) {
                 boolean rowHovered = ModUiTheme.isHovered(mouseX, mouseY, rowLeft, y, rowRight - rowLeft, LINE_HEIGHT);
                 ModUiTheme.drawListRow(context, rowLeft, y, rowRight, y + LINE_HEIGHT, rowHovered);
 
@@ -163,6 +168,7 @@ public class BanwordConfigScreen extends DimScreen {
             }
             y += LINE_HEIGHT;
         }
+        context.disableScissor();
 
         if (inputField != null) {
             ModUiTheme.drawInputFrame(
@@ -185,10 +191,15 @@ public class BanwordConfigScreen extends DimScreen {
 
         int top = LIST_TOP;
         int bottom = this.height - LIST_BOTTOM_OFFSET;
+        int clipTop = top + 1;
+        int clipBottom = bottom - 1;
+        if (mouseY < clipTop || mouseY > clipBottom) {
+            return false;
+        }
         int y = top + PADDING - scrollOffset;
         int btnX = this.width - PADDING - 4 - REMOVE_BTN_SIZE;
         for (String word : banwordList) {
-            if (y + LINE_HEIGHT > top + PADDING && y < bottom - PADDING) {
+            if (y + LINE_HEIGHT > clipTop && y < clipBottom) {
                 if (mouseX >= btnX && mouseX <= btnX + REMOVE_BTN_SIZE
                     && mouseY >= y && mouseY <= y + REMOVE_BTN_SIZE) {
                     banwordManager.removeBanword(word);

@@ -141,19 +141,25 @@ public abstract class AbstractStringListScreen extends DimScreen {
 
     protected void renderDefaultList(DrawContext context, int mouseX, int mouseY, EntryRenderer renderer) {
         drawListPanel(context);
+        int clipLeft = PADDING + 1;
+        int clipTop = listTop() + 1;
+        int clipRight = this.width - PADDING - 1;
+        int clipBottom = listBottom() - 1;
         int y = listTop() + PADDING - scrollOffset;
         int textX = PADDING * 2;
         int rowLeft = PADDING + 2;
         int rowRight = this.width - PADDING - 2;
 
+        context.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
         for (String entry : entries) {
-            if (y + LINE_HEIGHT > listTop() + PADDING && y < listBottom() - PADDING) {
+            if (y + LINE_HEIGHT > clipTop && y < clipBottom) {
                 boolean rowHovered = ModUiTheme.isHovered(mouseX, mouseY, rowLeft, y, rowRight - rowLeft, LINE_HEIGHT);
                 ModUiTheme.drawListRow(context, rowLeft, y, rowRight, y + LINE_HEIGHT, rowHovered);
                 renderer.render(context, entry, textX, y, mouseX, mouseY);
             }
             y += LINE_HEIGHT;
         }
+        context.disableScissor();
     }
 
     protected void drawRemoveButton(DrawContext context, int y, int mouseX, int mouseY) {
@@ -177,10 +183,15 @@ public abstract class AbstractStringListScreen extends DimScreen {
             return false;
         }
 
+        int clipTop = listTop() + 1;
+        int clipBottom = listBottom() - 1;
+        if (mouseY < clipTop || mouseY > clipBottom) {
+            return false;
+        }
         int y = listTop() + PADDING - scrollOffset;
         int btnX = this.width - PADDING - 4 - REMOVE_BTN_SIZE;
         for (String entry : entries) {
-            if (y + LINE_HEIGHT > listTop() + PADDING && y < listBottom() - PADDING) {
+            if (y + LINE_HEIGHT > clipTop && y < clipBottom) {
                 int btnY = y;
                 if (mouseX >= btnX && mouseX <= btnX + REMOVE_BTN_SIZE
                     && mouseY >= btnY && mouseY <= btnY + REMOVE_BTN_SIZE) {
