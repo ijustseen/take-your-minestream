@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.filtering.FilteringManager;
+import takeyourminestream.ijustseen.ui.gui.ConfirmResetButton;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import takeyourminestream.ijustseen.ui.gui.ScreenUiHelper;
@@ -63,7 +64,22 @@ public class RegexpConfigScreen extends DimScreen {
             }
         }).dimensions(this.width - PADDING - buttonW, bottomY - buttonH - spacing, buttonW, buttonH).build());
 
-        this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.back"), btn -> this.close()).dimensions(centerX - buttonW / 2, bottomY, buttonW, buttonH).build());
+        int gap = 8;
+        int rowLeft = centerX - buttonW - gap / 2;
+        this.addDrawableChild(ConfirmResetButton.create(
+            rowLeft,
+            bottomY,
+            buttonW,
+            buttonH,
+            Text.translatable("takeyourstreamchat.config.reset_defaults.button"),
+            () -> {
+                filteringManager.clearAll();
+                reloadList();
+                scrollOffset = 0;
+            }
+        ));
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.back"), btn -> this.close())
+            .dimensions(rowLeft + buttonW + gap, bottomY, buttonW, buttonH).build());
     }
 
     private void reloadList() {

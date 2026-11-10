@@ -56,18 +56,8 @@ public class BanwordManager implements IBanwordManager {
 
     @Override
     public void loadBanwords() {
-        try (InputStreamReader reader = new InputStreamReader(
-                BanwordManager.class.getClassLoader().getResourceAsStream(RESOURCE_PATH),
-                StandardCharsets.UTF_8)) {
-            Type listType = new TypeToken<List<String>>(){}.getType();
-            List<String> words = new Gson().fromJson(reader, listType);
-            banwords.clear();
-            if (words != null) {
-                banwords.addAll(words);
-            }
-        } catch (Exception e) {
-            LOGGER.severe("Failed to load banwords: " + e.getMessage());
-        }
+        banwords.clear();
+        loadBuiltInBanwords();
 
         // Загрузка пользовательского файла и слияние
         try {
@@ -146,11 +136,35 @@ public class BanwordManager implements IBanwordManager {
         return Collections.unmodifiableSet(banwords);
     }
 
+    @Override
+    public void resetToDefaults() {
+        banwords.clear();
+        loadBuiltInBanwords();
+        writeUserBanwords(List.of());
+    }
+
+    private void loadBuiltInBanwords() {
+        try (InputStreamReader reader = new InputStreamReader(
+                BanwordManager.class.getClassLoader().getResourceAsStream(RESOURCE_PATH),
+                StandardCharsets.UTF_8)) {
+            Type listType = new TypeToken<List<String>>(){}.getType();
+            List<String> words = new Gson().fromJson(reader, listType);
+            if (words != null) {
+                banwords.addAll(words);
+            }
+        } catch (Exception e) {
+            LOGGER.severe("Failed to load banwords: " + e.getMessage());
+        }
+    }
+
     private void saveUserBanwords() {
+        writeUserBanwords(banwords.stream().sorted().toList());
+    }
+
+    private void writeUserBanwords(List<String> list) {
         try {
             Path userFile = USER_FILE_PATH;
             Files.createDirectories(userFile.getParent());
-            List<String> list = banwords.stream().sorted().toList();
             try (BufferedWriter writer = Files.newBufferedWriter(userFile, StandardCharsets.UTF_8)) {
                 new Gson().toJson(list, writer);
             }

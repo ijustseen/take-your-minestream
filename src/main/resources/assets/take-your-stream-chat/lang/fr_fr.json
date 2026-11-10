@@ -301,7 +301,7 @@
   "takeyourstreamchat.config.role_filter.tiktok.mods.desc": "Modérateurs TikTok LIVE et l’hôte.",
   "takeyourstreamchat.config.reset_defaults": "Réinitialiser",
   "takeyourstreamchat.config.reset_defaults.button": "Reset",
-  "takeyourstreamchat.config.reset_defaults.desc": "Rétablir tous les réglages de cet écran aux valeurs par défaut. Les noms de chaîne et les listes de mots bannis, pseudos et regexps sont conservés.",
+  "takeyourstreamchat.config.reset_defaults.desc": "Rétablir les réglages de cet écran. Les noms de chaîne, la connexion TikTok, les mots bannis, les pseudos, les regexps et les messages épinglés restent. On les efface depuis leurs propres écrans.",
   "takeyourstreamchat.config.reset_confirm": "Cliquer encore pour confirmer",
   "takeyourstreamchat.config.color_picker.title": "Choisir une couleur",
   "takeyourstreamchat.config.color_picker.hex": "HEX",
@@ -355,5 +355,7 @@
   "takeyourstreamchat.config.event.tiktok.subscribe": "Abos LIVE :",
   "takeyourstreamchat.config.event.tiktok.subscribe.desc": "Show TikTok LIVE subscriptions.",
   "takeyourstreamchat.config.event.tiktok.gift": "Cadeaux :",
-  "takeyourstreamchat.config.event.tiktok.gift.desc": "Show TikTok gifts."
+  "takeyourstreamchat.config.event.tiktok.gift.desc": "Show TikTok gifts.",
+  "takeyourstreamchat.history.clear_pinned": "Retirer épinglés",
+  "takeyourstreamchat.config.reset_confirm_short": "Confirmer"
 }

@@ -166,6 +166,44 @@ public final class PinnedMessageStore {
         }
     }
 
+    /** Стирает закрепления текущего измерения и перезаписывает его файл. */
+    public static synchronized void clearCurrentWorld(MessageLifecycleManager lifecycleManager) {
+        if (lifecycleManager == null) {
+            return;
+        }
+        removeAllPinnedInMemory(lifecycleManager);
+        saveForCurrentWorld(lifecycleManager);
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(getLegacyStorageFile(client));
+        } catch (IOException e) {
+            Logger.error("Failed to clear legacy pinned messages", e);
+        }
+    }
+
+    /** Стирает закрепления во всех мирах и измерениях. */
+    public static synchronized void clearAll(MessageLifecycleManager lifecycleManager) {
+        if (lifecycleManager != null) {
+            removeAllPinnedInMemory(lifecycleManager);
+        }
+        Path dir = StoragePaths.getModRootDir().resolve(STORE_DIR);
+        if (!Files.isDirectory(dir)) {
+            return;
+        }
+        try (var files = Files.list(dir)) {
+            for (Path file : files.toList()) {
+                if (Files.isRegularFile(file)) {
+                    Files.deleteIfExists(file);
+                }
+            }
+        } catch (IOException e) {
+            Logger.error("Failed to clear pinned messages", e);
+        }
+    }
+
     private static void removeAllPinnedInMemory(MessageLifecycleManager lifecycleManager) {
         List<Message> activeMessages = new ArrayList<>(lifecycleManager.getLiveMessages());
         for (Message message : activeMessages) {

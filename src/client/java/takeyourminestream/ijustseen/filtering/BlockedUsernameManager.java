@@ -95,6 +95,11 @@ public class BlockedUsernameManager {
         return Collections.unmodifiableSet(blockedUsernames);
     }
 
+    public void clearAll() {
+        blockedUsernames.clear();
+        saveBlockedUsernames();
+    }
+
     private static String normalize(String username) {
         return username.trim().toLowerCase();
     }

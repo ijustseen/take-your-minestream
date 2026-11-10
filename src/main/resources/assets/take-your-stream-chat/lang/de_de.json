@@ -301,7 +301,7 @@
   "takeyourstreamchat.config.role_filter.tiktok.mods.desc": "TikTok-LIVE-Moderatoren und Host.",
   "takeyourstreamchat.config.reset_defaults": "Zurücksetzen",
   "takeyourstreamchat.config.reset_defaults.button": "Reset",
-  "takeyourstreamchat.config.reset_defaults.desc": "Alle Einstellungen dieses Bildschirms auf Standardwerte zurücksetzen. Kanalnamen, Bannwörter, blockierte Namen und Regexps bleiben erhalten.",
+  "takeyourstreamchat.config.reset_defaults.desc": "Alle Einstellungen dieses Bildschirms auf Standardwerte zurücksetzen. Kanalnamen, TikTok-Login, Bannwörter, blockierte Namen, Regexps und angeheftete Nachrichten bleiben. Die löscht man auf ihren eigenen Bildschirmen.",
   "takeyourstreamchat.config.reset_confirm": "Nochmal klicken zum Bestätigen",
   "takeyourstreamchat.config.color_picker.title": "Farbe wählen",
   "takeyourstreamchat.config.color_picker.hex": "HEX",
@@ -355,5 +355,7 @@
   "takeyourstreamchat.config.event.tiktok.subscribe": "LIVE-Abos:",
   "takeyourstreamchat.config.event.tiktok.subscribe.desc": "TikTok-LIVE-Abos anzeigen.",
   "takeyourstreamchat.config.event.tiktok.gift": "Geschenke:",
-  "takeyourstreamchat.config.event.tiktok.gift.desc": "TikTok-Geschenke anzeigen."
+  "takeyourstreamchat.config.event.tiktok.gift.desc": "TikTok-Geschenke anzeigen.",
+  "takeyourstreamchat.history.clear_pinned": "Pins löschen",
+  "takeyourstreamchat.config.reset_confirm_short": "Bestätigen"
 }

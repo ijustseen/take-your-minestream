@@ -43,6 +43,16 @@ public class BlockedUsernameConfigScreen extends AbstractStringListScreen {
     }
 
     @Override
+    protected boolean showsResetButton() {
+        return true;
+    }
+
+    @Override
+    protected void onResetList() {
+        blockedUsernameManager.clearAll();
+    }
+
+    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         var hiddenButtons = takeyourminestream.ijustseen.ui.gui.ScreenUiHelper.hideButtons(this);
         super.render(context, mouseX, mouseY, delta);

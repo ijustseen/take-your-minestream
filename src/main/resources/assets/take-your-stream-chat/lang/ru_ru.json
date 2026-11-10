@@ -301,7 +301,7 @@
   "takeyourstreamchat.config.role_filter.tiktok.mods.desc": "Модераторы TikTok LIVE и хост.",
   "takeyourstreamchat.config.reset_defaults": "Сбросить настройки",
   "takeyourstreamchat.config.reset_defaults.button": "Сбросить",
-  "takeyourstreamchat.config.reset_defaults.desc": "Вернуть все настройки этого экрана к значениям по умолчанию. Имена каналов, списки банвордов, ников и regexp не меняются.",
+  "takeyourstreamchat.config.reset_defaults.desc": "Вернуть настройки этого экрана к значениям по умолчанию. Имена каналов, вход TikTok, банворды, ники, regexp и закреплённые сообщения не меняются. Их очищают кнопки на своих экранах.",
   "takeyourstreamchat.config.reset_confirm": "Нажмите ещё раз",
   "takeyourstreamchat.config.color_picker.title": "Выбор цвета",
   "takeyourstreamchat.config.color_picker.hex": "HEX",
@@ -355,5 +355,7 @@
   "takeyourstreamchat.config.event.tiktok.subscribe": "LIVE-подписки:",
   "takeyourstreamchat.config.event.tiktok.subscribe.desc": "Показывать платные подписки TikTok LIVE.",
   "takeyourstreamchat.config.event.tiktok.gift": "Подарки:",
-  "takeyourstreamchat.config.event.tiktok.gift.desc": "Показывать подарки TikTok."
+  "takeyourstreamchat.config.event.tiktok.gift.desc": "Показывать подарки TikTok.",
+  "takeyourstreamchat.history.clear_pinned": "Сбросить пины",
+  "takeyourstreamchat.config.reset_confirm_short": "Ещё раз"
 }

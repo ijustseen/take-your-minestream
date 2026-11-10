@@ -87,7 +87,7 @@ public class ConfigManager implements IConfigManager {
 
     /**
      * Сбрасывает JSON-конфиг к значениям {@link ModConfigData} по умолчанию.
-     * Имена каналов платформ, cookie TikTok и списки банвордов/ников/regexp не трогает.
+     * Имена каналов, cookie TikTok, банворды, ники, regexp и закрепления не трогает.
      */
     public void resetToDefaults() {
         ModConfigData previous = this.configData;

@@ -301,7 +301,7 @@
   "takeyourstreamchat.config.role_filter.tiktok.mods.desc": "TikTok LIVE 管理员与主播。",
   "takeyourstreamchat.config.reset_defaults": "重置为默认",
   "takeyourstreamchat.config.reset_defaults.button": "重置",
-  "takeyourstreamchat.config.reset_defaults.desc": "将此屏幕的所有设置恢复为出厂默认。频道名称、屏蔽词、屏蔽昵称和正则列表保持不变。",
+  "takeyourstreamchat.config.reset_defaults.desc": "将此屏幕的设置恢复为默认。频道名、TikTok 登录、屏蔽词、屏蔽昵称、正则和置顶消息保持不变。它们只能在各自的页面里清除。",
   "takeyourstreamchat.config.reset_confirm": "再点一次以确认",
   "takeyourstreamchat.config.color_picker.title": "选择颜色",
   "takeyourstreamchat.config.color_picker.hex": "HEX",
@@ -355,5 +355,7 @@
   "takeyourstreamchat.config.event.tiktok.subscribe": "LIVE 订阅：",
   "takeyourstreamchat.config.event.tiktok.subscribe.desc": "显示 TikTok LIVE 付费订阅。",
   "takeyourstreamchat.config.event.tiktok.gift": "礼物：",
-  "takeyourstreamchat.config.event.tiktok.gift.desc": "显示 TikTok 礼物。"
+  "takeyourstreamchat.config.event.tiktok.gift.desc": "显示 TikTok 礼物。",
+  "takeyourstreamchat.history.clear_pinned": "清除置顶",
+  "takeyourstreamchat.config.reset_confirm_short": "确认"
 }

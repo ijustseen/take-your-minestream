@@ -6,6 +6,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.client.gui.Click;
 import org.jetbrains.annotations.Nullable;
+import takeyourminestream.ijustseen.ui.gui.ConfirmResetButton;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.ModUiTheme;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -58,8 +59,34 @@ public abstract class AbstractStringListScreen extends DimScreen {
             }
         }).dimensions(this.width - PADDING - buttonW, bottomY - buttonH - spacing, buttonW, buttonH).build());
 
+        int backX = this.width / 2 - buttonW / 2;
+        if (showsResetButton()) {
+            int gap = 8;
+            int rowLeft = this.width / 2 - buttonW - gap / 2;
+            this.addDrawableChild(ConfirmResetButton.create(
+                rowLeft,
+                bottomY,
+                buttonW,
+                buttonH,
+                Text.translatable("takeyourstreamchat.config.reset_defaults.button"),
+                () -> {
+                    onResetList();
+                    reloadEntries();
+                    scrollOffset = 0;
+                }
+            ));
+            backX = rowLeft + buttonW + gap;
+        }
         this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.back"), btn -> close())
-            .dimensions(this.width / 2 - buttonW / 2, bottomY, buttonW, buttonH).build());
+            .dimensions(backX, bottomY, buttonW, buttonH).build());
+    }
+
+    /** Показать кнопку сброса списка. По умолчанию её нет. */
+    protected boolean showsResetButton() {
+        return false;
+    }
+
+    protected void onResetList() {
     }
 
     protected abstract Text inputPlaceholder();

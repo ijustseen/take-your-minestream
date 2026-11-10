@@ -96,6 +96,11 @@ public class FilteringManager {
         return Collections.unmodifiableSet(regexps);
     }
 
+    public void clearAll() {
+        regexps.clear();
+        saveUserRegexps();
+    }
+
     private void saveUserRegexps() {
         try {
             Path userFile = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);

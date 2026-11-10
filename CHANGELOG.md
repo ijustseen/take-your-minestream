@@ -6,7 +6,7 @@
 
 - **Message size is now a slider in percent** (25–300%, step 5%) instead of five presets. 100% is the former “Normal”; existing configs are migrated once (Tiny → 45%, Small → 75%, Large → 135%, Huge → 165%)
 - **Separate HUD widget size** — HUD cards have their own size slider (shown in HUD mode), world messages keep theirs (shown in world mode)
-- **Reset to defaults keeps channel names** — Twitch / YouTube / Kick channels and the TikTok username survive a reset; everything else (including which platforms are enabled) goes back to defaults
+- **Reset to defaults keeps channel names** — Twitch / YouTube / Kick channels and the TikTok username survive a reset; everything else on the settings screen (including which platforms are enabled) goes back to defaults. Banwords, blocked names, regexps and pinned messages are left alone and cleared only by the reset button on their own screen (second click confirms)
 - **Twitch connects by channel name only** — the stream-key option is gone. It never unlocked extra events, only resolved the same nick, so the field is just a channel name again. Old keys are dropped from the config on the next save
 - **TikTok session cookies** — optional `sessionid` and `tt-target-idc` are separate fields on the TikTok page (`sessionid` stays masked). A `?` next to `sessionid` opens a help screen with screenshots at their own aspect ratio. Logged-in webcast sees more comments than a guest; leave both empty to stay anonymous. An older combined cookie string is split once on load
 

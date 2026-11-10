@@ -21,6 +21,8 @@ import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageHistoryActions;
 import takeyourminestream.ijustseen.messages.MessageLifecycleManager;
+import takeyourminestream.ijustseen.messages.PinnedMessageStore;
+import takeyourminestream.ijustseen.ui.gui.ConfirmResetButton;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.GuiLayerFlush;
 import takeyourminestream.ijustseen.ui.gui.HistoryMessageActionPopup;
@@ -92,8 +94,10 @@ public class MessageHistoryScreen extends DimScreen {
 
         int centerX = this.width / 2;
         int buttonY = this.height - 28;
-        int buttonWidth = 100;
-        int buttonSpacing = 10;
+        int buttonWidth = 88;
+        int buttonSpacing = 6;
+        int rowWidth = buttonWidth * 3 + buttonSpacing * 2;
+        int rowLeft = centerX - rowWidth / 2;
 
         historySizeField = new ConfigIntTextFieldWidget(
             this.textRenderer,
@@ -116,12 +120,25 @@ public class MessageHistoryScreen extends DimScreen {
                 actionPopup.dismiss();
                 updateLayout();
             }
-        ).dimensions(centerX - buttonWidth - buttonSpacing / 2, buttonY, buttonWidth, 20).build());
+        ).dimensions(rowLeft, buttonY, buttonWidth, 20).build());
+
+        this.addDrawableChild(ConfirmResetButton.create(
+            rowLeft + buttonWidth + buttonSpacing,
+            buttonY,
+            buttonWidth,
+            20,
+            Text.translatable("takeyourstreamchat.history.clear_pinned"),
+            () -> {
+                PinnedMessageStore.clearCurrentWorld(lifecycleManager);
+                actionPopup.dismiss();
+                updateLayout();
+            }
+        ));
 
         this.addDrawableChild(ButtonWidget.builder(
             Text.translatable("takeyourstreamchat.history.close"),
             btn -> this.close()
-        ).dimensions(centerX + buttonSpacing / 2, buttonY, buttonWidth, 20).build());
+        ).dimensions(rowLeft + (buttonWidth + buttonSpacing) * 2, buttonY, buttonWidth, 20).build());
     }
 
     private static int computeColumnPanelWidth() {

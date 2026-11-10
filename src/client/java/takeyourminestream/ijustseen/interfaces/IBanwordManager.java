@@ -35,6 +35,9 @@ public interface IBanwordManager {
      */
     void removeBanword(String banword);
 
+    /** Возвращает встроенный список и стирает пользовательские добавления. */
+    void resetToDefaults();
+
     /**
      * Возвращает неизменяемый набор текущих банвордов
      */
