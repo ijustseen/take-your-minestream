@@ -327,3 +327,31 @@ stonecutter parameters {
         }
     }
 }
+
+val publishOrder = listOf(
+    "1.20.1", "1.21", "1.21.1", "1.21.4", "1.21.8", "1.21.10", "1.21.11", "26.1", "26.2", "26.3",
+)
+
+fun registerPublishAll(taskName: String, description: String) {
+    tasks.register(taskName) {
+        group = "publishing"
+        this.description = description
+        val versionTasks = publishOrder.map { project(":$it").tasks.named(taskName) }
+        dependsOn(versionTasks)
+        for (index in 1 until versionTasks.size) {
+            versionTasks[index].configure { mustRunAfter(versionTasks[index - 1]) }
+        }
+    }
+}
+
+registerPublishAll("publishModrinth", "Upload every Minecraft jar to Modrinth")
+registerPublishAll("publishCurseforge", "Upload every Minecraft jar to CurseForge")
+
+// Gradle would otherwise run every version's publishMods and upload both sites at once.
+tasks.register("publishMods") {
+    group = "publishing"
+    description = "Disabled — use publishModrinth or publishCurseforge"
+    doLast {
+        throw GradleException("Use ./gradlew publishModrinth or ./gradlew publishCurseforge")
+    }
+}

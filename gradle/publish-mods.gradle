@@ -1,0 +1,90 @@
+def minecraftVersion = project.name
+def modVersion = (findProperty("mod.version") ?: rootProject.findProperty("mod.version")) as String
+def targetsProperty = findProperty("mod.mc_targets") as String
+def gameVersions = targetsProperty
+    ? targetsProperty.tokenize().findAll { !it.isBlank() }
+    : [minecraftVersion]
+if (gameVersions.isEmpty()) {
+    gameVersions = [minecraftVersion]
+}
+
+def jarTaskName = minecraftVersion.startsWith("26.") ? "jar" : "remapJar"
+def modJar = tasks.named(jarTaskName).flatMap { it.archiveFile }
+
+def releaseNotes = providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md")).asText.map { text ->
+    def header = text.indexOf("## [")
+    if (header < 0) {
+        return text.trim()
+    }
+    def next = text.indexOf("\n## [", header + 4)
+    return (next < 0 ? text.substring(header) : text.substring(header, next)).trim()
+}
+
+// Secrets live in the local .env (gitignored). Real process env still works for CI.
+def envFileValues = [:]
+def envFile = rootProject.file(".env")
+if (envFile.exists()) {
+    envFile.eachLine { line ->
+        def trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith("#")) {
+            return
+        }
+        def eq = trimmed.indexOf("=")
+        if (eq <= 0) {
+            return
+        }
+        def key = trimmed.substring(0, eq).trim()
+        def value = trimmed.substring(eq + 1).trim()
+        if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.substring(1, value.length() - 1)
+        }
+        if (!key.isEmpty()) {
+            envFileValues[key] = value
+        }
+    }
+}
+
+def secret = { String name ->
+    def fromFile = envFileValues[name]
+    if (fromFile != null && !fromFile.isBlank()) {
+        return providers.provider { fromFile }
+    }
+    return providers.environmentVariable(name)
+}
+
+def shownVersions = gameVersions.join(", ")
+
+publishMods {
+    file = modJar
+    version = "${modVersion}+${minecraftVersion}"
+    displayName = "${modVersion} for ${shownVersions}"
+    changelog = releaseNotes
+    type = STABLE
+    modLoaders.add("fabric")
+
+    modrinth {
+        accessToken = secret("MODRINTH_TOKEN")
+        projectId = secret("MODRINTH_ID")
+        minecraftVersions.addAll(gameVersions)
+        environment = CLIENT_ONLY
+        requires("fabric-api")
+        optional("modmenu")
+        dryRun = secret("MODRINTH_TOKEN").map { false }.orElse(true)
+    }
+
+    curseforge {
+        accessToken = secret("CURSEFORGE_TOKEN")
+        projectId = secret("CURSEFORGE_ID")
+        minecraftVersions.addAll(gameVersions)
+        client = true
+        server = false
+        requires("fabric-api")
+        optional("modmenu")
+        dryRun = secret("CURSEFORGE_TOKEN").map { false }.orElse(true)
+    }
+}
+
+// Keep Modrinth and CurseForge as separate root commands.
+tasks.named("publishMods").configure {
+    enabled = false
+}

@@ -54,6 +54,39 @@
 
 Имена артефактов: `tysc-<mod.version>+<minecraft>.jar` (например `tysc-2.0.0+1.21.11.jar`, `tysc-2.0.0+26.1.jar`).
 
+### Публикация
+
+Две отдельные команды. Каждая собирает все банки и выкладывает их по одной версии Minecraft на площадку (`2.2.0+1.21.11` и так далее). Банка 26.1 дополнительно помечается совместимой с 26.1.1 и 26.1.2.
+
+```bash
+./gradlew publishModrinth
+./gradlew publishCurseforge
+```
+
+`publishMods` отключён специально: он бы залил обе площадки сразу. Без токена команда уходит в dry-run и ничего не публикует.
+
+Токены только в локальном `.env` (файл в `.gitignore`, в публичный GitHub не попадёт). Скопируй шаблон и заполни:
+
+```bash
+cp .env.example .env
+```
+
+```
+MODRINTH_ID=wK5BN6Ju
+MODRINTH_TOKEN=...
+CURSEFORGE_ID=1351188
+CURSEFORGE_TOKEN=...
+```
+
+Id проектов тоже только в `.env`, не в git.
+
+Где взять:
+
+- **Modrinth** — [modrinth.com/settings/pats](https://modrinth.com/settings/pats). Создай PAT со scopes **Create / Read / Write versions**.
+- **CurseForge** — только со страницы [legacy.curseforge.com/account/api-tokens](https://legacy.curseforge.com/account/api-tokens) (так пишет mod-publish-plugin). Ключи из console или с `www.curseforge.com` выглядят так же (`$2a$10$…`), но upload API отвечает `API token is malformed`. В `.env` лучше так: `CURSEFORGE_TOKEN='$2a$10$...'`.
+
+Повторная заливка той же версии не пройдёт: номер `2.2.0+1.21.11` уже занят.
+
 ### Minecraft 26.1 / 26.1.1 / 26.1.2
 
 **26.1.1** и **26.1.2** — хотфиксы линии **26.1** (без ломающих изменений API). Отдельные Stonecutter-версии для них не нужны: собирается один JAR `+26.1`, в `fabric.mod.json` указано `>=26.1`, целевые клиенты перечислены в `versions/26.1/gradle.properties` (`mod.mc_targets=26.1 26.1.1 26.1.2`).

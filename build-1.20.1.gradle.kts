@@ -1,6 +1,7 @@
 plugins {
     id("fabric-loom") version "1.13-SNAPSHOT"
     id("maven-publish")
+    id("me.modmuss50.mod-publish-plugin") version "2.2.1"
 }
 
 fun modProp(name: String): String =
@@ -85,3 +86,5 @@ if (stonecutter.current.isActive) {
         dependsOn(tasks.named("runClient"))
     }
 }
+
+apply(from = rootProject.file("gradle/publish-mods.gradle"))
