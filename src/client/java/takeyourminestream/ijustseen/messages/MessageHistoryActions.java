@@ -1,7 +1,6 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import takeyourminestream.ijustseen.config.MessageSpawnMode;
 import takeyourminestream.ijustseen.config.ModConfig;
@@ -92,12 +91,9 @@ public final class MessageHistoryActions {
         } else {
             position = MessagePosition.generatePositionInFrontOfPlayer(client);
             Vec3d eyePos = client.player.getEyePos();
-            double dx = eyePos.x - position.x;
-            double dy = eyePos.y - position.y;
-            double dz = eyePos.z - position.z;
-            double distXZ = Math.sqrt(dx * dx + dz * dz);
-            yaw = (float) (MathHelper.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0f;
-            pitch = (float) -(MathHelper.atan2(dy, distXZ) * (180.0 / Math.PI));
+            MessageFacing.Angles facing = MessageFacing.towardEye(eyePos, position, client.player.getYaw());
+            yaw = facing.yaw();
+            pitch = facing.pitch();
             offset = position.subtract(eyePos);
         }
 

@@ -55,6 +55,7 @@ public class MessageLifecycleManager {
             float yawLerp = clamp01(1.0f - (float)Math.exp(-1.0f / yawSmoothTime));
             float pitchLerp = clamp01(1.0f - (float)Math.exp(-1.0f / pitchSmoothTime));
 
+            TextRenderer textRenderer = client.textRenderer;
             for (Message message : activeMessages) {
                 if (message.isPinned()) {
                     continue;
@@ -65,21 +66,37 @@ public class MessageLifecycleManager {
                 // Целевая мировая позиция = глаза игрока + фиксированное мировое смещение (НЕ зависящее от yaw)
                 Vec3d targetWorld = eyePos.add(local);
 
-                // Плавное сближение к цели с нарастающей/затухающей скоростью (без клипа скорости)
+                // Ориентация к глазам — ею же считаем хитбокс у стены (вся панель / 3D-рамка)
                 Vec3d currentPos = message.getPosition();
+                MessageFacing.Angles facing = MessageFacing.towardEye(eyePos, targetWorld, message.getYaw());
+                targetWorld = MessageWallClamp.clampTowardEye(
+                    client,
+                    eyePos,
+                    targetWorld,
+                    facing.yaw(),
+                    facing.pitch(),
+                    message,
+                    textRenderer,
+                    tickCounter
+                );
+
+                // Плавное сближение к цели с нарастающей/затухающей скоростью (без клипа скорости)
                 Vec3d toTarget = targetWorld.subtract(currentPos);
                 Vec3d newPos = currentPos.add(toTarget.multiply(positionLerp));
+                newPos = MessageWallClamp.clampTowardEye(
+                    client,
+                    eyePos,
+                    newPos,
+                    facing.yaw(),
+                    facing.pitch(),
+                    message,
+                    textRenderer,
+                    tickCounter
+                );
                 message.setPosition(newPos);
 
-                // Ориентация: не мгновенно, а сглаженно смотрит на глаза игрока
-                double dx = eyePos.x - newPos.x;
-                double dy = eyePos.y - newPos.y;
-                double dz = eyePos.z - newPos.z;
-                double distXZ = Math.sqrt(dx * dx + dz * dz);
-                float targetYaw = (float)(MathHelper.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0f;
-                float targetPitch = (float)-(MathHelper.atan2(dy, distXZ) * (180.0 / Math.PI));
-                message.setYaw(lerpAngleDegrees(message.getYaw(), targetYaw, yawLerp));
-                message.setPitch(lerpAngleDegrees(message.getPitch(), targetPitch, pitchLerp));
+                message.setYaw(lerpAngleDegrees(message.getYaw(), facing.yaw(), yawLerp));
+                message.setPitch(lerpAngleDegrees(message.getPitch(), facing.pitch(), pitchLerp));
             }
         }
         

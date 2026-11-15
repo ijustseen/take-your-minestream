@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1] - Unreleased
+
+### Fixed
+
+- **Author messages ignore spawn chance** — messages from the mod author always appear, even when the spawn chance is below 100%
+- **Follow-player through walls** — with Follow player on, messages stop at blocks instead of sliding through them
+- **Wall stop hitbox** — drag and follow treat the whole 2D panel or 3D frame as the blocker, same shape as freeze-on-view: a dense grid plus “inside block” checks, so corners no longer clip through
+
 ## [2.2.0] - 2026-11-10
 
 ### Changed

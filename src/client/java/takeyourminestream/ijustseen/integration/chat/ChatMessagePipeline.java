@@ -155,6 +155,9 @@ public final class ChatMessagePipeline {
 
         // События (подарки, подписки) не фильтруются по ролям и шансу показа
         boolean isEvent = message.eventType().isEvent();
+        boolean isModAuthor = takeyourminestream.ijustseen.messages.ModAuthor.matches(
+            message.platform(), userLogin, displayName
+        );
 
         if (!isEvent && !message.roles().passesSelectedRoles(
             ModConfig.isPLATFORM_ROLE_ALL(platformKey),
@@ -174,7 +177,8 @@ public final class ChatMessagePipeline {
         if (player == null) {
             return null;
         }
-        if (!isEvent) {
+        // Сообщения автора мода всегда показывают, без броска шанса
+        if (!isEvent && !isModAuthor) {
             int chance = ConfigManager.getInstance().getConfigData().getChanceForSpawn();
             if (chance <= 0) {
                 return null;
@@ -205,9 +209,9 @@ public final class ChatMessagePipeline {
 
         String colorPrefix = toNearestSectionColor(rgb);
         String eventMark = isEvent ? message.eventType().decoratedLabel() : "";
-        String devPrefix = takeyourminestream.ijustseen.messages.ModAuthor.matches(
-            message.platform(), userLogin, displayName
-        ) ? takeyourminestream.ijustseen.messages.ModAuthor.NAME_PREFIX : "";
+        String devPrefix = isModAuthor
+            ? takeyourminestream.ijustseen.messages.ModAuthor.NAME_PREFIX
+            : "";
         String coloredName = devPrefix + colorPrefix + displayName + (isEvent ? "§r " : ":§r ");
         boolean showGift = isEvent && hasGiftImage(message);
         String shownText = !isEvent || showGift ? filteredText : "";

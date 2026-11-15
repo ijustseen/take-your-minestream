@@ -63,15 +63,12 @@ public class MessageSpawner {
                 ? MessagePosition.generatePositionInFrontOfPlayer(client)
                 : MessagePosition.generateRandomPosition(client);
             var playerEyePos = client.player.getEyePos();
-            double dx = playerEyePos.x - position.x;
-            double dy = playerEyePos.y - position.y;
-            double dz = playerEyePos.z - position.z;
-            double distXZ = Math.sqrt(dx * dx + dz * dz);
-            float yaw = (float) (MathHelper.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0f;
-            float pitch = (float) -(MathHelper.atan2(dy, distXZ) * (180.0 / Math.PI));
+            MessageFacing.Angles facing = MessageFacing.towardEye(
+                playerEyePos, position, client.player.getYaw()
+            );
             var worldOffset = position.subtract(playerEyePos);
             var message = new Message(
-                messageText, position, tick, yaw, pitch, authorColor, worldOffset, queued.emotes
+                messageText, position, tick, facing.yaw(), facing.pitch(), authorColor, worldOffset, queued.emotes
             );
             message.setEventType(queued.eventType);
             PinnedMessageStore.tagWithCurrentDimension(message, client);

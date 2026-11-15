@@ -85,8 +85,10 @@ public final class MessageEditorPreview {
             Vec3d position = frontOnly
                 ? MessagePosition.generatePositionInFrontOfPlayer(client)
                 : MessagePosition.generateRandomPosition(client);
-            float[] facing = facing(position, eye);
-            messages.add(create(client, SAMPLES.get(i % SAMPLES.size()), position, facing[0], facing[1], position.subtract(eye)));
+            MessageFacing.Angles facing = MessageFacing.towardEye(eye, position, client.player.getYaw());
+            messages.add(create(
+                client, SAMPLES.get(i % SAMPLES.size()), position, facing.yaw(), facing.pitch(), position.subtract(eye)
+            ));
         }
         return messages;
     }
@@ -107,20 +109,12 @@ public final class MessageEditorPreview {
         Vec3d localDir = new Vec3d(-Math.cos(yawRad), 0, -Math.sin(yawRad));
         double lateral = distance * screenOffset * Math.tan(horizontalHalfFovRad(client));
         Vec3d position = camera.add(lookVec.multiply(distance)).add(localDir.multiply(lateral));
-        float[] facing = facing(position, camera);
+        MessageFacing.Angles facing = MessageFacing.towardEye(
+            camera, position, EditorCameraCompat.yaw(client.player)
+        );
         message.setPosition(position);
-        message.setYaw(facing[0] + extraYaw);
-        message.setPitch(MathHelper.clamp(facing[1] + extraPitch, -89.0f, 89.0f));
-    }
-
-    private static float[] facing(Vec3d position, Vec3d target) {
-        double dx = target.x - position.x;
-        double dy = target.y - position.y;
-        double dz = target.z - position.z;
-        double distXZ = Math.sqrt(dx * dx + dz * dz);
-        float yaw = (float) (MathHelper.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0f;
-        float pitch = (float) -(MathHelper.atan2(dy, distXZ) * (180.0 / Math.PI));
-        return new float[] {yaw, pitch};
+        message.setYaw(facing.yaw() + extraYaw);
+        message.setPitch(MathHelper.clamp(facing.pitch() + extraPitch, -89.0f, 89.0f));
     }
 
     private static double horizontalHalfFovRad(MinecraftClient client) {

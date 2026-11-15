@@ -1,7 +1,6 @@
 package takeyourminestream.ijustseen.messages;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import takeyourminestream.ijustseen.config.MessageSpawnMode;
 import takeyourminestream.ijustseen.config.ModConfig;
@@ -101,19 +100,23 @@ public class PinnedMessageInteractionManager {
 
         Vec3d cameraPos = CameraPositionCompat.getCameraPos(client);
         Vec3d lookVec = client.player.getRotationVec(1.0f).normalize();
-        double reach = BlockOcclusion.clearDistance(client, cameraPos, lookVec, dragDistance);
-        Vec3d newPos = cameraPos.add(lookVec.multiply(reach));
-        draggedMessage.setPosition(newPos);
+        Vec3d desiredPos = cameraPos.add(lookVec.multiply(dragDistance));
 
         Vec3d eyePos = client.player.getEyePos();
-        double dx = eyePos.x - newPos.x;
-        double dy = eyePos.y - newPos.y;
-        double dz = eyePos.z - newPos.z;
-        double distXZ = Math.sqrt(dx * dx + dz * dz);
-        float targetYaw = (float) (MathHelper.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0f;
-        float targetPitch = (float) -(MathHelper.atan2(dy, distXZ) * (180.0 / Math.PI));
-        draggedMessage.setYaw(targetYaw);
-        draggedMessage.setPitch(targetPitch);
+        MessageFacing.Angles facing = MessageFacing.towardEye(eyePos, desiredPos, draggedMessage.getYaw());
+        Vec3d newPos = MessageWallClamp.clampTowardEye(
+            client,
+            cameraPos,
+            desiredPos,
+            facing.yaw(),
+            facing.pitch(),
+            draggedMessage,
+            client.textRenderer,
+            lifecycleManager.getTickCounter()
+        );
+        draggedMessage.setPosition(newPos);
+        draggedMessage.setYaw(facing.yaw());
+        draggedMessage.setPitch(facing.pitch());
     }
 
     private static boolean shouldUnpinImmediatelyOnPress(MessageClickHandler.MessageHit hit) {
