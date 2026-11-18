@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import takeyourminestream.ijustseen.interfaces.IBanwordManager;
 import takeyourminestream.ijustseen.core.storage.StoragePaths;
-import net.fabricmc.loader.api.FabricLoader;
+import takeyourminestream.ijustseen.platform.ModEnvironment;
 
 import java.io.InputStreamReader;
 import java.io.BufferedWriter;
@@ -28,7 +28,7 @@ public class BanwordManager implements IBanwordManager {
 
     static {
         Path newPath = StoragePaths.getModRootDir().resolve(USER_FILE_NAME);
-        Path legacyPath = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);
+        Path legacyPath = ModEnvironment.getConfigDir().resolve(USER_FILE_NAME);
         Path legacyModFile = StoragePaths.getLegacyModRootDir().resolve("take-your-minestream-banwords.json");
         Path legacyGameModFile = StoragePaths.getLegacyGameModRootDir().resolve("take-your-minestream-banwords.json");
         try {

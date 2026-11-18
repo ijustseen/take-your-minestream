@@ -1,0 +1,1 @@
+../build-fabric-stub.gradle.kts

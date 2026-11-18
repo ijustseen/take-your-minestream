@@ -2,7 +2,7 @@ package takeyourminestream.ijustseen.filtering;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import net.fabricmc.loader.api.FabricLoader;
+import takeyourminestream.ijustseen.platform.ModEnvironment;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 
 import java.io.BufferedWriter;
@@ -37,7 +37,7 @@ public class FilteringManager {
 
     public void loadRegexp() {
         try {
-            Path userFile = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);
+            Path userFile = ModEnvironment.getConfigDir().resolve(USER_FILE_NAME);
             if (!Files.exists(userFile)) {
                 try (FileWriter writer = new FileWriter(String.valueOf(userFile))) {
                     writer.write("[]");
@@ -103,7 +103,7 @@ public class FilteringManager {
 
     private void saveUserRegexps() {
         try {
-            Path userFile = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);
+            Path userFile = ModEnvironment.getConfigDir().resolve(USER_FILE_NAME);
             List<String> list = regexps.stream().sorted().toList();
             try (BufferedWriter writer = Files.newBufferedWriter(userFile, StandardCharsets.UTF_8)) {
                 new Gson().toJson(list, writer);

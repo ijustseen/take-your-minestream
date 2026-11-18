@@ -33,7 +33,7 @@ It’s client-side. Only you need the mod.
 
 ## Setup (about two minutes)
 
-1. Install **Fabric** and **Fabric API** for your Minecraft version. Download the matching jar from this page.
+1. Install **Fabric** (+ **Fabric API**), **Forge**, or **NeoForge** for your Minecraft version. Download the matching jar from this page (loader is in the file name for Forge / NeoForge).
 2. Drop the jar in `mods/` and launch.
 3. Press **`]`** to open settings.
 4. Turn on a platform, click the gear, paste your channel / `@username`.
@@ -41,7 +41,7 @@ It’s client-side. Only you need the mod.
 
 Turning a platform on does **not** connect by itself. That’s on purpose: you can set everything up, then go live with one click.
 
-> **Mod Menu** is optional. Fabric API is not.
+> On Fabric, **Mod Menu** is optional; **Fabric API** is not. Forge / NeoForge builds do not need Fabric API.
 
 ---
 
@@ -88,9 +88,15 @@ You probably won’t need these — settings cover the same things. Main command
 
 ## Versions
 
-Minecraft **1.20.1**, **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3**. One jar per game version — pick yours on this page. The 1.20.1 jar needs Java 17.
+| Loader | Minecraft |
+|--------|-----------|
+| **Fabric** | 1.20.1, 1.21, 1.21.1, 1.21.4, 1.21.8, 1.21.10, 1.21.11, 26.1, 26.2, 26.3 |
+| **Forge** | 1.20.1 |
+| **NeoForge** | 1.21.1 |
 
-Needs Fabric Loader and **Fabric API**.
+One jar per game version (and loader) — pick yours on this page. The 1.20.1 jars need Java 17.
+
+Fabric needs Fabric Loader and **Fabric API**. Forge / NeoForge need only their own loader.
 
 ---
 

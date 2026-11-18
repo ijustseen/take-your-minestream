@@ -4,15 +4,36 @@ plugins {
     id("dev.kikugie.stonecutter")
 }
 
-stonecutter active "1.21.11" /* [SC] DO NOT EDIT */
+val activeLoaders = ((findProperty("mod.loaders") as? String) ?: "fabric,forge,neoforge")
+    .split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+// При изолированном FML active остаётся 1.21.8 (fabric stub), чтобы Neo/Forge не стали active-деревом.
+if ("fabric" in activeLoaders) {
+    stonecutter active "1.21.11" /* [SC] DO NOT EDIT */
+} else {
+    stonecutter active "1.21.8"
+}
 
 stonecutter parameters {
+    // Ветки: fabric|neoforge|forge → {loader}/versions/{mc}
+    val loader = node.branch.id.ifBlank { "fabric" }
+    constants {
+        match(loader, "fabric", "neoforge", "forge")
+    }
+
     replacements {
         string(eval(current.version, "< 1.21.11")) {
             replace("import net.minecraft.client.render.RenderLayers;", "// RenderLayers added in 1.21.11")
             replace("return RenderLayers.entityTranslucent(texture);", "return RenderLayer.getEntityTranslucent(texture, false);")
             replace("return RenderLayers.text(texture);", "return RenderLayer.getText(texture);")
             replace("camera.getCameraPos()", "camera.getPos()")
+        }
+        // Fabric API < 1.21.10: WorldRenderEvents без .world, matrixStack() вместо matrices()
+        string(eval(current.version, "< 1.21.10")) {
+            replace(
+                "net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents",
+                "net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents"
+            )
+            replace("context.matrices()", "context.matrixStack()")
         }
         string(eval(current.version, ">= 26.1")) {
             // Packages (imports)
@@ -328,15 +349,19 @@ stonecutter parameters {
     }
 }
 
-val publishOrder = listOf(
-    "1.20.1", "1.21", "1.21.1", "1.21.4", "1.21.8", "1.21.10", "1.21.11", "26.1", "26.2", "26.3",
+val fabricPublishOrder = listOf(
+    "fabric:1.20.1", "fabric:1.21", "fabric:1.21.1", "fabric:1.21.4",
+    "fabric:1.21.8", "fabric:1.21.10", "fabric:1.21.11",
+    "fabric:26.1", "fabric:26.2", "fabric:26.3",
 )
 
 fun registerPublishAll(taskName: String, description: String) {
     tasks.register(taskName) {
         group = "publishing"
         this.description = description
-        val versionTasks = publishOrder.map { project(":$it").tasks.named(taskName) }
+        val versionTasks = fabricPublishOrder.mapNotNull { path ->
+            rootProject.findProject(":$path")?.tasks?.named(taskName)
+        }
         dependsOn(versionTasks)
         for (index in 1 until versionTasks.size) {
             versionTasks[index].configure { mustRunAfter(versionTasks[index - 1]) }
@@ -344,14 +369,68 @@ fun registerPublishAll(taskName: String, description: String) {
     }
 }
 
-registerPublishAll("publishModrinth", "Upload every Minecraft jar to Modrinth")
-registerPublishAll("publishCurseforge", "Upload every Minecraft jar to CurseForge")
+registerPublishAll("publishModrinth", "Upload every Fabric jar to Modrinth")
+registerPublishAll("publishCurseforge", "Upload every Fabric jar to CurseForge")
 
-// Gradle would otherwise run every version's publishMods and upload both sites at once.
 tasks.register("publishMods") {
     group = "publishing"
     description = "Disabled — use publishModrinth or publishCurseforge"
     doLast {
         throw GradleException("Use ./gradlew publishModrinth or ./gradlew publishCurseforge")
     }
+}
+
+fun registerIsolatedLoaderBuild(
+    taskName: String,
+    loaders: String,
+    description: String,
+    delegateTasks: List<String>,
+) {
+    tasks.register<Exec>(taskName) {
+        group = "build"
+        this.description = description
+        workingDir = rootDir
+        commandLine(
+            buildList {
+                add(rootDir.resolve("gradlew").absolutePath)
+                add("-Pmod.loaders=$loaders")
+                addAll(delegateTasks)
+            }
+        )
+    }
+}
+
+registerIsolatedLoaderBuild(
+    "buildAndCollectFabric",
+    "fabric",
+    "Собрать все Fabric JAR → build/libs/<version>/fabric/",
+    listOf("collectJars"),
+)
+registerIsolatedLoaderBuild(
+    "buildAndCollectForge",
+    "forge",
+    "Собрать Forge 1.20.1 JAR → build/libs/<version>/forge/",
+    listOf(":forge:1.20.1:collectJars"),
+)
+registerIsolatedLoaderBuild(
+    "buildAndCollectNeoForge",
+    "neoforge",
+    "Собрать NeoForge 1.21.1 JAR → build/libs/<version>/neoforge/",
+    listOf(":neoforge:1.21.1:collectJars"),
+)
+
+tasks.register("buildAndCollectAll") {
+    group = "build"
+    description = "Fabric + Forge + NeoForge (три изолированных Gradle-прогона)"
+    dependsOn("buildAndCollectFabric", "buildAndCollectForge", "buildAndCollectNeoForge")
+}
+
+tasks.named("buildAndCollectForge") { mustRunAfter("buildAndCollectFabric") }
+tasks.named("buildAndCollectNeoForge") { mustRunAfter("buildAndCollectForge") }
+
+// Старое имя → полный прогон по лоадерам
+tasks.register("buildAndCollect") {
+    group = "build"
+    description = "Алиас buildAndCollectAll"
+    dependsOn("buildAndCollectAll")
 }

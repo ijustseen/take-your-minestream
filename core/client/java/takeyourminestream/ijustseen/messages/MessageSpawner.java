@@ -1,10 +1,10 @@
 package takeyourminestream.ijustseen.messages;
 
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import takeyourminestream.ijustseen.platform.ClientHooks;
 
 /**
  * Отвечает за спавн новых сообщений из очереди
@@ -24,7 +24,7 @@ public class MessageSpawner {
         this.lifecycleManager = lifecycleManager;
         this.pinnedInteractionManager = new PinnedMessageInteractionManager(lifecycleManager);
 
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+        ClientHooks.get().onEndClientTick(client -> {
             TwitchEmoteTextureCache.drainUploads(client);
             if (client.textRenderer != null) {
                 lifecycleManager.warmPendingHistoryLayouts(client.textRenderer, 8);

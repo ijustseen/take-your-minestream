@@ -1,18 +1,17 @@
 package takeyourminestream.ijustseen.input;
 
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
-import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
+import takeyourminestream.ijustseen.messages.MessageSpawner;
+import takeyourminestream.ijustseen.platform.ClientHooks;
 import takeyourminestream.ijustseen.ui.screen.MessageHistoryScreen;
 import takeyourminestream.ijustseen.ui.screen.ModConfigScreen;
-import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.utils.Logger;
+import takeyourminestream.ijustseen.utils.ScreenNavigationCompat;
 
 /**
  * Менеджер привязок клавиш
@@ -32,28 +31,29 @@ public class KeyBindingManager {
     }
 
     public void registerKeyBindings() {
-        openConfigScreenKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        ClientHooks hooks = ClientHooks.get();
+        openConfigScreenKeyBinding = hooks.registerKeyBinding(new KeyBinding(
             "key.takeyourstreamchat.openconfig",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_RIGHT_BRACKET,
             KEY_CATEGORY
         ));
 
-        startAndStopMessagesKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        startAndStopMessagesKeyBinding = hooks.registerKeyBinding(new KeyBinding(
             "key.takeyourstreamchat.startandstop",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_LEFT_BRACKET,
             KEY_CATEGORY
         ));
 
-        openMessageHistoryKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        openMessageHistoryKeyBinding = hooks.registerKeyBinding(new KeyBinding(
             "key.takeyourstreamchat.openhistory",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_BACKSLASH,
             KEY_CATEGORY
         ));
 
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+        hooks.onEndClientTick(client -> {
             while (openConfigScreenKeyBinding.wasPressed()) {
                 handleOpenConfigScreen();
             }

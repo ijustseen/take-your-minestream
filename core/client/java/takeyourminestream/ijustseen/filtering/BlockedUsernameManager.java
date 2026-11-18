@@ -2,7 +2,7 @@ package takeyourminestream.ijustseen.filtering;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import net.fabricmc.loader.api.FabricLoader;
+import takeyourminestream.ijustseen.platform.ModEnvironment;
 import takeyourminestream.ijustseen.core.storage.StoragePaths;
 
 import java.io.BufferedWriter;
@@ -25,7 +25,7 @@ public class BlockedUsernameManager {
 
     static {
         Path newPath = StoragePaths.getModRootDir().resolve(USER_FILE_NAME);
-        Path legacyPath = FabricLoader.getInstance().getConfigDir().resolve(USER_FILE_NAME);
+        Path legacyPath = ModEnvironment.getConfigDir().resolve(USER_FILE_NAME);
         try {
             StoragePaths.ensureModRootDir();
         } catch (Exception ignored) {

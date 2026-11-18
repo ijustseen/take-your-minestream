@@ -6,7 +6,7 @@ import takeyourminestream.ijustseen.TakeYourMineStreamClient;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.core.storage.StoragePaths;
 import takeyourminestream.ijustseen.interfaces.IConfigManager;
-import net.fabricmc.loader.api.FabricLoader;
+import takeyourminestream.ijustseen.platform.ModEnvironment;
 import net.minecraft.client.MinecraftClient;
 import takeyourminestream.ijustseen.utils.PlayerMessageCompat;
 
@@ -29,7 +29,7 @@ public class ConfigManager implements IConfigManager {
         Path modRoot = StoragePaths.getModRootDir();
         Path newConfigPath = modRoot.resolve("take-your-stream-chat.json");
         Path legacyConfigInNewFolder = modRoot.resolve("take-your-minestream.json");
-        Path legacyConfigPath = FabricLoader.getInstance().getConfigDir().resolve("take-your-minestream.json");
+        Path legacyConfigPath = ModEnvironment.getConfigDir().resolve("take-your-minestream.json");
         Path legacyConfigInFolder = StoragePaths.getLegacyModRootDir().resolve("take-your-minestream.json");
         Path legacyGameFolderConfig = StoragePaths.getLegacyGameModRootDir().resolve("take-your-minestream.json");
 

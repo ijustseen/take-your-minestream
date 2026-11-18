@@ -1,12 +1,12 @@
 package takeyourminestream.ijustseen.messages;
 
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import takeyourminestream.ijustseen.config.MessageSpawnMode;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
+import takeyourminestream.ijustseen.platform.ClientHooks;
 import takeyourminestream.ijustseen.ui.gui.MessageCardRenderer;
 
 import java.util.List;
@@ -19,7 +19,7 @@ public class MessageHudRenderer {
     public MessageHudRenderer(MessageLifecycleManager lifecycleManager) {
         this.lifecycleManager = lifecycleManager;
 
-        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
+        ClientHooks.get().onHudRender(drawContext -> {
             if (ModConfig.getMESSAGE_SPAWN_MODE() == MessageSpawnMode.HUD_WIDGET) {
                 renderHudMessages(drawContext);
             }

@@ -1,27 +1,23 @@
 package takeyourminestream.ijustseen;
 
-import net.fabricmc.api.ClientModInitializer;
 import org.slf4j.LoggerFactory;
-import takeyourminestream.ijustseen.filtering.BanwordManager;
+import takeyourminestream.ijustseen.commands.CommandManager;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
 import takeyourminestream.ijustseen.filtering.FilteringManager;
-import takeyourminestream.ijustseen.messages.MessageSpawner;
-import takeyourminestream.ijustseen.messages.MessageSystemFactory;
-import takeyourminestream.ijustseen.messages.TwitchEmoteTextureCache;
-import takeyourminestream.ijustseen.interfaces.IConfigManager;
-import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
-import takeyourminestream.ijustseen.interfaces.IBanwordManager;
-import takeyourminestream.ijustseen.config.ConfigManager;
-import takeyourminestream.ijustseen.integration.chat.ChatConnectionManager;
-import takeyourminestream.ijustseen.commands.CommandManager;
 import takeyourminestream.ijustseen.input.KeyBindingManager;
-import takeyourminestream.ijustseen.utils.Logger;
+import takeyourminestream.ijustseen.interfaces.IBanwordManager;
+import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
+import takeyourminestream.ijustseen.interfaces.IConfigManager;
+import takeyourminestream.ijustseen.messages.MessageSpawner;
 
 /**
- * Главный класс клиентской части мода
+ * Состояние клиентского мода (общее для всех лоадеров).
  */
-public class TakeYourMineStreamClient implements ClientModInitializer {
+public class TakeYourMineStreamClient {
+    /** Namespace ресурсов / Fabric mod id (дефисы OK). */
     public static final String MOD_ID = "take-your-stream-chat";
+    /** FML modId для Forge/NeoForge: только [a-z0-9_]. */
+    public static final String FML_MOD_ID = "take_your_stream_chat";
     public static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static TakeYourMineStreamClient instance;
@@ -34,41 +30,29 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
     private CommandManager commandManager;
     private KeyBindingManager keyBindingManager;
 
-    @Override
-    public void onInitializeClient() {
-        instance = this;
-        try {
-            initializeMod();
-            Logger.info("Take Your Stream Chat initialized");
-        } catch (Exception e) {
-            Logger.error("Failed to initialize mod", e);
-        }
+    public static TakeYourMineStreamClient createInstance() {
+        instance = new TakeYourMineStreamClient();
+        return instance;
     }
 
-    private void initializeMod() {
-        // Инициализация менеджеров
-        configManager = ConfigManager.getInstance();
-        banwordManager = BanwordManager.getInstance();
-        blockedUsernameManager = BlockedUsernameManager.getInstance();
-        filteringManager = FilteringManager.getInstance();
-        chatConnectionManager = ChatConnectionManager.getInstance(configManager);
-        
-        // Инициализация системы сообщений
-        messageSpawner = MessageSystemFactory.createMessageSystem();
-        
-        // Инициализация менеджеров команд и клавиш
-        commandManager = new CommandManager(chatConnectionManager, banwordManager, blockedUsernameManager, messageSpawner);
-        keyBindingManager = new KeyBindingManager(chatConnectionManager, messageSpawner);
-        
-        // Регистрация команд и клавиш
-        commandManager.registerCommands();
-        keyBindingManager.registerKeyBindings();
-        
-        // Регистрация обработчиков событий мира
-        WorldEventHandler.register(messageSpawner);
-        TwitchEmoteTextureCache.registerClientTick();
-
-        LOGGER.info("All mod components initialized");
+    void bindInitialized(
+        IConfigManager configManager,
+        IChatConnectionManager chatConnectionManager,
+        IBanwordManager banwordManager,
+        BlockedUsernameManager blockedUsernameManager,
+        FilteringManager filteringManager,
+        MessageSpawner messageSpawner,
+        CommandManager commandManager,
+        KeyBindingManager keyBindingManager
+    ) {
+        this.configManager = configManager;
+        this.chatConnectionManager = chatConnectionManager;
+        this.banwordManager = banwordManager;
+        this.blockedUsernameManager = blockedUsernameManager;
+        this.filteringManager = filteringManager;
+        this.messageSpawner = messageSpawner;
+        this.commandManager = commandManager;
+        this.keyBindingManager = keyBindingManager;
     }
 
     public static TakeYourMineStreamClient getInstance() {
@@ -97,7 +81,9 @@ public class TakeYourMineStreamClient implements ClientModInitializer {
         return blockedUsernameManager;
     }
 
-    public FilteringManager getFilteringManager() {return filteringManager;}
+    public FilteringManager getFilteringManager() {
+        return filteringManager;
+    }
 
     public MessageSpawner getMessageSpawner() {
         return messageSpawner;

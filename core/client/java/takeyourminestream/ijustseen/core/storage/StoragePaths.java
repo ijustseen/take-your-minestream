@@ -1,6 +1,6 @@
 package takeyourminestream.ijustseen.core.storage;
 
-import net.fabricmc.loader.api.FabricLoader;
+import takeyourminestream.ijustseen.platform.ModEnvironment;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,15 +15,15 @@ public final class StoragePaths {
     }
 
     public static Path getModRootDir() {
-        return FabricLoader.getInstance().getGameDir().resolve(MOD_DIR_NAME);
+        return ModEnvironment.getGameDir().resolve(MOD_DIR_NAME);
     }
 
     public static Path getLegacyModRootDir() {
-        return FabricLoader.getInstance().getConfigDir().resolve(LEGACY_MOD_DIR_NAME);
+        return ModEnvironment.getConfigDir().resolve(LEGACY_MOD_DIR_NAME);
     }
 
     public static Path getLegacyGameModRootDir() {
-        return FabricLoader.getInstance().getGameDir().resolve(LEGACY_MOD_DIR_NAME);
+        return ModEnvironment.getGameDir().resolve(LEGACY_MOD_DIR_NAME);
     }
 
     public static Path ensureModRootDir() throws IOException {

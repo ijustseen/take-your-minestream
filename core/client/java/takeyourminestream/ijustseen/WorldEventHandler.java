@@ -1,30 +1,32 @@
 package takeyourminestream.ijustseen;
 
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.minecraft.client.MinecraftClient;
 import takeyourminestream.ijustseen.config.ModConfig;
 import takeyourminestream.ijustseen.messages.MessageSpawner;
 import takeyourminestream.ijustseen.messages.PinnedMessageStore;
+import takeyourminestream.ijustseen.platform.ClientHooks;
 import takeyourminestream.ijustseen.utils.Logger;
 
 public class WorldEventHandler {
     private static String lastDimensionKey;
 
     public static void register(MessageSpawner messageSpawner) {
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+        ClientHooks hooks = ClientHooks.get();
+
+        hooks.onPlayJoin(() -> {
             onWorldJoin(messageSpawner);
+            MinecraftClient client = MinecraftClient.getInstance();
             if (client.world != null) {
                 lastDimensionKey = client.world.getRegistryKey().getValue().toString();
             }
         });
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+        hooks.onPlayDisconnect(() -> {
             onWorldLeave(messageSpawner);
             lastDimensionKey = null;
         });
 
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+        hooks.onEndClientTick(client -> {
             if (client == null || client.world == null || messageSpawner == null) {
                 return;
             }
@@ -44,7 +46,7 @@ public class WorldEventHandler {
             }
         });
 
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+        hooks.onClientStopping(client -> {
             if (messageSpawner != null) {
                 var app = TakeYourMineStreamClient.getInstance();
                 if (app != null && app.getChatConnectionManager() != null && app.getChatConnectionManager().isConnected()) {

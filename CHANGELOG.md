@@ -1,6 +1,21 @@
 # Changelog
 
-## [2.2.1] - Unreleased
+## [2.2.2] - Unreleased
+
+### Added
+
+- **Forge 1.20.1** — same client features as Fabric on that version (`tysc-…+1.20.1-forge.jar`, Forge 47.3.x, Java 17)
+- **NeoForge 1.21.1** — same client features as Fabric on that version (`tysc-…+1.21.1-neoforge.jar`, NeoForge 21.1.x, Java 21)
+
+### Technical
+
+- Multi-loader layout: shared **`core/`** (code + assets) + Stonecutter branches `fabric|forge|neoforge/versions/{mc}`
+- Separate collect tasks per loader (`buildAndCollectFabric` / `Forge` / `NeoForge`) — Fabric Loom and Architectury Loom cannot remap in one Gradle process
+- FML modId is `take_your_stream_chat` (underscores); resource namespace stays `take-your-stream-chat`
+- Forge/NeoForge packaging: `pack.mcmeta`, Loom mod name aligned with FML modId, main assets synced into the client source set for userdev
+- Stonecutter: Fabric API `< 1.21.10` keeps `v1.WorldRenderEvents` + `matrixStack()` so older Fabric jars still compile after `FabricClientHooks`
+
+## [2.2.1] - 2026-11-15
 
 ### Fixed
 

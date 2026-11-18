@@ -1,12 +1,13 @@
 package takeyourminestream.ijustseen.commands;
 
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
-import takeyourminestream.ijustseen.interfaces.IBanwordManager;
-import takeyourminestream.ijustseen.messages.MessageSpawner;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import takeyourminestream.ijustseen.filtering.BlockedUsernameManager;
+import takeyourminestream.ijustseen.interfaces.IBanwordManager;
+import takeyourminestream.ijustseen.interfaces.IChatConnectionManager;
+import takeyourminestream.ijustseen.messages.MessageSpawner;
+import takeyourminestream.ijustseen.platform.ClientHooks;
 import takeyourminestream.ijustseen.utils.Logger;
 
 import java.util.Set;
@@ -28,13 +29,15 @@ public class CommandManager {
     }
 
     public void registerCommands() {
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            dispatcher.register(buildRootCommand("streamchat"));
-            dispatcher.register(buildRootCommand("minestream"));
+        ClientHooks.get().registerClientCommands((dispatcher, registryAccess) -> {
+            @SuppressWarnings("unchecked")
+            var typed = (com.mojang.brigadier.CommandDispatcher<FabricClientCommandSource>) dispatcher;
+            typed.register(buildRootCommand("streamchat"));
+            typed.register(buildRootCommand("minestream"));
         });
     }
 
-    private com.mojang.brigadier.builder.LiteralArgumentBuilder<net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource> buildRootCommand(String name) {
+    private com.mojang.brigadier.builder.LiteralArgumentBuilder<FabricClientCommandSource> buildRootCommand(String name) {
         return ClientCommandManager.literal(name)
                 .then(ClientCommandManager.literal("test")
                     .then(ClientCommandManager.argument("message", StringArgumentType.greedyString())

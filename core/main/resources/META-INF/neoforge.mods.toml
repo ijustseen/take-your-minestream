@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+# NeoForge/Forge: только [a-z0-9_], дефисы запрещены
+modId = "take_your_stream_chat"
+version = "${version}"
+displayName = "Take Your Stream Chat"
+authors = "ijustseen"
+description = '''Display live chat from Twitch, YouTube, Kick, and TikTok in Minecraft.'''
+
+[[mixins]]
+config = "take-your-stream-chat.client.mixins.json"
+
+[[dependencies.take_your_stream_chat]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neoforge},)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.take_your_stream_chat]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${minecraft},)"
+ordering = "NONE"
+side = "CLIENT"

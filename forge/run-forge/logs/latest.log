@@ -1,0 +1,39 @@
+[11:03:20] [main/INFO] (Launcher) ModLauncher running: args [--launchTarget, forgeclientuserdev, --version, MOD_DEV, --assetIndex, 1.20.1-5, --assetsDir, /Users/andrew/.gradle/caches/fabric-loom/assets, --gameDir, ., --fml.forgeVersion, 47.3.12, --fml.mcVersion, 1.20.1, --fml.forgeGroup, net.minecraftforge, --fml.mcpVersion, 20230612.114412, -mixin.config, take-your-stream-chat.client.mixins.json]
+[11:03:20] [main/INFO] (Launcher) ModLauncher 10.0.9+10.0.9+main.dcd20f30 starting: java version 21.0.10 by Eclipse Adoptium; OS Mac OS X arch aarch64 version 26.5.1
+[11:03:20] [main/WARN] (FMLConfig) Configuration file /Users/andrew/www/takeyourstreamchat-fabric/forge/run-forge/config/fml.toml is not correct. Correcting
+[11:03:20] [main/INFO] (FMLConfig) Incorrect key [earlyWindowSkipGLVersions] was corrected from null to []
+[11:03:20] [main/INFO] (FMLConfig) Incorrect key [earlyWindowLogHelpMessage] was corrected from null to true
+[11:03:20] [main/INFO] (FMLConfig) Incorrect key [earlyWindowSquir] was corrected from null to false
+[11:03:20] [main/INFO] (FMLConfig) Incorrect key [earlyWindowShowCPU] was corrected from null to false
+[11:03:21] [main/INFO] (ImmediateWindowHandler) Loading ImmediateWindowProvider fmlearlywindow
+[11:03:21] [main/INFO] (EARLYDISPLAY) Trying GL version 4.6
+[11:03:21] [main/INFO] (EARLYDISPLAY) If this message is the only thing at the bottom of your log before a crash, you probably have a driver issue.
+
+Possible solutions:
+A) Make sure Minecraft is set to prefer high performance graphics in the OS and/or driver control panel
+B) Check for driver updates on the graphics brand's website
+C) Try reinstalling your graphics drivers
+D) If still not working after trying all of the above, ask for further help on the Forge forums or Discord
+
+You can safely ignore this message if the game starts up successfully.
+[11:03:21] [main/INFO] (EARLYDISPLAY) Trying GL version 4.5
+[11:03:21] [main/INFO] (EARLYDISPLAY) Trying GL version 4.4
+[11:03:21] [main/INFO] (EARLYDISPLAY) Trying GL version 4.3
+[11:03:21] [main/INFO] (EARLYDISPLAY) Trying GL version 4.2
+[11:03:21] [main/INFO] (EARLYDISPLAY) Trying GL version 4.1
+[11:03:21] [main/INFO] (EARLYDISPLAY) Requested GL version 4.1 got version 4.1
+[11:03:21] [main/INFO] (mixin) SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:/Users/andrew/.gradle/caches/modules-2/files-2.1/dev.architectury/mixin-patched/0.8.5.12/cf1f787f58d3b08b0cb53ecbba7928c09a1893c8/mixin-patched-0.8.5.12.jar%23121!/ Service=ModLauncher Env=CLIENT
+[11:03:21] [pool-2-thread-1/INFO] (EARLYDISPLAY) GL info: Apple M1 GL version 4.1 Metal - 90.5, Apple
+[11:03:21] [main/WARN] (ModFileParser) Mod file /Users/andrew/.gradle/caches/modules-2/files-2.1/net.minecraftforge/javafmllanguage/1.20.1-47.3.12/f6b9f7f45e33548b47f78d9f54c7b4eb1e94e9bd/javafmllanguage-1.20.1-47.3.12.jar is missing mods.toml file
+[11:03:21] [main/WARN] (ModFileParser) Mod file /Users/andrew/.gradle/caches/modules-2/files-2.1/net.minecraftforge/lowcodelanguage/1.20.1-47.3.12/81de74e1180787af25604b6ecb3728fc485bd3c7/lowcodelanguage-1.20.1-47.3.12.jar is missing mods.toml file
+[11:03:21] [main/WARN] (ModFileParser) Mod file /Users/andrew/.gradle/caches/modules-2/files-2.1/net.minecraftforge/mclanguage/1.20.1-47.3.12/1ff4ed058e0774b82d8da352d9e051e6d2a154eb/mclanguage-1.20.1-47.3.12.jar is missing mods.toml file
+[11:03:21] [main/WARN] (ModFileParser) Mod file /Users/andrew/.gradle/caches/modules-2/files-2.1/net.minecraftforge/fmlcore/1.20.1-47.3.12/9a4d9f99e106aa2358cdbe6777921855d353371/fmlcore-1.20.1-47.3.12.jar is missing mods.toml file
+[11:03:21] [main/INFO] (ModDiscoverer) Found mod file javafmllanguage-1.20.1-47.3.12.jar of type LANGPROVIDER with provider net.minecraftforge.fml.loading.moddiscovery.MinecraftLocator@71652c98
+[11:03:21] [main/INFO] (ModDiscoverer) Found mod file lowcodelanguage-1.20.1-47.3.12.jar of type LANGPROVIDER with provider net.minecraftforge.fml.loading.moddiscovery.MinecraftLocator@71652c98
+[11:03:21] [main/INFO] (ModDiscoverer) Found mod file mclanguage-1.20.1-47.3.12.jar of type LANGPROVIDER with provider net.minecraftforge.fml.loading.moddiscovery.MinecraftLocator@71652c98
+[11:03:21] [main/INFO] (ModDiscoverer) Found mod file fmlcore-1.20.1-47.3.12.jar of type LIBRARY with provider net.minecraftforge.fml.loading.moddiscovery.MinecraftLocator@71652c98
+[11:03:21] [main/INFO] (ModDiscoverer) Found mod file forge-1.20.1-47.3.12-minecraft-merged-1.20.1-loom.mappings.1_20_1.layered+hash.1113573641-v2-forge-1.20.1-47.3.12.jar of type MOD with provider net.minecraftforge.fml.loading.moddiscovery.MinecraftLocator@71652c98
+[11:03:21] [main/INFO] (ModDiscoverer) Found mod file main of type MOD with provider net.minecraftforge.fml.loading.moddiscovery.MinecraftLocator@71652c98
+[11:03:21] [main/INFO] (ModDiscoverer) Found mod file main of type MOD with provider net.minecraftforge.fml.loading.moddiscovery.MinecraftLocator@71652c98
+[11:03:21] [main/INFO] (ModDiscoverer) Found mod file  of type MOD with provider net.minecraftforge.fml.loading.moddiscovery.MinecraftLocator@71652c98
+[11:03:21] [main/INFO] (JarInJarDependencyLocator) No dependencies to load found. Skipping!

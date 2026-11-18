@@ -1,6 +1,6 @@
 package takeyourminestream.ijustseen.messages;
 
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import takeyourminestream.ijustseen.platform.ClientHooks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
@@ -118,7 +118,7 @@ public final class TwitchEmoteTextureCache {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
     public static void registerClientTick() {
-        ClientTickEvents.END_CLIENT_TICK.register(client -> drainUploads(client));
+        ClientHooks.get().onEndClientTick(TwitchEmoteTextureCache::drainUploads);
         DOWNLOAD_EXECUTOR.execute(EmojiTextureCache::warmup);
     }
 

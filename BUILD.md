@@ -1,156 +1,124 @@
 # Сборка и запуск
 
-Проект использует [Stonecutter](https://stonecutter.kikugie.dev/): один исходный код, версии Minecraft — **1.20.1**, **1.21**, **1.21.1**, **1.21.4**, **1.21.8**, **1.21.10**, **1.21.11**, **26.1**, **26.2**, **26.3**.
+## Идея раскладки
 
-Требования:
-- **1.20.1** — байткод Java 17 (собирается тем же JDK 21 через `--release 17`)
-- **1.21.x** — JDK 21
-- **26.1 / 26.2 / 26.3** — JDK 25 (Gradle toolchain подтянет автоматически, если установлен)
-- Gradle 9.6+ (`./gradlew`; Loom 1.17 для 26.3)
+```
+core/                         # общий код + ассеты (чаты, UI, lang, textures)
+fabric|forge|neoforge/
+  src → ../core               # симлинк для Stonecutter
+  versions/{mc}/              # overrides и gradle.properties версии
+  build-*.gradle.kts → ../…   # скрипт лоадера
+```
 
-## Активная версия
+- **core** — один исходник: подключения чатов, рендер, конфиг, `assets/take-your-stream-chat/`, `pack.mcmeta`, FML `mods.toml`
+- **fabric / forge / neoforge** — только лоадерный entrypoint, ClientHooks и MC-overrides
+- Namespace ресурсов / Fabric id: `take-your-stream-chat`
+- FML modId: `take_your_stream_chat` (дефисы Forge не принимает)
 
-Активная версия определяет, какой код попадает в `src/` и что запускают `runActive` / `buildActive`. Сейчас по умолчанию: **1.21.11** (`stonecutter.gradle.kts`).
+Fabric Loom и Architectury Loom **нельзя** remap’ить в одном Gradle-прогоне (`JarManifestService`). Поэтому сборка JAR — **отдельная команда на лоадер** (изолированный `-Pmod.loaders=…`).
 
-Переключить активную версию:
+| Лоадер | Версии Minecraft |
+|--------|------------------|
+| **Fabric** | 1.20.1, 1.21, 1.21.1, 1.21.4, 1.21.8, 1.21.10, 1.21.11, 26.1, 26.2, 26.3 |
+| **Forge** | 1.20.1 |
+| **NeoForge** | 1.21.1 |
+
+Требования: Java 17 (1.20.1), 21 (1.21.x), 25 (26.x); Gradle 9.6+.
+
+## Сборка JAR (по лоадерам)
+
+Артефакты → `build/libs/<mod.version>/{fabric,forge,neoforge}/`.
 
 ```bash
-# Через Gradle (рекомендуется)
-./gradlew "Set active project to 1.21.11"
-./gradlew "Set active project to 1.21.10"
-./gradlew "Set active project to 1.21.8"
-./gradlew "Set active project to 26.1"
+# Только Fabric (все MC-версии ветки)
+./gradlew buildAndCollectFabric
 
-# Или вручную: stonecutter active "1.21.11" в stonecutter.gradle.kts
+# Только Forge 1.20.1
+./gradlew buildAndCollectForge
+
+# Только NeoForge 1.21.1
+./gradlew buildAndCollectNeoForge
+
+# Все три лоадера подряд (три изолированных прогона)
+./gradlew buildAndCollectAll
+# алиас:
+./gradlew buildAndCollect
 ```
 
-Перед коммитом (вернуть VCS-версию 1.21.8):
+Пример:
+
+```
+build/libs/2.2.2/
+  fabric/tysc-2.2.2+1.21.11.jar
+  forge/tysc-2.2.2+1.20.1-forge.jar
+  neoforge/tysc-2.2.2+1.21.1-neoforge.jar
+```
+
+Одна версия вручную:
 
 ```bash
-./gradlew "Reset active project"
-```
-
-## Сборка
-
-```bash
-# Все версии сразу; JAR-файлы в build/libs/<mod.version>/
-./gradlew build buildAndCollect
-
-# Только активная версия
-./gradlew buildActive
-
-# Конкретная версия
-./gradlew :1.21.11:build :1.21.11:buildAndCollect
-./gradlew :1.21.10:build :1.21.10:buildAndCollect
-./gradlew :1.20.1:build :1.20.1:buildAndCollect
-./gradlew :1.21:build :1.21:buildAndCollect
-./gradlew :1.21.1:build :1.21.1:buildAndCollect
-./gradlew :1.21.4:build :1.21.4:buildAndCollect
-./gradlew :1.21.8:build :1.21.8:buildAndCollect
-./gradlew :26.1:build :26.1:buildAndCollect
-./gradlew :26.2:build :26.2:buildAndCollect
-./gradlew :26.3:build :26.3:buildAndCollect
-```
-
-Имена артефактов: `tysc-<mod.version>+<minecraft>.jar` (например `tysc-2.0.0+1.21.11.jar`, `tysc-2.0.0+26.1.jar`).
-
-### Публикация
-
-Две отдельные команды. Каждая собирает все банки и выкладывает их по одной версии Minecraft на площадку (`2.2.0+1.21.11` и так далее). Банка 26.1 дополнительно помечается совместимой с 26.1.1 и 26.1.2.
-
-```bash
-./gradlew publishModrinth
-./gradlew publishCurseforge
-```
-
-`publishMods` отключён специально: он бы залил обе площадки сразу. Без токена команда уходит в dry-run и ничего не публикует.
-
-Токены только в локальном `.env` (файл в `.gitignore`, в публичный GitHub не попадёт). Скопируй шаблон и заполни:
-
-```bash
-cp .env.example .env
-```
-
-```
-MODRINTH_ID=wK5BN6Ju
-MODRINTH_TOKEN=...
-CURSEFORGE_ID=1351188
-CURSEFORGE_TOKEN=...
-```
-
-Id проектов тоже только в `.env`, не в git.
-
-Где взять:
-
-- **Modrinth** — [modrinth.com/settings/pats](https://modrinth.com/settings/pats). Создай PAT со scopes **Create / Read / Write versions**.
-- **CurseForge** — только со страницы [legacy.curseforge.com/account/api-tokens](https://legacy.curseforge.com/account/api-tokens) (так пишет mod-publish-plugin). Ключи из console или с `www.curseforge.com` выглядят так же (`$2a$10$…`), но upload API отвечает `API token is malformed`. В `.env` лучше так: `CURSEFORGE_TOKEN='$2a$10$...'`.
-
-Повторная заливка той же версии не пройдёт: номер `2.2.0+1.21.11` уже занят.
-
-### Minecraft 26.1 / 26.1.1 / 26.1.2
-
-**26.1.1** и **26.1.2** — хотфиксы линии **26.1** (без ломающих изменений API). Отдельные Stonecutter-версии для них не нужны: собирается один JAR `+26.1`, в `fabric.mod.json` указано `>=26.1`, целевые клиенты перечислены в `versions/26.1/gradle.properties` (`mod.mc_targets=26.1 26.1.1 26.1.2`).
-
-Особенности сборки 26.1:
-- Отдельный скрипт `build-unobfuscated.gradle.kts` и плагин `net.fabricmc.fabric-loom` (без remapping)
-- Minecraft **не обфусцирован** — официальные Mojang mappings, Java 25
-- Порт с Yarn/1.21.11 на 26.1: замены в `stonecutter.gradle.kts` + overrides в `versions/26.1/src/`
-
-Проверка компиляции без полной сборки:
-
-```bash
-./gradlew :1.21.11:compileClientJava :1.21.8:compileClientJava
-```
-
-Очистка:
-
-```bash
-./gradlew clean
+./gradlew -Pmod.loaders=fabric :fabric:1.21.11:collectJars
+./gradlew -Pmod.loaders=forge :forge:1.20.1:collectJars
+./gradlew -Pmod.loaders=neoforge :neoforge:1.21.1:collectJars
 ```
 
 ## Запуск клиента
 
-Общая папка запуска для всех версий: `run/` в корне репозитория.
+По умолчанию в settings подключены все лоадеры (удобно для IDE). Run-каталоги: `run/`, `run-forge/`, `run-neoforge/`.
 
 ```bash
-# Активная версия (сейчас 1.21.11)
-./gradlew runActive
+./gradlew runActive                          # активная Stonecutter-версия (fabric 1.21.11)
 
-# Конкретная версия
-./gradlew :1.20.1:runClient
-./gradlew :1.21.11:runClient
-./gradlew :1.21.10:runClient
-./gradlew :1.21.8:runClient
-./gradlew :26.1:runClient
-./gradlew :26.2:runClient
-./gradlew :26.3:runClient
+./gradlew :fabric:1.20.1:runClient
+./gradlew :fabric:1.21.11:runClient
+./gradlew :fabric:26.3:runClient
+
+./gradlew :forge:1.20.1:runClient
+./gradlew :neoforge:1.21.1:runClient
 ```
 
-## Структура версий
-
-| Версия MC | Зависимости | Особенности |
-|-----------|-------------|-------------|
-| 1.20.1    | `versions/1.20.1/gradle.properties` | `build-1.20.1.gradle.kts`, Java 17, Yarn, Mod Menu 7 |
-| 1.21      | `versions/1.21/gradle.properties` | legacy GUI/HUD render + overrides из 1.21.8 |
-| 1.21.1    | `versions/1.21.1/gradle.properties` | то же |
-| 1.21.4    | `versions/1.21.4/gradle.properties` | RenderLayer GUI + overrides из 1.21.8 |
-| 1.21.8    | `versions/1.21.8/gradle.properties` | `build-obfuscated.gradle.kts`, override в `versions/1.21.8/src/` |
-| 1.21.10   | `versions/1.21.10/gradle.properties` | `build-obfuscated.gradle.kts`, общий `src/` |
-| 1.21.11   | `versions/1.21.11/gradle.properties` | `build-obfuscated.gradle.kts`, активная по умолчанию |
-| 26.1      | `versions/26.1/gradle.properties` | `build-unobfuscated.gradle.kts`, JAR для 26.1–26.1.2 |
-| 26.2      | `versions/26.2/gradle.properties` | `build-unobfuscated.gradle.kts`, submit-рендер |
-| 26.3      | `versions/26.3/gradle.properties` | `build-26.3.gradle.kts`, Loom 1.17, SDL (`InputConstants`) |
-
-Общие настройки мода: `gradle.properties` (`mod.version`, `mod.archives_name` и т.д.).
-
-## Полезные Gradle-задачи
+Сузить проекты (быстрее configure):
 
 ```bash
-./gradlew tasks --group=project    # buildActive, runActive
-./gradlew tasks --group=build      # build, buildAndCollect, clean
-./gradlew tasks --group="Stonecutter tasks"   # переключение активной версии
+./gradlew -Pmod.loaders=fabric :fabric:1.21.11:runClient
+./gradlew -Pmod.loaders=forge :forge:1.20.1:runClient
+./gradlew -Pmod.loaders=neoforge :neoforge:1.21.1:runClient
 ```
 
-## IDE
+## Активная версия Stonecutter
 
-После смены активной версии обновите Gradle-проект в IDE. Задача `stonecutterIdea` подготавливает конфигурацию для IntelliJ.
+```bash
+./gradlew "Set active project to 1.21.11"
+./gradlew "Reset active project"   # → VCS 1.21.8
+```
+
+Сейчас по умолчанию: **1.21.11** (`stonecutter.gradle.kts`).
+
+## Публикация
+
+Только Fabric-ветки в одном прогоне (`-Pmod.loaders=fabric` подставьте при необходимости):
+
+```bash
+cp .env.example .env   # MODRINTH_* / CURSEFORGE_*
+./gradlew -Pmod.loaders=fabric publishModrinth
+./gradlew -Pmod.loaders=fabric publishCurseforge
+```
+
+`publishMods` отключён специально.
+
+## Forge / NeoForge (заметки)
+
+- Architectury Loom 1.9, `client` source set, `ClientHooks`
+- Userdev: `syncMainResourcesToClient` (lang/textures); без второго `META-INF/mods.toml` в client
+- `pack.mcmeta` лежит в `core/main/resources/`
+- Remap JAR — только в изолированном прогоне (`buildAndCollectForge` / `NeoForge`)
+- При `-Pmod.loaders=forge` / `neoforge` в settings поднимается **fabric stub** (`build-fabric-stub.gradle.kts`) без Loom — якорь Stonecutter active/vcs, чтобы FML-версия не стала active-деревом и не скомпилила сырой `core/`
+
+## Полезное
+
+```bash
+./gradlew tasks --group=build
+./gradlew :fabric:1.21.11:compileClientJava
+./gradlew -Pmod.loaders=forge :forge:1.20.1:clientClasses
+./gradlew clean
+```

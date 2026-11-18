@@ -1,6 +1,5 @@
 package takeyourminestream.ijustseen.messages;
 
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -21,6 +20,7 @@ import net.minecraft.util.math.Vec3d;
 import takeyourminestream.ijustseen.utils.CameraPositionCompat;
 import takeyourminestream.ijustseen.utils.RenderLayerCompat;
 import takeyourminestream.ijustseen.core.render.MessagePanelWorldRenderer;
+import takeyourminestream.ijustseen.platform.ClientHooks;
 
 /**
  * Отвечает за рендеринг сообщений в мире
@@ -39,20 +39,17 @@ public class MessageRenderer {
         this.lifecycleManager = lifecycleManager;
         this.particleManager = particleManager;
         
-        WorldRenderEvents.AFTER_ENTITIES.register(context -> {
+        ClientHooks.get().onWorldRenderAfterEntities((matrices, consumers) -> {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player == null || client.world == null) return;
-            
+
             // Не рендерим 3D сообщения в HUD режиме
             var spawnMode = takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SPAWN_MODE();
             if (spawnMode == takeyourminestream.ijustseen.config.MessageSpawnMode.HUD_WIDGET) {
                 return;
             }
 
-            MatrixStack matrices = context.matrices();
             TextRenderer textRenderer = client.textRenderer;
-            VertexConsumerProvider consumers = context.consumers();
-
             List<Message> activeMessages = lifecycleManager.getActiveMessages();
 
             for (Message message : activeMessages) {
@@ -61,7 +58,6 @@ public class MessageRenderer {
                 }
                 renderMessage(client, message, matrices, textRenderer, consumers);
             }
-            // Рендер партиклов
             if (particleManager != null) {
                 particleManager.render(client, matrices, consumers);
             }
