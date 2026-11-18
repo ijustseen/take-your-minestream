@@ -1,7 +1,4 @@
-# Automatically build the project and run any configured tests for every push
-# and submitted pull request. This can help catch issues that only occur on
-# certain platforms or Java versions, and provides a first line of defence
-# against bad commits.
+# Build every loader in isolation (Fabric Loom ≠ Architectury Loom in one process).
 
 name: build
 on: [pull_request, push]
@@ -17,12 +14,15 @@ jobs:
       - name: setup jdk
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'microsoft'
+          # 21 — 1.21.x / Forge / NeoForge; 25 — Minecraft 26.x (toolchain)
+          java-version: |
+            21
+            25
+          distribution: temurin
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build
-        run: ./gradlew build
+      - name: build all loaders
+        run: ./gradlew buildAndCollectAll --stacktrace
       - name: capture build artifacts
         uses: actions/upload-artifact@v4
         with:

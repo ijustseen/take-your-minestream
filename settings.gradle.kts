@@ -1,7 +1,8 @@
 pluginManagement {
     repositories {
-        mavenCentral()
+        // Portal первым: Stonecutter публикуется туда; Central/KikuGie иногда отдают битый/пустой 0.9
         gradlePluginPortal()
+        mavenCentral()
         maven("https://maven.fabricmc.net/")
         maven("https://maven.minecraftforge.net/")
         maven("https://maven.neoforged.net/releases/")
@@ -12,7 +13,7 @@ pluginManagement {
 }
 
 plugins {
-    id("dev.kikugie.stonecutter") version "0.9"
+    id("dev.kikugie.stonecutter") version "0.9.8"
 }
 
 // Fabric Loom и Architectury Loom нельзя remap’ить в одном прогоне.
