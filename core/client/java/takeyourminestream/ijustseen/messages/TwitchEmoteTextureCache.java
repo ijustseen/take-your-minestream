@@ -14,6 +14,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -28,11 +29,18 @@ public final class TwitchEmoteTextureCache {
     private static final Map<String, AnimatedTextureSet> ANIMATED_TEXTURES = new ConcurrentHashMap<>();
     private static final Map<String, NativeImageBackedTexture> TEXTURE_REFS = new ConcurrentHashMap<>();
     private static final Map<String, byte[]> IMAGE_BYTES_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, Long> LAST_USED_MS = new ConcurrentHashMap<>();
     private static final Set<String> PENDING_OR_DONE = ConcurrentHashMap.newKeySet();
     private static final Set<String> FAILED = ConcurrentHashMap.newKeySet();
     private static final Set<String> REUPLOADING = ConcurrentHashMap.newKeySet();
     private static final ConcurrentLinkedQueue<PendingUpload> UPLOAD_QUEUE = new ConcurrentLinkedQueue<>();
     private static final int MAX_TEXTURES_PER_TICK = 3;
+    /** Неиспользуемые GPU-эмоуты выгружаем через это время (диск/байты остаются). */
+    private static final long EMOTE_GPU_TTL_MS = 60_000L;
+    /** Soft-cap числа эмоут-ключей в GPU; сверх — вытесняем самые старые. */
+    private static final int MAX_GPU_EMOTE_KEYS = 160;
+    private static final int MAX_UNLOADS_PER_TICK = 4;
+    private static int tickCounter = 0;
     private static final ExecutorService DOWNLOAD_EXECUTOR = Executors.newFixedThreadPool(4, runnable -> {
         Thread thread = new Thread(runnable, "TYMS-EmoteLoader");
         thread.setDaemon(true);
@@ -118,8 +126,98 @@ public final class TwitchEmoteTextureCache {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
     public static void registerClientTick() {
-        ClientHooks.get().onEndClientTick(TwitchEmoteTextureCache::drainUploads);
+        ClientHooks.get().onEndClientTick(client -> {
+            drainUploads(client);
+            // Раз в 20 тиков — LRU GPU-эмоутов (не блокируем каждый кадр).
+            if ((++tickCounter % 20) == 0) {
+                evictUnusedGpuTextures(client);
+            }
+        });
         DOWNLOAD_EXECUTOR.execute(EmojiTextureCache::warmup);
+    }
+
+    private static void touch(String key) {
+        LAST_USED_MS.put(key, System.currentTimeMillis());
+    }
+
+    private static int gpuKeyCount() {
+        return LOADED_TEXTURES.size() + ANIMATED_TEXTURES.size();
+    }
+
+    private static void evictUnusedGpuTextures(MinecraftClient client) {
+        if (client == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        int unloaded = 0;
+
+        // 1) TTL
+        List<String> expired = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : LAST_USED_MS.entrySet()) {
+            String key = entry.getKey();
+            if (!LOADED_TEXTURES.containsKey(key) && !ANIMATED_TEXTURES.containsKey(key)) {
+                continue;
+            }
+            if (now - entry.getValue() >= EMOTE_GPU_TTL_MS) {
+                expired.add(key);
+            }
+        }
+        expired.sort(Comparator.comparingLong(k -> LAST_USED_MS.getOrDefault(k, 0L)));
+        for (String key : expired) {
+            if (unloaded >= MAX_UNLOADS_PER_TICK) {
+                break;
+            }
+            if (unloadGpuKey(client, key)) {
+                unloaded++;
+            }
+        }
+
+        // 2) Soft-cap: вытесняем самые старые, даже если TTL ещё не вышел.
+        if (gpuKeyCount() > MAX_GPU_EMOTE_KEYS && unloaded < MAX_UNLOADS_PER_TICK) {
+            List<String> oldest = new ArrayList<>(LOADED_TEXTURES.keySet());
+            oldest.addAll(ANIMATED_TEXTURES.keySet());
+            oldest.sort(Comparator.comparingLong(k -> LAST_USED_MS.getOrDefault(k, 0L)));
+            for (String key : oldest) {
+                if (gpuKeyCount() <= MAX_GPU_EMOTE_KEYS || unloaded >= MAX_UNLOADS_PER_TICK) {
+                    break;
+                }
+                if (unloadGpuKey(client, key)) {
+                    unloaded++;
+                }
+            }
+        }
+    }
+
+    private static boolean unloadGpuKey(MinecraftClient client, String key) {
+        if (key == null || key.startsWith("platform:")) {
+            return false;
+        }
+        AnimatedTextureSet animated = ANIMATED_TEXTURES.remove(key);
+        if (animated != null) {
+            for (Identifier frameId : animated.frameTextureIds) {
+                client.getTextureManager().destroyTexture(frameId);
+            }
+            LOADED_TEXTURES.remove(key);
+            TEXTURE_REFS.remove(key);
+            PENDING_OR_DONE.remove(key);
+            LAST_USED_MS.remove(key);
+            return true;
+        }
+        Identifier id = LOADED_TEXTURES.remove(key);
+        if (id == null) {
+            return false;
+        }
+        client.getTextureManager().destroyTexture(id);
+        NativeImageBackedTexture tex = TEXTURE_REFS.remove(key);
+        if (tex != null) {
+            try {
+                tex.close();
+            } catch (Exception ignored) {
+            }
+        }
+        PENDING_OR_DONE.remove(key);
+        LAST_USED_MS.remove(key);
+        return true;
     }
 
     private static String getEmoteUrl(String provider, String emoteId) {
@@ -259,11 +357,13 @@ public final class TwitchEmoteTextureCache {
         String key = cacheKey(provider, emoteId);
         AnimatedTextureSet animated = ANIMATED_TEXTURES.get(key);
         if (animated != null) {
+            touch(key);
             return animated.currentFrameId();
         }
 
         Identifier existing = LOADED_TEXTURES.get(key);
         if (existing != null) {
+            touch(key);
             MinecraftClient client = MinecraftClient.getInstance();
             if (client != null) {
                 net.minecraft.client.texture.AbstractTexture tex = client.getTextureManager().getTexture(existing);
@@ -489,6 +589,7 @@ public final class TwitchEmoteTextureCache {
             TEXTURE_REFS.put(key, texture);
             LOADED_TEXTURES.put(key, textureId);
             ANIMATED_TEXTURES.remove(key);
+            touch(key);
             return 1;
         } catch (Exception e) {
             markFailed(key);
@@ -522,6 +623,7 @@ public final class TwitchEmoteTextureCache {
         }
         ANIMATED_TEXTURES.put(key, new AnimatedTextureSet(List.copyOf(frameIds), List.copyOf(frameDurations)));
         LOADED_TEXTURES.remove(key);
+        touch(key);
         return frameIds.size();
     }
 

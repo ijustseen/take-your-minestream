@@ -22,7 +22,7 @@ import takeyourminestream.ijustseen.messages.Message;
 import takeyourminestream.ijustseen.messages.MessageHistoryActions;
 import takeyourminestream.ijustseen.messages.MessageLifecycleManager;
 import takeyourminestream.ijustseen.messages.PinnedMessageStore;
-import takeyourminestream.ijustseen.ui.gui.ConfirmResetButton;
+import takeyourminestream.ijustseen.ui.gui.ConfirmActionPopup;
 import takeyourminestream.ijustseen.ui.gui.GuiScrollbar;
 import takeyourminestream.ijustseen.ui.gui.GuiLayerFlush;
 import takeyourminestream.ijustseen.ui.gui.HistoryMessageActionPopup;
@@ -50,6 +50,7 @@ public class MessageHistoryScreen extends DimScreen {
     private final MessageLifecycleManager lifecycleManager;
     private final BlockedUsernameManager blockedUsernameManager = BlockedUsernameManager.getInstance();
     private final HistoryMessageActionPopup actionPopup = new HistoryMessageActionPopup();
+    private final ConfirmActionPopup confirmPopup = new ConfirmActionPopup();
 
     // Открываем историю прокрученной вниз — к самым свежим сообщениям
     private int historyScrollOffset = Integer.MAX_VALUE;
@@ -118,22 +119,29 @@ public class MessageHistoryScreen extends DimScreen {
             btn -> {
                 lifecycleManager.clearMessageHistory();
                 actionPopup.dismiss();
+                confirmPopup.dismiss();
                 updateLayout();
             }
         ).dimensions(rowLeft, buttonY, buttonWidth, 20).build());
 
-        this.addDrawableChild(ConfirmResetButton.create(
-            rowLeft + buttonWidth + buttonSpacing,
-            buttonY,
-            buttonWidth,
-            20,
+        this.addDrawableChild(ButtonWidget.builder(
             Text.translatable("takeyourstreamchat.history.clear_pinned"),
-            () -> {
-                PinnedMessageStore.clearCurrentWorld(lifecycleManager);
+            btn -> {
                 actionPopup.dismiss();
-                updateLayout();
+                confirmPopup.open(
+                    this.width,
+                    this.height,
+                    this.textRenderer,
+                    Text.translatable("takeyourstreamchat.history.clear_pinned_confirm_title"),
+                    Text.translatable("takeyourstreamchat.history.clear_pinned_confirm"),
+                    Text.translatable("takeyourstreamchat.history.clear_pinned_cancel"),
+                    () -> {
+                        PinnedMessageStore.clearCurrentWorld(lifecycleManager);
+                        updateLayout();
+                    }
+                );
             }
-        ));
+        ).dimensions(rowLeft + buttonWidth + buttonSpacing, buttonY, buttonWidth, 20).build());
 
         this.addDrawableChild(ButtonWidget.builder(
             Text.translatable("takeyourstreamchat.history.close"),
@@ -298,7 +306,15 @@ public class MessageHistoryScreen extends DimScreen {
         renderHistorySizeField(context, mouseX, mouseY, delta);
         ScreenUiHelper.renderAllButtons(context, mouseX, mouseY, this);
 
-        if (actionPopup.isOpen()) {
+        if (confirmPopup.isOpen()) {
+            GuiLayerFlush.renderOverlay(
+                context,
+                () -> confirmPopup.render(context, this.textRenderer, mouseX, mouseY, this.width, this.height),
+                mouseX,
+                mouseY,
+                delta
+            );
+        } else if (actionPopup.isOpen()) {
             GuiLayerFlush.renderOverlay(
                 context,
                 () -> actionPopup.render(context, this.textRenderer, mouseX, mouseY),
@@ -376,7 +392,7 @@ public class MessageHistoryScreen extends DimScreen {
 
             boolean visibleInWorld = lifecycleManager.isVisibleInWorld(card.message);
             float alpha = visibleInWorld ? 1.0f : 0.75f;
-            boolean hovered = card == hoveredCard && !actionPopup.isOpen();
+            boolean hovered = card == hoveredCard && !actionPopup.isOpen() && !confirmPopup.isOpen();
 
             MessageCardRenderer.draw(
                 context,
@@ -415,7 +431,7 @@ public class MessageHistoryScreen extends DimScreen {
 
     private void updateHoverState(int mouseX, int mouseY) {
         hoveredCard = null;
-        if (actionPopup.isOpen() || draggingColumn != SCROLL_NONE) {
+        if (confirmPopup.isOpen() || actionPopup.isOpen() || draggingColumn != SCROLL_NONE) {
             return;
         }
 
@@ -445,7 +461,7 @@ public class MessageHistoryScreen extends DimScreen {
     }
 
     private void renderTooltip(DrawContext context, int mouseX, int mouseY) {
-        if (actionPopup.isOpen() || hoveredCard == null) {
+        if (confirmPopup.isOpen() || actionPopup.isOpen() || hoveredCard == null) {
             return;
         }
         context.drawTooltip(
@@ -474,6 +490,10 @@ public class MessageHistoryScreen extends DimScreen {
     private boolean handleHistoryMouseClicked(double mouseX, double mouseY, int button) {
         int mx = (int) mouseX;
         int my = (int) mouseY;
+
+        if (confirmPopup.isOpen()) {
+            return confirmPopup.handleClick(mx, my);
+        }
 
         if (actionPopup.isOpen()) {
             HistoryMessageActionPopup.Entry entry = actionPopup.hitTest(mx, my);
@@ -580,6 +600,10 @@ public class MessageHistoryScreen extends DimScreen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        if (confirmPopup.isOpen() && input.key() == GLFW.GLFW_KEY_ESCAPE) {
+            confirmPopup.dismiss();
+            return true;
+        }
         if (actionPopup.isOpen() && input.key() == GLFW.GLFW_KEY_ESCAPE) {
             actionPopup.dismiss();
             selectedCard = null;
@@ -590,7 +614,7 @@ public class MessageHistoryScreen extends DimScreen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (actionPopup.isOpen()) {
+        if (confirmPopup.isOpen() || actionPopup.isOpen()) {
             return true;
         }
 
@@ -758,6 +782,7 @@ public class MessageHistoryScreen extends DimScreen {
     @Override
     public void close() {
         actionPopup.dismiss();
+        confirmPopup.dismiss();
         if (this.parent != null) {
             ScreenNavigationCompat.open(this.client, this.parent);
         } else {

@@ -17,16 +17,16 @@ import takeyourminestream.ijustseen.utils.SubmitGeometryHelper;
 
 import java.util.List;
 
-/** Отвечает за рендеринг сообщений в мире (Minecraft 26.2). */
+/** Отвечает за рендеринг сообщений в мире (Minecraft 26.3). */
 public class MessageRenderer {
     private final MessageLifecycleManager lifecycleManager;
     private final MessageParticleManager particleManager;
     private final java.util.WeakHashMap<Message, MessageRenderSmoothing> smoothing = new java.util.WeakHashMap<>();
+    private final java.util.WeakHashMap<Message, MessageRenderLod.Level> lodState = new java.util.WeakHashMap<>();
     /** Куб редактора рисуется после всех сообщений: иначе его стенки перекрывают по глубине ещё не нарисованный текст. */
     private org.joml.Matrix4f pendingBlockCube;
 
     private static final float PIN_ICON_Z_OFFSET = -0.02f;
-    private static final int EMOTE_ICON_SIZE = 12;
     private static final int EMOTE_ICON_SPACING = 1;
     private static final float EMOTE_ICON_Z_OFFSET = 0.02f;
 
@@ -53,7 +53,18 @@ public class MessageRenderer {
                 if (!PinnedMessageStore.belongsToCurrentWorld(message, client)) {
                     continue;
                 }
-                renderMessage(client, message, poseStack, textRenderer, collector);
+                MessageRenderLod.Level drawLevel;
+                if (message.isPreview()) {
+                    drawLevel = MessageRenderLod.Level.FULL;
+                } else {
+                    MessageRenderLod.Level previous = lodState.getOrDefault(message, MessageRenderLod.Level.HIDDEN);
+                    drawLevel = MessageRenderLod.resolve(client, message.getPosition(), previous);
+                    lodState.put(message, drawLevel);
+                }
+                if (drawLevel == MessageRenderLod.Level.HIDDEN) {
+                    continue;
+                }
+                renderMessage(client, message, poseStack, textRenderer, collector, drawLevel);
             }
             if (particleManager != null) {
                 particleManager.render(client, poseStack, collector);
@@ -70,7 +81,8 @@ public class MessageRenderer {
         Message message,
         PoseStack poseStack,
         Font textRenderer,
-        SubmitNodeCollector collector
+        SubmitNodeCollector collector,
+        MessageRenderLod.Level lod
     ) {
         poseStack.pushPose();
 
@@ -103,12 +115,17 @@ public class MessageRenderer {
         float finalScale = MessagePanelLayout.worldScale();
         poseStack.scale(finalScale, -finalScale, finalScale);
 
+        if (lod == MessageRenderLod.Level.SIMPLE) {
+            renderSimplifiedMessage(message, poseStack, textRenderer, collector, fallOffsetY);
+            poseStack.popPose();
+            return;
+        }
+
         MessagePanelLayout.Dimensions layout = message.getWorldLayout(textRenderer);
         int maxTextWidth = layout.maxTextWidth();
         float totalTextHeight = layout.totalTextHeight();
         int panelWidth = layout.panelWidth();
         int panelHeight = layout.panelHeight();
-        String platformIconKey = message.getPlatformIconKey();
         int iconOffset = layout.firstLineIconOffset();
 
         boolean hasEmotes = message.hasInlineEmotes();
@@ -195,6 +212,47 @@ public class MessageRenderer {
             renderPinIcon(poseStack, collector, panelWidth);
         }
         poseStack.popPose();
+    }
+
+    /** Дальний LOD: дешёвая плашка без 9-slice/3D/текста. */
+    private void renderSimplifiedMessage(
+        Message message,
+        PoseStack poseStack,
+        Font textRenderer,
+        SubmitNodeCollector collector,
+        float fallOffsetY
+    ) {
+        MessagePanelLayout.Dimensions layout = message.peekWorldLayout();
+        int panelWidth;
+        int panelHeight;
+        if (layout == null) {
+            poseStack.translate(-30.0f, -8.0f + fallOffsetY, 0f);
+            panelWidth = 72;
+            panelHeight = 20;
+        } else {
+            poseStack.translate(-layout.maxTextWidth() / 2.0f, -layout.totalTextHeight() / 2.0f + fallOffsetY, 0f);
+            panelWidth = layout.panelWidth();
+            panelHeight = layout.panelHeight();
+        }
+        if (!ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
+            return;
+        }
+        takeyourminestream.ijustseen.core.MessagePanelColors.bindEvent(message.getEventType());
+        try {
+            MessagePanelWorldRenderer.drawSimplifiedPanel(
+                poseStack,
+                collector,
+                -MessagePanelConstants.PADDING_X,
+                -MessagePanelConstants.PADDING_Y,
+                panelWidth,
+                panelHeight,
+                0.9f,
+                takeyourminestream.ijustseen.core.MessagePanelColors.baseRgb(),
+                ModAuthor.borderRgb(message)
+            );
+        } finally {
+            takeyourminestream.ijustseen.core.MessagePanelColors.unbindEvent();
+        }
     }
 
     private void renderPinIcon(PoseStack poseStack, SubmitNodeCollector collector, int panelWidth) {

@@ -358,5 +358,8 @@
   "takeyourstreamchat.config.event.tiktok.gift": "Подарки:",
   "takeyourstreamchat.config.event.tiktok.gift.desc": "Показывать подарки TikTok.",
   "takeyourstreamchat.history.clear_pinned": "Сбросить пины",
+  "takeyourstreamchat.history.clear_pinned_confirm_title": "Сбросить все пины в этом мире?",
+  "takeyourstreamchat.history.clear_pinned_confirm": "Сбросить",
+  "takeyourstreamchat.history.clear_pinned_cancel": "Отмена",
   "takeyourstreamchat.config.reset_confirm_short": "Ещё раз"
 }

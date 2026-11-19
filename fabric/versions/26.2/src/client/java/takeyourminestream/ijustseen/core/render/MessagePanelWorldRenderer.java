@@ -70,6 +70,38 @@ public final class MessagePanelWorldRenderer {
         }
     }
 
+    /** Дешёвый LOD: fill + тонкая рамка без 9-slice/3D. */
+    public static void drawSimplifiedPanel(
+        PoseStack poseStack,
+        SubmitNodeCollector collector,
+        int x,
+        int y,
+        int width,
+        int height,
+        float alpha,
+        int fillRgb,
+        int borderRgb
+    ) {
+        float fr = ((fillRgb >> 16) & 0xFF) / 255.0f;
+        float fg = ((fillRgb >> 8) & 0xFF) / 255.0f;
+        float fb = (fillRgb & 0xFF) / 255.0f;
+        float br = ((borderRgb >> 16) & 0xFF) / 255.0f;
+        float bg = ((borderRgb >> 8) & 0xFF) / 255.0f;
+        float bb = (borderRgb & 0xFF) / 255.0f;
+        var panel = MessagePanelTextures.panel();
+        var border = MessagePanelTextures.border();
+        SubmitGeometryHelper.submitTexturedQuad(
+            collector, poseStack, panel, false,
+            x, y, x + width, y + height, 0f,
+            0.5f, 0.5f, 0.5f, 0.5f, fr, fg, fb, alpha
+        );
+        float e = 1.0f;
+        SubmitGeometryHelper.submitTexturedQuad(collector, poseStack, border, false, x, y, x + width, y + e, BORDER_Z, 0.5f, 0.5f, 0.5f, 0.5f, br, bg, bb, alpha);
+        SubmitGeometryHelper.submitTexturedQuad(collector, poseStack, border, false, x, y + height - e, x + width, y + height, BORDER_Z, 0.5f, 0.5f, 0.5f, 0.5f, br, bg, bb, alpha);
+        SubmitGeometryHelper.submitTexturedQuad(collector, poseStack, border, false, x, y, x + e, y + height, BORDER_Z, 0.5f, 0.5f, 0.5f, 0.5f, br, bg, bb, alpha);
+        SubmitGeometryHelper.submitTexturedQuad(collector, poseStack, border, false, x + width - e, y, x + width, y + height, BORDER_Z, 0.5f, 0.5f, 0.5f, 0.5f, br, bg, bb, alpha);
+    }
+
     /** Каркас куба 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
     public static void drawBlockCube(org.joml.Matrix4f matrix, SubmitNodeCollector collector) {
         PoseStack poseStack = new PoseStack();

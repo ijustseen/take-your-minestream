@@ -358,5 +358,8 @@
   "takeyourstreamchat.config.event.tiktok.gift": "Gifts:",
   "takeyourstreamchat.config.event.tiktok.gift.desc": "Show TikTok gifts.",
   "takeyourstreamchat.history.clear_pinned": "Clear pins",
+  "takeyourstreamchat.history.clear_pinned_confirm_title": "Clear all pinned messages in this world?",
+  "takeyourstreamchat.history.clear_pinned_confirm": "Clear",
+  "takeyourstreamchat.history.clear_pinned_cancel": "Cancel",
   "takeyourstreamchat.config.reset_confirm_short": "Confirm"
 }

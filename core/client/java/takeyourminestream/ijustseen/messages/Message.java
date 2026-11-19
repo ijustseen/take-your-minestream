@@ -205,6 +205,12 @@ public class Message {
         return cached;
     }
 
+    /** Уже посчитанный layout без форса вычислений (для дешёвого LOD). */
+    public MessagePanelLayout.Dimensions peekWorldLayout() {
+        invalidateLayoutIfWrapChanged();
+        return cachedWorldLayout;
+    }
+
     public List<EmoteTextLayout.LineContent> getEmoteLines(TextRenderer textRenderer) {
         if (!hasInlineEmotes()) {
             return List.of();

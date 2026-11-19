@@ -358,5 +358,8 @@
   "takeyourstreamchat.config.event.tiktok.gift": "Geschenke:",
   "takeyourstreamchat.config.event.tiktok.gift.desc": "TikTok-Geschenke anzeigen.",
   "takeyourstreamchat.history.clear_pinned": "Pins löschen",
+  "takeyourstreamchat.history.clear_pinned_confirm_title": "Alle Pins in dieser Welt löschen?",
+  "takeyourstreamchat.history.clear_pinned_confirm": "Löschen",
+  "takeyourstreamchat.history.clear_pinned_cancel": "Abbrechen",
   "takeyourstreamchat.config.reset_confirm_short": "Bestätigen"
 }

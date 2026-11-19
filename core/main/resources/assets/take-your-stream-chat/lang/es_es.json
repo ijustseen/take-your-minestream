@@ -358,5 +358,8 @@
   "takeyourstreamchat.config.event.tiktok.gift": "Regalos:",
   "takeyourstreamchat.config.event.tiktok.gift.desc": "Show TikTok gifts.",
   "takeyourstreamchat.history.clear_pinned": "Quitar fijados",
+  "takeyourstreamchat.history.clear_pinned_confirm_title": "¿Quitar todos los fijados de este mundo?",
+  "takeyourstreamchat.history.clear_pinned_confirm": "Quitar",
+  "takeyourstreamchat.history.clear_pinned_cancel": "Cancelar",
   "takeyourstreamchat.config.reset_confirm_short": "Confirmar"
 }

@@ -90,6 +90,62 @@ public final class MessagePanelWorldRenderer {
         }
     }
 
+    /**
+     * Дешёвый LOD-билборд: один tinted quad без 9-slice и 3D-рамки.
+     * Координаты — в локальной плоскости сообщения (как у полной панели).
+     */
+    public static void drawSimplifiedPanel(
+        MatrixStack matrices,
+        net.minecraft.client.render.VertexConsumerProvider consumers,
+        int x,
+        int y,
+        int width,
+        int height,
+        float alpha,
+        int fillRgb,
+        int borderRgb
+    ) {
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        int light = 0xF000F0;
+        int overlay = OverlayTexture.DEFAULT_UV;
+        float fr = ((fillRgb >> 16) & 0xFF) / 255.0f;
+        float fg = ((fillRgb >> 8) & 0xFF) / 255.0f;
+        float fb = (fillRgb & 0xFF) / 255.0f;
+        float br = ((borderRgb >> 16) & 0xFF) / 255.0f;
+        float bg = ((borderRgb >> 8) & 0xFF) / 255.0f;
+        float bb = (borderRgb & 0xFF) / 255.0f;
+
+        VertexConsumer fill = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelTextures.panel());
+        fill.vertex(matrix, x, y, 0).color(fr, fg, fb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        fill.vertex(matrix, x, y + height, 0).color(fr, fg, fb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        fill.vertex(matrix, x + width, y + height, 0).color(fr, fg, fb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        fill.vertex(matrix, x + width, y, 0).color(fr, fg, fb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+
+        // Тонкая рамка одним проходом по краю (без 9-slice).
+        float edge = 1.0f;
+        VertexConsumer border = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelTextures.border());
+        // top
+        border.vertex(matrix, x, y, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x, y + edge, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + width, y + edge, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + width, y, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        // bottom
+        border.vertex(matrix, x, y + height - edge, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x, y + height, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + width, y + height, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + width, y + height - edge, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        // left
+        border.vertex(matrix, x, y, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x, y + height, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + edge, y + height, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + edge, y, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        // right
+        border.vertex(matrix, x + width - edge, y, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + width - edge, y + height, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + width, y + height, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+        border.vertex(matrix, x + width, y, 0.01f).color(br, bg, bb, alpha).texture(0.5f, 0.5f).overlay(overlay).light(light).normal(0, 0, -1);
+    }
+
     /** Каркас куба 1×1×1 блок с центром в начале текущей матрицы (единицы — блоки). */
     public static void drawBlockCube(Matrix4f matrix, net.minecraft.client.render.VertexConsumerProvider consumers) {
         VertexConsumer consumer = RenderLayerCompat.getEntityBuffer(consumers, MessagePanelConstants.EDITOR_CUBE_TEXTURE);

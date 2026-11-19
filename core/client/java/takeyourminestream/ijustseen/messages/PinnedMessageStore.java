@@ -91,12 +91,8 @@ public final class PinnedMessageStore {
                     } catch (IllegalArgumentException ignored) {
                     }
                 }
-                // Предзагружаем текстуры эмоутов для закреплённых сообщений
-                if (entry.emotes != null) {
-                    for (PinnedEmoteEntry emote : entry.emotes) {
-                        TwitchEmoteTextureCache.preload(emote.provider, emote.emoteId);
-                    }
-                }
+                // Эмоуты пинов грузим лениво при первом FULL-рендере (MessageRenderLod),
+                // иначе сотни пинов сразу забивают GPU/сеть при входе в мир.
                 lifecycleManager.addPinnedMessage(message);
             }
         } catch (Exception e) {

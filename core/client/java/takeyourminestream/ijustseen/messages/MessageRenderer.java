@@ -29,34 +29,45 @@ public class MessageRenderer {
     private final MessageLifecycleManager lifecycleManager;
     private final MessageParticleManager particleManager;
     private final java.util.WeakHashMap<Message, MessageRenderSmoothing> smoothing = new java.util.WeakHashMap<>();
+    private final java.util.WeakHashMap<Message, MessageRenderLod.Level> lodState = new java.util.WeakHashMap<>();
     /** Куб редактора рисуется после всех сообщений: иначе его стенки перекрывают по глубине ещё не нарисованный текст. */
     private org.joml.Matrix4f pendingBlockCube;
 
     private static final float PIN_ICON_Z_OFFSET = -0.02f;
     private static final int EMOTE_ICON_SPACING = 1;
     private static final float EMOTE_ICON_Z_OFFSET = 0.02f;
+
     public MessageRenderer(MessageLifecycleManager lifecycleManager, MessageParticleManager particleManager) {
         this.lifecycleManager = lifecycleManager;
         this.particleManager = particleManager;
-        
+
         ClientHooks.get().onWorldRenderAfterEntities((matrices, consumers) -> {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player == null || client.world == null) return;
 
-            // Не рендерим 3D сообщения в HUD режиме
-            var spawnMode = takeyourminestream.ijustseen.config.ModConfig.getMESSAGE_SPAWN_MODE();
+            var spawnMode = ModConfig.getMESSAGE_SPAWN_MODE();
             if (spawnMode == takeyourminestream.ijustseen.config.MessageSpawnMode.HUD_WIDGET) {
                 return;
             }
 
             TextRenderer textRenderer = client.textRenderer;
-            List<Message> activeMessages = lifecycleManager.getActiveMessages();
-
-            for (Message message : activeMessages) {
+            for (Message message : lifecycleManager.getActiveMessages()) {
                 if (!PinnedMessageStore.belongsToCurrentWorld(message, client)) {
                     continue;
                 }
-                renderMessage(client, message, matrices, textRenderer, consumers);
+                MessageRenderLod.Level drawLevel;
+                if (message.isPreview()) {
+                    drawLevel = MessageRenderLod.Level.FULL;
+                } else {
+                    // Cull/LOD по сырой позиции — до smoothing (дешевле на сотнях пинов).
+                    MessageRenderLod.Level previous = lodState.getOrDefault(message, MessageRenderLod.Level.HIDDEN);
+                    drawLevel = MessageRenderLod.resolve(client, message.getPosition(), previous);
+                    lodState.put(message, drawLevel);
+                }
+                if (drawLevel == MessageRenderLod.Level.HIDDEN) {
+                    continue;
+                }
+                renderMessage(client, message, matrices, textRenderer, consumers, drawLevel);
             }
             if (particleManager != null) {
                 particleManager.render(client, matrices, consumers);
@@ -67,12 +78,15 @@ public class MessageRenderer {
             }
         });
     }
-    
-    /**
-     * Рендерит одно сообщение
-     */
-    private void renderMessage(MinecraftClient client, Message message, MatrixStack matrices, 
-                             TextRenderer textRenderer, VertexConsumerProvider consumers) {
+
+    private void renderMessage(
+        MinecraftClient client,
+        Message message,
+        MatrixStack matrices,
+        TextRenderer textRenderer,
+        VertexConsumerProvider consumers,
+        MessageRenderLod.Level lod
+    ) {
         matrices.push();
 
         int tickCounter = lifecycleManager.getTickCounter();
@@ -82,12 +96,11 @@ public class MessageRenderer {
         int fallStart = ModConfig.getMESSAGE_LIFETIME_TICKS();
         int fallAge = age - fallStart;
         if (fallAge >= fallTicks) {
-            // Сообщение уже "разбилось" и не должно отображаться
             matrices.pop();
             return;
         }
 
-        // Сверхплавная интерполяция на стороне рендера (кадровая)
+        // Smoothing только для видимых.
         MessageRenderSmoothing state = smoothing.computeIfAbsent(message, MessageRenderSmoothing::fromMessage);
         state.updateTowards(message);
 
@@ -103,17 +116,21 @@ public class MessageRenderer {
         if (message.isPreview() && message.hasBlockCube()) {
             pendingBlockCube = new org.joml.Matrix4f(matrices.peek().getPositionMatrix());
         }
-        
-        // Применяем масштаб из конфигурации
+
         float finalScale = MessagePanelLayout.worldScale();
         matrices.scale(finalScale, -finalScale, finalScale);
+
+        if (lod == MessageRenderLod.Level.SIMPLE) {
+            renderSimplifiedMessage(message, matrices, textRenderer, consumers, fallOffsetY);
+            matrices.pop();
+            return;
+        }
 
         MessagePanelLayout.Dimensions layout = message.getWorldLayout(textRenderer);
         int maxTextWidth = layout.maxTextWidth();
         float totalTextHeight = layout.totalTextHeight();
         int panelWidth = layout.panelWidth();
         int panelHeight = layout.panelHeight();
-        String platformIconKey = message.getPlatformIconKey();
         int iconOffset = layout.firstLineIconOffset();
 
         boolean hasEmotes = message.hasInlineEmotes();
@@ -123,9 +140,7 @@ public class MessageRenderer {
         List<OrderedText> wrappedText = hasEmotes
             ? java.util.Collections.emptyList()
             : textRenderer.wrapLines(LegacySectionText.parse(message.getText()), MessagePanelLayout.wrapWidth());
-        // Центрируем текст и панель + применяем падение
         matrices.translate(-maxTextWidth / 2.0f, -totalTextHeight / 2.0f + fallOffsetY, 0f);
-        // Рендерим панель (по флагу)
         if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
             MessagePanelColors.bindEvent(message.getEventType());
             try {
@@ -137,14 +152,13 @@ public class MessageRenderer {
                     panelWidth,
                     panelHeight,
                     1.0f,
-                    takeyourminestream.ijustseen.messages.ModAuthor.borderRgb(message)
+                    ModAuthor.borderRgb(message)
                 );
             } finally {
                 MessagePanelColors.unbindEvent();
             }
         }
         matrices.translate(0f, 0f, 0.1f);
-        // Рендерим текст
         int alphaInt = 0xFF << 24;
         int color = (0xFFFFFF) | alphaInt;
         renderIconRow(matrices, consumers, message);
@@ -206,6 +220,55 @@ public class MessageRenderer {
             renderPinIcon(matrices, panelWidth, consumers);
         }
         matrices.pop();
+    }
+
+    /** Дальний LOD: 1 fill + тонкая рамка, без 9-slice/3D/текста. */
+    private void renderSimplifiedMessage(
+        Message message,
+        MatrixStack matrices,
+        TextRenderer textRenderer,
+        VertexConsumerProvider consumers,
+        float fallOffsetY
+    ) {
+        MessagePanelLayout.Dimensions layout = message.peekWorldLayout();
+        if (layout == null) {
+            // Не форсим полный compute: фиксированный stub для дальних.
+            matrices.translate(-30.0f, -8.0f + fallOffsetY, 0f);
+            if (ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
+                drawCheapPanel(message, matrices, consumers, 72, 20);
+            }
+            return;
+        }
+        matrices.translate(-layout.maxTextWidth() / 2.0f, -layout.totalTextHeight() / 2.0f + fallOffsetY, 0f);
+        if (!ModConfig.isSHOW_MESSAGE_BACKGROUND()) {
+            return;
+        }
+        drawCheapPanel(message, matrices, consumers, layout.panelWidth(), layout.panelHeight());
+    }
+
+    private void drawCheapPanel(
+        Message message,
+        MatrixStack matrices,
+        VertexConsumerProvider consumers,
+        int panelWidth,
+        int panelHeight
+    ) {
+        MessagePanelColors.bindEvent(message.getEventType());
+        try {
+            MessagePanelWorldRenderer.drawSimplifiedPanel(
+                matrices,
+                consumers,
+                -MessagePanelConstants.PADDING_X,
+                -MessagePanelConstants.PADDING_Y,
+                panelWidth,
+                panelHeight,
+                0.9f,
+                MessagePanelColors.baseRgb(),
+                ModAuthor.borderRgb(message)
+            );
+        } finally {
+            MessagePanelColors.unbindEvent();
+        }
     }
 
     private void renderPinIcon(MatrixStack matrices, int panelWidth, VertexConsumerProvider consumers) {
@@ -317,7 +380,6 @@ public class MessageRenderer {
                 );
                 x += iconSize + EMOTE_ICON_SPACING;
             } else if (!"emoji".equals(emote.getProvider())) {
-                // Fallback: show emote code as text while texture is loading/failed
                 String code = emote.getEmoteCode();
                 textRenderer.draw(code,
                     x,
@@ -352,4 +414,4 @@ public class MessageRenderer {
             );
         }
     }
-} 
+}

@@ -7,6 +7,11 @@
 - **Forge 1.20.1** — same client features as Fabric on that version (`tysc-…+1.20.1-forge.jar`, Forge 47.3.x, Java 17)
 - **NeoForge 1.21.1** — same client features as Fabric on that version (`tysc-…+1.21.1-neoforge.jar`, NeoForge 21.1.x, Java 21)
 
+### Changed
+
+- **World message LOD** — view/distance hysteresis; far messages use a cheap flat billboard (no text/emotes/9-slice/3D). Pin emotes load lazily; unused GPU emote textures LRU-evict after ~60s (disk cache kept)
+- **Clear pins confirmation** — history screen uses a modal popup instead of the two-click confirm button label
+
 ### Technical
 
 - Multi-loader layout: shared **`core/`** (code + assets) + Stonecutter branches `fabric|forge|neoforge/versions/{mc}`
@@ -14,6 +19,7 @@
 - FML modId is `take_your_stream_chat` (underscores); resource namespace stays `take-your-stream-chat`
 - Forge/NeoForge packaging: `pack.mcmeta`, Loom mod name aligned with FML modId, main assets synced into the client source set for userdev
 - Stonecutter: Fabric API `< 1.21.10` keeps `v1.WorldRenderEvents` + `matrixStack()` so older Fabric jars still compile after `FabricClientHooks`
+- CI: Stonecutter pinned to `0.9.8`, workflow runs `buildAndCollectAll` with JDK 21+25
 
 ## [2.2.1] - 2026-11-15
 

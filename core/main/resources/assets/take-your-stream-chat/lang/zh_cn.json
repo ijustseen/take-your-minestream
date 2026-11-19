@@ -358,5 +358,8 @@
   "takeyourstreamchat.config.event.tiktok.gift": "礼物：",
   "takeyourstreamchat.config.event.tiktok.gift.desc": "显示 TikTok 礼物。",
   "takeyourstreamchat.history.clear_pinned": "清除置顶",
+  "takeyourstreamchat.history.clear_pinned_confirm_title": "清除此世界的所有置顶？",
+  "takeyourstreamchat.history.clear_pinned_confirm": "清除",
+  "takeyourstreamchat.history.clear_pinned_cancel": "取消",
   "takeyourstreamchat.config.reset_confirm_short": "确认"
 }

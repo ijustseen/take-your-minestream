@@ -358,5 +358,8 @@
   "takeyourstreamchat.config.event.tiktok.gift": "Cadeaux :",
   "takeyourstreamchat.config.event.tiktok.gift.desc": "Show TikTok gifts.",
   "takeyourstreamchat.history.clear_pinned": "Retirer épinglés",
+  "takeyourstreamchat.history.clear_pinned_confirm_title": "Retirer tous les épinglés de ce monde ?",
+  "takeyourstreamchat.history.clear_pinned_confirm": "Retirer",
+  "takeyourstreamchat.history.clear_pinned_cancel": "Annuler",
   "takeyourstreamchat.config.reset_confirm_short": "Confirmer"
 }
