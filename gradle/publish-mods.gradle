@@ -8,7 +8,13 @@ if (gameVersions.isEmpty()) {
     gameVersions = [minecraftVersion]
 }
 
-def jarTaskName = minecraftVersion.startsWith("26.") ? "jar" : "remapJar"
+// Проекты Stonecutter: :fabric:1.21.11, :forge:1.20.1, :neoforge:1.21.1
+def loader = project.parent?.name ?: "fabric"
+def isFabric = loader == "fabric"
+def loaderSuffix = isFabric ? "" : "-${loader}"
+def loaderTitle = [forge: "Forge", neoforge: "NeoForge"][loader]
+
+def jarTaskName = isFabric && minecraftVersion.startsWith("26.") ? "jar" : "remapJar"
 def modJar = tasks.named(jarTaskName).flatMap { it.archiveFile }
 
 def releaseNotes = providers.fileContents(rootProject.layout.projectDirectory.file("CHANGELOG.md")).asText.map { text ->
@@ -56,19 +62,23 @@ def shownVersions = gameVersions.join(", ")
 
 publishMods {
     file = modJar
-    version = "${modVersion}+${minecraftVersion}"
-    displayName = "${modVersion} for ${shownVersions}"
+    version = "${modVersion}+${minecraftVersion}${loaderSuffix}"
+    displayName = loaderTitle
+        ? "${modVersion} for ${shownVersions} (${loaderTitle})"
+        : "${modVersion} for ${shownVersions}"
     changelog = releaseNotes
     type = STABLE
-    modLoaders.add("fabric")
+    modLoaders.add(loader)
 
     modrinth {
         accessToken = secret("MODRINTH_TOKEN")
         projectId = secret("MODRINTH_ID")
         minecraftVersions.addAll(gameVersions)
         environment = CLIENT_ONLY
-        requires("fabric-api")
-        optional("modmenu")
+        if (isFabric) {
+            requires("fabric-api")
+            optional("modmenu")
+        }
         dryRun = secret("MODRINTH_TOKEN").map { false }.orElse(true)
     }
 
@@ -78,8 +88,10 @@ publishMods {
         minecraftVersions.addAll(gameVersions)
         client = true
         server = false
-        requires("fabric-api")
-        optional("modmenu")
+        if (isFabric) {
+            requires("fabric-api")
+            optional("modmenu")
+        }
         dryRun = secret("CURSEFORGE_TOKEN").map { false }.orElse(true)
     }
 }

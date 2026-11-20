@@ -349,17 +349,25 @@ stonecutter parameters {
     }
 }
 
-val fabricPublishOrder = listOf(
-    "fabric:1.20.1", "fabric:1.21", "fabric:1.21.1", "fabric:1.21.4",
-    "fabric:1.21.8", "fabric:1.21.10", "fabric:1.21.11",
-    "fabric:26.1", "fabric:26.2", "fabric:26.3",
-)
+// Fabric и FML собираются в разных прогонах (-Pmod.loaders), поэтому публикуем только активный лоадер.
+// При -Pmod.loaders=forge|neoforge есть stub fabric:1.21.8 — его не публикуем.
+val publishOrder = buildList {
+    if ("fabric" in activeLoaders) {
+        addAll(listOf(
+            "fabric:1.20.1", "fabric:1.21", "fabric:1.21.1", "fabric:1.21.4",
+            "fabric:1.21.8", "fabric:1.21.10", "fabric:1.21.11",
+            "fabric:26.1", "fabric:26.2", "fabric:26.3",
+        ))
+    }
+    if ("forge" in activeLoaders) add("forge:1.20.1")
+    if ("neoforge" in activeLoaders) add("neoforge:1.21.1")
+}
 
 fun registerPublishAll(taskName: String, description: String) {
     tasks.register(taskName) {
         group = "publishing"
         this.description = description
-        val versionTasks = fabricPublishOrder.mapNotNull { path ->
+        val versionTasks = publishOrder.mapNotNull { path ->
             rootProject.findProject(":$path")?.tasks?.named(taskName)
         }
         dependsOn(versionTasks)
@@ -369,8 +377,8 @@ fun registerPublishAll(taskName: String, description: String) {
     }
 }
 
-registerPublishAll("publishModrinth", "Upload every Fabric jar to Modrinth")
-registerPublishAll("publishCurseforge", "Upload every Fabric jar to CurseForge")
+registerPublishAll("publishModrinth", "Upload every jar of the active loader(s) to Modrinth")
+registerPublishAll("publishCurseforge", "Upload every jar of the active loader(s) to CurseForge")
 
 tasks.register("publishMods") {
     group = "publishing"

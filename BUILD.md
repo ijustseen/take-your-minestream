@@ -96,13 +96,16 @@ build/libs/2.2.2/
 
 ## Публикация
 
-Только Fabric-ветки в одном прогоне (`-Pmod.loaders=fabric` подставьте при необходимости):
+Каждый лоадер — отдельным прогоном (Fabric Loom и Architectury Loom не уживаются в одном):
 
 ```bash
 cp .env.example .env   # MODRINTH_* / CURSEFORGE_*
-./gradlew -Pmod.loaders=fabric publishModrinth
-./gradlew -Pmod.loaders=fabric publishCurseforge
+./gradlew -Pmod.loaders=fabric publishModrinth publishCurseforge
+./gradlew -Pmod.loaders=forge publishModrinth publishCurseforge
+./gradlew -Pmod.loaders=neoforge publishModrinth publishCurseforge
 ```
+
+Версии Forge/NeoForge получают суффикс лоадера (`2.2.2+1.20.1-forge`) и пометку в названии, чтобы не совпасть с Fabric той же версии MC.
 
 `publishMods` отключён специально.
 

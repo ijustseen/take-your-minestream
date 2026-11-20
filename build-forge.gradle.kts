@@ -1,6 +1,7 @@
 plugins {
     id("dev.architectury.loom") version "1.9-SNAPSHOT"
     id("maven-publish")
+    id("me.modmuss50.mod-publish-plugin") version "2.2.1"
 }
 
 fun modProp(name: String): String =
@@ -136,3 +137,5 @@ tasks {
 
 tasks.named("remapJar") { onlyIf { fmlBuildAllowed } }
 tasks.named("remapSourcesJar") { onlyIf { fmlBuildAllowed } }
+
+apply(from = rootProject.file("gradle/publish-mods.gradle"))
