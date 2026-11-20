@@ -3,14 +3,15 @@ package takeyourminestream.ijustseen.messages;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.Vec3d;
 import takeyourminestream.ijustseen.utils.CameraPositionCompat;
+import takeyourminestream.ijustseen.utils.EditorCameraCompat;
 
 /**
  * LOD мировых сообщений с гистерезисом.
  * <p>
- * Пороги только в блоках + конус взгляда — без углового размера:
- * слайдер размера сообщения не должен сдвигать дистанцию FULL.
- * HIDDEN — вне взгляда / слишком далеко.
- * SIMPLE — дешёвая плашка без текста/эмоутов.
+ * Пороги дистанции в блоках (слайдер размера сообщения не должен сдвигать дистанцию FULL)
+ * + конус видимости по реальному FOV и соотношению сторон окна.
+ * HIDDEN — за пределами экрана / слишком далеко.
+ * SIMPLE — дешёвая плашка без текста/эмоутов (только по дистанции).
  * FULL — полный рендер.
  */
 public final class MessageRenderLod {
@@ -29,10 +30,13 @@ public final class MessageRenderLod {
     /** Вернуться из HIDDEN по дистанции. */
     private static final double CULL_EXIT = 88.0;
 
-    private static final double VIEW_ENTER = 0.22;
-    private static final double VIEW_EXIT = 0.12;
-    private static final double FULL_VIEW_ENTER = 0.48;
-    private static final double FULL_VIEW_EXIT = 0.38;
+    /** Запас на динамический FOV (спринт, зелья скорости) поверх значения из настроек. */
+    private static final double DYNAMIC_FOV_HEADROOM = 1.2;
+    /** Полуразмер панели в блоках: край крупной панели виден, даже когда центр уже за экраном. */
+    private static final double PANEL_RADIUS_BLOCKS = 2.5;
+    /** Гистерезис конуса видимости, градусы. */
+    private static final double VIEW_EXIT_EXTRA_DEG = 6.0;
+    private static final double MAX_VIEW_HALF_ANGLE_DEG = 175.0;
 
     private MessageRenderLod() {}
 
@@ -61,26 +65,45 @@ public final class MessageRenderLod {
             return Level.FULL;
         }
 
-        Vec3d look = client.player.getRotationVec(1.0f);
         Vec3d dir = messagePos.subtract(cameraPos).normalize();
-        double dot = look.dotProduct(dir);
+        double dot = cameraLook(client).dotProduct(dir);
 
-        double viewMin = prev == Level.HIDDEN ? VIEW_ENTER : VIEW_EXIT;
-        if (dot < viewMin) {
+        double halfAngle = screenHalfAngleDeg(client) + Math.toDegrees(Math.atan(PANEL_RADIUS_BLOCKS / dist));
+        if (prev != Level.HIDDEN) {
+            halfAngle += VIEW_EXIT_EXTRA_DEG;
+        }
+        halfAngle = Math.min(halfAngle, MAX_VIEW_HALF_ANGLE_DEG);
+        if (dot < Math.cos(Math.toRadians(halfAngle))) {
             return Level.HIDDEN;
         }
 
-        if (prev == Level.FULL) {
-            if (dist <= FULL_EXIT && dot >= FULL_VIEW_EXIT) {
-                return Level.FULL;
-            }
-            return Level.SIMPLE;
-        }
+        double fullMax = prev == Level.FULL ? FULL_EXIT : FULL_ENTER;
+        return dist <= fullMax ? Level.FULL : Level.SIMPLE;
+    }
 
-        if (dist <= FULL_ENTER && dot >= FULL_VIEW_ENTER) {
-            return Level.FULL;
+    /**
+     * Направление камеры: взгляд игрока, развёрнутый в виде от 3-го лица спереди.
+     * Позицию игрока не используем — она не интерполирована между тиками и при движении
+     * расходится с камерой, из-за чего сообщения мерцали.
+     */
+    private static Vec3d cameraLook(MinecraftClient client) {
+        Vec3d look = client.player.getRotationVec(1.0f);
+        Object perspective = EditorCameraCompat.capturePerspective(client);
+        if (perspective instanceof Enum<?> mode && "THIRD_PERSON_FRONT".equals(mode.name())) {
+            return new Vec3d(-look.x, -look.y, -look.z);
         }
-        return Level.SIMPLE;
+        return look;
+    }
+
+    /** Угол от центра до угла экрана с учётом FOV и соотношения сторон окна. */
+    private static double screenHalfAngleDeg(MinecraftClient client) {
+        double verticalFov = client.options.getFov().getValue() * DYNAMIC_FOV_HEADROOM;
+        double tanV = Math.tan(Math.toRadians(Math.min(verticalFov, 170.0) / 2.0));
+        int width = client.getWindow().getFramebufferWidth();
+        int height = client.getWindow().getFramebufferHeight();
+        double aspect = width > 0 && height > 0 ? (double) width / height : 16.0 / 9.0;
+        double tanH = tanV * aspect;
+        return Math.toDegrees(Math.atan(Math.sqrt(tanV * tanV + tanH * tanH)));
     }
 
     /**

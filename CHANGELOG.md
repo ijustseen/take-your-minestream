@@ -10,6 +10,7 @@
 ### Changed
 
 - **World message LOD** — view/distance hysteresis; far messages use a cheap flat billboard (no text/emotes/9-slice/3D). Pin emotes load lazily; unused GPU emote textures LRU-evict after ~60s (disk cache kept)
+- **Dense message clusters** — 3D frame geometry is cached per panel size (was rebuilt every frame for every message), wrapped text lines are cached per message; frame side walls and back are merged into long quads (~10× fewer vertices, same look); world messages render in layer passes (all fills → borders → backs → text → icons) instead of message-by-message, so 1.21.x no longer flushes a draw call on every texture switch. Fabric 1.20.1–1.21.8, Forge 1.20.1 and NeoForge 1.21.1 now use the shared world renderer instead of outdated per-version copies, so they get LOD, culling and batching too
 - **Clear pins confirmation** — history screen uses a modal popup instead of the two-click confirm button label
 
 ### Technical

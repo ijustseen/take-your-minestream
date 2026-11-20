@@ -16,18 +16,22 @@ public final class MessageFrame3DModel {
     public static final float Z_FRONT = 0.6f;
     public static final float Z_BACK = -1.4f;
 
-    private List<FrameQuad> cachedQuads;
-    private int cachedX;
-    private int cachedY;
-    private int cachedW;
-    private int cachedH;
-    private int cachedAlphaBits;
-    private int cachedBaseRgb;
-    private int cachedBorderRgb;
-    private int cachedRevision;
-    private int cachedShape;
-    private int cachedBorderSize;
-    private int cachedFillSize;
+    /** Сообщения разного размера/цвета на экране одновременно — одной ячейки кэша мало. */
+    private static final int MAX_CACHED_SHAPES = 512;
+
+    private record CacheKey(
+        int x, int y, int w, int h,
+        int alphaBits, int baseRgb, int borderRgb,
+        int revision, int shape, int borderSize, int fillSize
+    ) {}
+
+    private final java.util.LinkedHashMap<CacheKey, List<FrameQuad>> cache =
+        new java.util.LinkedHashMap<>(64, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(java.util.Map.Entry<CacheKey, List<FrameQuad>> eldest) {
+                return size() > MAX_CACHED_SHAPES;
+            }
+        };
 
     public record FrameQuad(
         Identifier textureId,
@@ -67,17 +71,13 @@ public final class MessageFrame3DModel {
         int shape = MessagePanelTextures.shapeStamp();
         int borderSize = MessagePanelTextures.size(true);
         int fillSize = MessagePanelTextures.size(false);
-        if (cachedQuads != null
-            && cachedX == ix && cachedY == iy && cachedW == iw && cachedH == ih
-            && cachedAlphaBits == alphaBits
-            && cachedBaseRgb == baseRgb
-            && cachedBorderRgb == borderRgb
-            && cachedRevision == textureRevision
-            && cachedShape == shape
-            && cachedBorderSize == borderSize
-            && cachedFillSize == fillSize
-        ) {
-            return cachedQuads;
+        CacheKey key = new CacheKey(
+            ix, iy, iw, ih, alphaBits, baseRgb, borderRgb,
+            textureRevision, shape, borderSize, fillSize
+        );
+        List<FrameQuad> hit = cache.get(key);
+        if (hit != null) {
+            return hit;
         }
 
         List<FrameQuad> quads = new ArrayList<>();
@@ -146,19 +146,11 @@ public final class MessageFrame3DModel {
             alpha
         );
 
-        cachedQuads = List.copyOf(quads);
-        cachedX = ix;
-        cachedY = iy;
-        cachedW = iw;
-        cachedH = ih;
-        cachedAlphaBits = alphaBits;
-        cachedBaseRgb = baseRgb;
-        cachedBorderRgb = borderRgb;
-        cachedRevision = textureRevision;
-        cachedShape = shape;
-        cachedBorderSize = borderSize;
-        cachedFillSize = fillSize;
-        return cachedQuads;
+        // Подряд по текстуре: рендер берёт буфер слоя один раз на группу, а не на каждый квад.
+        quads.sort(java.util.Comparator.comparing(q -> q.textureId().toString()));
+        List<FrameQuad> built = List.copyOf(quads);
+        cache.put(key, built);
+        return built;
     }
 
     /**
@@ -202,86 +194,157 @@ public final class MessageFrame3DModel {
         floodOutside(kind, cols, rows);
         appendBack(quads, kind, cols, rows, originX, originY, width, height, step, zBack, alpha);
 
-        Identifier borderTexture = MessagePanelTextures.border();
-        Identifier fillTexture = MessagePanelTextures.panel();
-        int[] dx = {0, 0, -1, 1};
-        int[] dy = {-1, 1, 0, 0};
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                int here = kind[row * cols + col];
-                if (here != RAISED && here != CANVAS) {
-                    continue;
-                }
-                float x0 = originX + col * step;
-                float y0 = originY + row * step;
-                float x1 = originX + Math.min(width, (col + 1) * step);
-                float y1 = originY + Math.min(height, (row + 1) * step);
-                int sampleX = Math.min(width - 1, col * step + step / 2);
-                int sampleY = Math.min(height - 1, row * step + step / 2);
-                boolean raised = here == RAISED;
-                Identifier texture = raised ? borderTexture : fillTexture;
-                float[] uv = sampleUv(raised, sampleX, sampleY, width, height);
-                float cr = raised ? borderR : baseR;
-                float cg = raised ? borderG : baseG;
-                float cb = raised ? borderB : baseB;
-                for (int dir = 0; dir < 4; dir++) {
-                    int nx = col + dx[dir];
-                    int ny = row + dy[dir];
-                    int neighbor = nx < 0 || ny < 0 || nx >= cols || ny >= rows
-                        ? OUTSIDE
-                        : kind[ny * cols + nx];
-                    if (neighbor == here || (!raised && neighbor == RAISED)) {
+        Grid grid = new Grid(kind, cols, rows, originX, originY, width, height, step);
+        float[] border = {borderR, borderG, borderB};
+        float[] base = {baseR, baseG, baseB};
+        // Стенка по пикселю края — тысячи квадов на сообщение. Соседние рёбра с тем же
+        // направлением, типом и цветом текселя склеиваются в один квад: картинка та же.
+        for (int dir = 0; dir < 4; dir++) {
+            boolean horizontal = dir < 2;
+            int lines = horizontal ? rows : cols;
+            int span = horizontal ? cols : rows;
+            for (int line = 0; line < lines; line++) {
+                int runStart = -1;
+                int runKind = 0;
+                boolean runOnto = false;
+                int runArgb = 0;
+                float[] runUv = null;
+                for (int i = 0; i <= span; i++) {
+                    int edgeKind = 0;
+                    boolean onto = false;
+                    int argb = 0;
+                    if (i < span) {
+                        int col = horizontal ? i : line;
+                        int row = horizontal ? line : i;
+                        int here = kind[row * cols + col];
+                        if (here == RAISED || here == CANVAS) {
+                            int nx = col + DIR_X[dir];
+                            int ny = row + DIR_Y[dir];
+                            int neighbor = nx < 0 || ny < 0 || nx >= cols || ny >= rows
+                                ? OUTSIDE
+                                : kind[ny * cols + nx];
+                            boolean raised = here == RAISED;
+                            if (neighbor != here && (raised || neighbor != RAISED)) {
+                                edgeKind = here;
+                                onto = raised && neighbor == CANVAS;
+                                argb = texel(raised, grid.sampleX(col), grid.sampleY(row), width, height);
+                            }
+                        }
+                    }
+                    boolean continues = runStart >= 0 && edgeKind == runKind && onto == runOnto && argb == runArgb;
+                    if (continues) {
                         continue;
                     }
-                    boolean ontoCanvas = raised && neighbor == CANVAS;
-                    float zNear = raised ? zFront : zCanvas;
-                    float zFar = ontoCanvas ? zCanvas : zBack;
-                    float shade = dir == 0 ? (ontoCanvas ? 0.72f : 0.95f) : dir == 1 ? (ontoCanvas ? 0.55f : 0.62f) : 0.8f;
-                    float ex0;
-                    float ey0;
-                    float ex1;
-                    float ey1;
-                    if (dir == 0) {
-                        ex0 = x0;
-                        ey0 = y0;
-                        ex1 = x1;
-                        ey1 = y0;
-                    } else if (dir == 1) {
-                        ex0 = x1;
-                        ey0 = y1;
-                        ex1 = x0;
-                        ey1 = y1;
-                    } else if (dir == 2) {
-                        ex0 = x0;
-                        ey0 = y1;
-                        ex1 = x0;
-                        ey1 = y0;
-                    } else {
-                        ex0 = x1;
-                        ey0 = y0;
-                        ex1 = x1;
-                        ey1 = y1;
+                    if (runStart >= 0) {
+                        emitWall(quads, grid, dir, line, runStart, i - 1, runKind == RAISED, runOnto, runUv,
+                            zFront, zCanvas, zBack, runKind == RAISED ? border : base, alpha);
+                        runStart = -1;
                     }
-                    if (ontoCanvas) {
-                        float swapX = ex0;
-                        float swapY = ey0;
-                        ex0 = ex1;
-                        ey0 = ey1;
-                        ex1 = swapX;
-                        ey1 = swapY;
+                    if (edgeKind != 0) {
+                        int col = horizontal ? i : line;
+                        int row = horizontal ? line : i;
+                        runStart = i;
+                        runKind = edgeKind;
+                        runOnto = onto;
+                        runArgb = argb;
+                        runUv = sampleUv(edgeKind == RAISED, grid.sampleX(col), grid.sampleY(row), width, height);
                     }
-                    quads.add(new FrameQuad(
-                        texture,
-                        ex0, ey0, zNear,
-                        ex0, ey0, zFar,
-                        ex1, ey1, zFar,
-                        ex1, ey1, zNear,
-                        uv[0], uv[1], uv[0], uv[1], uv[0], uv[1], uv[0], uv[1],
-                        cr * shade, cg * shade, cb * shade, alpha
-                    ));
                 }
             }
         }
+    }
+
+    private static final int[] DIR_X = {0, 0, -1, 1};
+    private static final int[] DIR_Y = {-1, 1, 0, 0};
+
+    private record Grid(byte[] kind, int cols, int rows, int originX, int originY, int width, int height, int step) {
+        int sampleX(int col) {
+            return Math.min(width - 1, col * step + step / 2);
+        }
+
+        int sampleY(int row) {
+            return Math.min(height - 1, row * step + step / 2);
+        }
+
+        float x0(int col) {
+            return originX + col * step;
+        }
+
+        float x1(int col) {
+            return originX + Math.min(width, (col + 1) * step);
+        }
+
+        float y0(int row) {
+            return originY + row * step;
+        }
+
+        float y1(int row) {
+            return originY + Math.min(height, (row + 1) * step);
+        }
+    }
+
+    /** Стенка вдоль ячеек [from..to] одной строки (dir 0/1) или колонки (dir 2/3). */
+    private static void emitWall(
+        List<FrameQuad> quads,
+        Grid grid,
+        int dir,
+        int line,
+        int from,
+        int to,
+        boolean raised,
+        boolean ontoCanvas,
+        float[] uv,
+        float zFront,
+        float zCanvas,
+        float zBack,
+        float[] rgb,
+        float alpha
+    ) {
+        float ex0;
+        float ey0;
+        float ex1;
+        float ey1;
+        if (dir == 0) {
+            ex0 = grid.x0(from);
+            ey0 = grid.y0(line);
+            ex1 = grid.x1(to);
+            ey1 = ey0;
+        } else if (dir == 1) {
+            ex0 = grid.x1(to);
+            ey0 = grid.y1(line);
+            ex1 = grid.x0(from);
+            ey1 = ey0;
+        } else if (dir == 2) {
+            ex0 = grid.x0(line);
+            ey0 = grid.y1(to);
+            ex1 = ex0;
+            ey1 = grid.y0(from);
+        } else {
+            ex0 = grid.x1(line);
+            ey0 = grid.y0(from);
+            ex1 = ex0;
+            ey1 = grid.y1(to);
+        }
+        if (ontoCanvas) {
+            float swapX = ex0;
+            float swapY = ey0;
+            ex0 = ex1;
+            ey0 = ey1;
+            ex1 = swapX;
+            ey1 = swapY;
+        }
+        float zNear = raised ? zFront : zCanvas;
+        float zFar = ontoCanvas ? zCanvas : zBack;
+        float shade = dir == 0 ? (ontoCanvas ? 0.72f : 0.95f) : dir == 1 ? (ontoCanvas ? 0.55f : 0.62f) : 0.8f;
+        quads.add(new FrameQuad(
+            raised ? MessagePanelTextures.border() : MessagePanelTextures.panel(),
+            ex0, ey0, zNear,
+            ex0, ey0, zFar,
+            ex1, ey1, zFar,
+            ex1, ey1, zNear,
+            uv[0], uv[1], uv[0], uv[1], uv[0], uv[1], uv[0], uv[1],
+            rgb[0] * shade, rgb[1] * shade, rgb[2] * shade, alpha
+        ));
     }
 
     private static final byte RAISED = 1;
@@ -342,46 +405,78 @@ public final class MessageFrame3DModel {
         float alpha
     ) {
         float shade = 0.85f;
-        for (int row = 0; row < rows; row++) {
-            int col = 0;
-            while (col < cols) {
-                int here = kind[row * cols + col];
-                if (here != RAISED && here != CANVAS) {
-                    col++;
-                    continue;
-                }
-                int start = col;
-                int tile = (start * step) / 16;
-                col++;
-                while (col < cols && (col * step) / 16 == tile) {
-                    int next = kind[row * cols + col];
-                    if (next != RAISED && next != CANVAS) {
-                        break;
-                    }
-                    col++;
-                }
-                float x0 = originX + start * step;
-                float x1 = originX + Math.min(width, col * step);
-                float y0 = originY + row * step;
-                float y1 = originY + Math.min(height, (row + 1) * step);
-                float u0 = (8f + (start * step) % 16) / 32f;
-                float u1 = (8f + (start * step) % 16 + (x1 - x0)) / 32f;
-                float v0 = (8f + (row * step) % 16) / 32f;
-                float v1 = (8f + (row * step) % 16 + (y1 - y0)) / 32f;
-                quads.add(new FrameQuad(
-                    MessagePanelConstants.FRAME_BACK_TEXTURE,
-                    x1, y0, zBack,
-                    x1, y1, zBack,
-                    x0, y1, zBack,
-                    x0, y0, zBack,
-                    u1, v0,
-                    u1, v1,
-                    u0, v1,
-                    u0, v0,
-                    shade, shade, shade, alpha
-                ));
+        // Строки внутри одного 16px тайла с одинаковыми отрезками склеиваются по вертикали:
+        // UV в тайле линейный, поэтому один высокий квад совпадает со стопкой строк.
+        int[] prevSegments = null;
+        int bandStart = 0;
+        for (int row = 0; row <= rows; row++) {
+            int[] segments = row < rows ? backSegments(kind, cols, row, step) : null;
+            boolean sameBand = prevSegments != null
+                && segments != null
+                && (row * step) / 16 == (bandStart * step) / 16
+                && java.util.Arrays.equals(prevSegments, segments);
+            if (sameBand) {
+                continue;
             }
+            if (prevSegments != null) {
+                float y0 = originY + bandStart * step;
+                float y1 = originY + Math.min(height, row * step);
+                float v0 = (8f + (bandStart * step) % 16) / 32f;
+                float v1 = v0 + (y1 - y0) / 32f;
+                for (int s = 0; s < prevSegments.length; s += 2) {
+                    int start = prevSegments[s];
+                    int end = prevSegments[s + 1];
+                    float x0 = originX + start * step;
+                    float x1 = originX + Math.min(width, end * step);
+                    float u0 = (8f + (start * step) % 16) / 32f;
+                    float u1 = u0 + (x1 - x0) / 32f;
+                    quads.add(new FrameQuad(
+                        MessagePanelConstants.FRAME_BACK_TEXTURE,
+                        x1, y0, zBack,
+                        x1, y1, zBack,
+                        x0, y1, zBack,
+                        x0, y0, zBack,
+                        u1, v0,
+                        u1, v1,
+                        u0, v1,
+                        u0, v0,
+                        shade, shade, shade, alpha
+                    ));
+                }
+            }
+            prevSegments = segments;
+            bandStart = row;
         }
+    }
+
+    /** Отрезки [start, end) заполненных ячеек строки, разрезанные по границам 16px тайла. */
+    private static int[] backSegments(byte[] kind, int cols, int row, int step) {
+        int[] out = new int[8];
+        int n = 0;
+        int col = 0;
+        while (col < cols) {
+            int here = kind[row * cols + col];
+            if (here != RAISED && here != CANVAS) {
+                col++;
+                continue;
+            }
+            int start = col;
+            int tile = (start * step) / 16;
+            col++;
+            while (col < cols && (col * step) / 16 == tile) {
+                int next = kind[row * cols + col];
+                if (next != RAISED && next != CANVAS) {
+                    break;
+                }
+                col++;
+            }
+            if (n + 2 > out.length) {
+                out = java.util.Arrays.copyOf(out, out.length * 2);
+            }
+            out[n++] = start;
+            out[n++] = col;
+        }
+        return java.util.Arrays.copyOf(out, n);
     }
 
     private static boolean sampleOpaque(boolean border, int x, int y, int width, int height) {
@@ -389,6 +484,11 @@ public final class MessageFrame3DModel {
         int tx = mapToTex(x, width, tex);
         int ty = mapToTex(y, height, tex);
         return (MessagePanelTextures.argb(border, tx, ty) >>> 24) > 16;
+    }
+
+    private static int texel(boolean border, int x, int y, int width, int height) {
+        int tex = MessagePanelTextures.size(border);
+        return MessagePanelTextures.argb(border, mapToTex(x, width, tex), mapToTex(y, height, tex));
     }
 
     private static float[] sampleUv(boolean border, int x, int y, int width, int height) {

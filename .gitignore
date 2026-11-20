@@ -32,9 +32,11 @@ bin/
 
 .env
 
-# fabric
+# dev-клиенты (Fabric / Forge / NeoForge): логи, миры, кэш эмоутов, пины
 
 run/
+run-forge/
+run-neoforge/
 
 # java
 

@@ -46,6 +46,7 @@ public class Message {
 
     private volatile MessagePanelLayout.Dimensions cachedWorldLayout;
     private volatile List<EmoteTextLayout.LineContent> cachedEmoteLines;
+    private volatile List<?> cachedWorldWrappedText;
     private volatile MessageCardLayout.Layout cachedHudLayout;
     private volatile int cachedHudMaxWidth = -1;
     private volatile MessageCardLayout.Layout cachedHistoryLayout;
@@ -277,11 +278,24 @@ public class Message {
         return layout;
     }
 
+    /** Перенесённые строки 3D-текста; тип строки зависит от версии MC, поэтому хранится без параметра. */
+    @SuppressWarnings("unchecked")
+    public <T> List<T> getWorldWrappedText(java.util.function.Supplier<List<T>> compute) {
+        invalidateLayoutIfWrapChanged();
+        List<?> cached = cachedWorldWrappedText;
+        if (cached == null) {
+            cached = compute.get();
+            cachedWorldWrappedText = cached;
+        }
+        return (List<T>) cached;
+    }
+
     private void invalidateLayoutIfWrapChanged() {
         int wrapWidth = MessagePanelLayout.wrapWidth();
         if (cachedWrapWidth != wrapWidth) {
             cachedWorldLayout = null;
             cachedEmoteLines = null;
+            cachedWorldWrappedText = null;
             cachedHudLayout = null;
             cachedHistoryLayout = null;
             cachedWrapWidth = wrapWidth;
